@@ -1,5 +1,7 @@
 """Market data service — multi-timeframe fetching + technical indicator calculations."""
 
+import yfinance as yf
+import pandas as pd
 import numpy as np
 import pytz
 from datetime import datetime, timezone, time
