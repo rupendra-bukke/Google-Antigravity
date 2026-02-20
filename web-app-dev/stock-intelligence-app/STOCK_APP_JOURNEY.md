@@ -47,6 +47,12 @@ If you want to explain this project to a friend, just use your hand:
 *   **Analogy:** Your code was a "private file" on your laptop. Now, we've turned it into a "Public Broadcast."
 *   **What we did:** We moved your code from your D: drive to professional "Host Computers" in the cloud.
 
+### Phase 6: Professional Branding (Trade-Craft)
+*   **Analogy:** This is the signing of the masterpiece. Every great tool has a name and a logo.
+*   **What we did:** We integrated "Trade-Craft" as the brand name and Rupendra's custom "RB" logo into the sidebar.
+*   **Why we did it:** To give the application a professional, enterprise-grade identity. It's no longer just a "stock app"—it's a product.
+*   **Outcome:** A personalized dashboard that carries your signature and brand identity.
+
 ---
 
 ## ☁️ The "Magic of the Cloud" (How it works)

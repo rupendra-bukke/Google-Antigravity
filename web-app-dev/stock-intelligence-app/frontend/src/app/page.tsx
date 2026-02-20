@@ -113,13 +113,22 @@ export default function Dashboard() {
     const loading = isLoading && !data;
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6 pb-12">
+        <div className="max-w-6xl mx-auto space-y-6 pb-12 relative">
+            {/* ── Background Watermark ── */}
+            <div className="fixed inset-0 pointer-events-none flex items-center justify-center -z-10 overflow-hidden">
+                <img
+                    src="/rb-logo.png"
+                    alt="Watermark"
+                    className="w-[500px] h-[500px] md:w-[800px] md:h-[800px] object-contain opacity-[0.08] grayscale brightness-200"
+                />
+            </div>
+
             {/* ── Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-lg font-bold text-white">Dashboard</h1>
-                    <p className="text-[10px] text-gray-500 mt-0.5 font-medium tracking-wide">
-                        Real-time intraday analysis · Auto-refreshes every 60s
+                    <h1 className="text-xl font-black text-white tracking-tight italic">Trade-Craft Dashboard</h1>
+                    <p className="text-[10px] text-gray-500 mt-1 font-medium tracking-wide">
+                        Real-time intraday intelligence · Built for precision
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -152,28 +161,30 @@ export default function Dashboard() {
                         </svg>
                     </button>
                 </div>
-            </div>
+            </div >
 
             {/* ── Error ── */}
-            {error && (
-                <div className="glass-card p-4 border border-rose-500/20 bg-rose-500/5 animate-fade-in">
-                    <div className="flex items-start gap-3">
-                        <span className="text-rose-400 text-base mt-0.5">⚠</span>
-                        <div>
-                            <p className="text-sm font-semibold text-rose-400">
-                                Failed to load data
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">{error}</p>
-                            <p className="text-xs text-gray-600 mt-2">
-                                Backend:{" "}
-                                <code className="text-brand-400/80 text-[10px]">
-                                    uvicorn main:app --reload --port 8000
-                                </code>
-                            </p>
+            {
+                error && (
+                    <div className="glass-card p-4 border border-rose-500/20 bg-rose-500/5 animate-fade-in">
+                        <div className="flex items-start gap-3">
+                            <span className="text-rose-400 text-base mt-0.5">⚠</span>
+                            <div>
+                                <p className="text-sm font-semibold text-rose-400">
+                                    Failed to load data
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">{error}</p>
+                                <p className="text-xs text-gray-600 mt-2">
+                                    Backend:{" "}
+                                    <code className="text-brand-400/80 text-[10px]">
+                                        uvicorn main:app --reload --port 8000
+                                    </code>
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* ── Market Status Banner ── */}
             <MarketStatusBanner
@@ -287,6 +298,6 @@ export default function Dashboard() {
                     · Data via yfinance · Not financial advice
                 </p>
             </div>
-        </div>
+        </div >
     );
 }

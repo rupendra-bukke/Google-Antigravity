@@ -77,15 +77,25 @@ export default function Sidebar() {
                 {/* Logo */}
                 <div className="p-6 border-b border-gray-800/30">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-brand-500/20 transition-all duration-300">
-                            {meta.initial}
+                        <div className="w-10 h-10 rounded-xl bg-gray-800/50 flex items-center justify-center overflow-hidden border border-gray-700/50">
+                            <img
+                                src="/rb-logo.png"
+                                alt="Logo"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    // Fallback to initial if image fails
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                    (e.target as HTMLImageElement).parentElement!.innerHTML = `<span class="text-white font-black text-lg">${meta.initial}</span>`;
+                                    (e.target as HTMLImageElement).parentElement!.classList.add('bg-gradient-to-br', 'from-brand-500', 'to-brand-700');
+                                }}
+                            />
                         </div>
                         <div>
                             <h1 className="text-sm font-bold text-white tracking-tight transition-all duration-300">
-                                {meta.name}
+                                Trade-Craft
                             </h1>
                             <p className="text-[10px] text-gray-500 font-semibold tracking-wide">
-                                Stock Intelligence
+                                RB Stock Intelligence
                             </p>
                         </div>
                     </div>
@@ -128,10 +138,10 @@ export default function Sidebar() {
 
                 {/* Footer */}
                 <div className="p-4">
-                    <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-gray-800/20 to-gray-800/40 text-center">
-                        <p className="text-[9px] text-gray-600 font-semibold uppercase tracking-widest">Powered by</p>
+                    <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-gray-800/20 to-gray-800/40 text-center border border-gray-800/30">
+                        <p className="text-[9px] text-gray-600 font-semibold uppercase tracking-widest">Designed by</p>
                         <p className="text-[11px] font-bold bg-gradient-to-r from-brand-400 to-emerald-400 bg-clip-text text-transparent mt-0.5">
-                            yfinance · FastAPI
+                            Rupendra Bukke
                         </p>
                     </div>
                 </div>
