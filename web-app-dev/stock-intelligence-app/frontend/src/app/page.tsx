@@ -5,7 +5,7 @@ import { useSymbol } from "./context/SymbolContext";
 import StockHeader from "./components/StockHeader";
 import IndexSelector from "./components/IndexSelector";
 import CandlestickChart from "./components/CandlestickChart";
-import IndicatorCard from "./components/IndicatorCard";
+
 import DecisionBadge from "./components/DecisionBadge";
 import AdvancedDecision from "./components/AdvancedDecision";
 import MarketStatusBanner from "./components/MarketStatusBanner";
@@ -242,6 +242,100 @@ export default function Dashboard() {
                 isLoading={loading}
             />
 
+            {/* ── Checkpoint Board — PRIME POSITION ── */}
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1rem" }}>
+                <CheckpointBoard symbol={selectedSymbol} />
+            </div>
+
+            {/* ── Compact Indicators Strip ── */}
+            <div>
+                <p className="section-label mb-2 ml-1" style={{ fontSize: "0.65rem" }}>Indicators</p>
+                <div style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "0.4rem",
+                }}>
+                    {/* EMA 20 */}
+                    <div style={{
+                        background: "rgba(99,102,241,0.08)",
+                        border: "1px solid rgba(99,102,241,0.2)",
+                        borderRadius: "8px",
+                        padding: "0.3rem 0.7rem",
+                        display: "flex", alignItems: "center", gap: "0.4rem",
+                    }}>
+                        <span style={{ fontSize: "0.65rem", color: "#6366f1", fontWeight: 700 }}>EMA20</span>
+                        <span style={{ fontSize: "0.72rem", color: "#e2e8f0", fontWeight: 600 }}>
+                            {data ? data.indicators.ema20.toLocaleString("en-IN", { maximumFractionDigits: 2 }) : "—"}
+                        </span>
+                    </div>
+                    {/* RSI */}
+                    <div style={{
+                        background: "rgba(16,185,129,0.08)",
+                        border: "1px solid rgba(16,185,129,0.2)",
+                        borderRadius: "8px",
+                        padding: "0.3rem 0.7rem",
+                        display: "flex", alignItems: "center", gap: "0.4rem",
+                    }}>
+                        <span style={{ fontSize: "0.65rem", color: "#10b981", fontWeight: 700 }}>RSI(14)</span>
+                        <span style={{ fontSize: "0.72rem", color: "#e2e8f0", fontWeight: 600 }}>
+                            {data ? data.indicators.rsi14.toFixed(2) : "—"}
+                        </span>
+                    </div>
+                    {/* VWAP */}
+                    <div style={{
+                        background: "rgba(6,182,212,0.08)",
+                        border: "1px solid rgba(6,182,212,0.2)",
+                        borderRadius: "8px",
+                        padding: "0.3rem 0.7rem",
+                        display: "flex", alignItems: "center", gap: "0.4rem",
+                    }}>
+                        <span style={{ fontSize: "0.65rem", color: "#06b6d4", fontWeight: 700 }}>VWAP</span>
+                        <span style={{ fontSize: "0.72rem", color: "#e2e8f0", fontWeight: 600 }}>
+                            {data ? data.indicators.vwap.toLocaleString("en-IN", { maximumFractionDigits: 2 }) : "—"}
+                        </span>
+                    </div>
+                    {/* BB */}
+                    <div style={{
+                        background: "rgba(245,158,11,0.08)",
+                        border: "1px solid rgba(245,158,11,0.2)",
+                        borderRadius: "8px",
+                        padding: "0.3rem 0.7rem",
+                        display: "flex", alignItems: "center", gap: "0.4rem",
+                    }}>
+                        <span style={{ fontSize: "0.65rem", color: "#f59e0b", fontWeight: 700 }}>BB</span>
+                        <span style={{ fontSize: "0.72rem", color: "#e2e8f0", fontWeight: 600 }}>
+                            {data
+                                ? `${data.indicators.bollinger.lower.toLocaleString("en-IN")} – ${data.indicators.bollinger.upper.toLocaleString("en-IN")}`
+                                : "—"}
+                        </span>
+                    </div>
+                    {/* MACD */}
+                    <div style={{
+                        background: "rgba(139,92,246,0.08)",
+                        border: "1px solid rgba(139,92,246,0.2)",
+                        borderRadius: "8px",
+                        padding: "0.3rem 0.7rem",
+                        display: "flex", alignItems: "center", gap: "0.4rem",
+                    }}>
+                        <span style={{ fontSize: "0.65rem", color: "#8b5cf6", fontWeight: 700 }}>MACD</span>
+                        <span style={{ fontSize: "0.72rem", color: "#e2e8f0", fontWeight: 600 }}>
+                            {data
+                                ? `${data.indicators.macd.macd_line} / ${data.indicators.macd.signal_line}`
+                                : "—"}
+                        </span>
+                        {data && (
+                            <span style={{
+                                fontSize: "0.62rem",
+                                color: data.indicators.macd.histogram > 0 ? "#22c55e" : "#ef4444",
+                                fontWeight: 600,
+                            }}>
+                                H:{data.indicators.macd.histogram}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
+
             {/* ── Chart ── */}
             <div>
                 <p className="section-label mb-3 ml-1">Price Action</p>
@@ -252,81 +346,12 @@ export default function Dashboard() {
                 />
             </div>
 
-            {/* ── Core Indicators ── */}
-            <div>
-                <p className="section-label mb-3 ml-1">Technical Indicators</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <IndicatorCard
-                        label="EMA 20"
-                        value={data?.indicators.ema20 ?? null}
-                        description="Exponential Moving Average (20). Price above = uptrend."
-                        icon="📏"
-                        color="indigo"
-                        isLoading={loading}
-                    />
-                    <IndicatorCard
-                        label="RSI (14)"
-                        value={data?.indicators.rsi14 ?? null}
-                        description="Relative Strength Index. <30 oversold, >70 overbought."
-                        icon="⚡"
-                        color="emerald"
-                        isLoading={loading}
-                    />
-                    <IndicatorCard
-                        label="VWAP"
-                        value={data?.indicators.vwap ?? null}
-                        description="Volume-Weighted Avg Price. Institutional fair-value benchmark."
-                        icon="🎯"
-                        color="cyan"
-                        isLoading={loading}
-                    />
-                </div>
-            </div>
-
-            {/* ── Advanced Indicators ── */}
-            <div>
-                <p className="section-label mb-3 ml-1">Advanced</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <IndicatorCard
-                        label="Bollinger Bands"
-                        value={
-                            data
-                                ? `${data.indicators.bollinger.lower.toLocaleString("en-IN")} – ${data.indicators.bollinger.upper.toLocaleString("en-IN")}`
-                                : null
-                        }
-                        description={`Mid: ${data?.indicators.bollinger.middle.toLocaleString("en-IN") ?? "—"} · SMA20 ± 2σ range`}
-                        icon="📐"
-                        color="amber"
-                        isLoading={loading}
-                    />
-                    <IndicatorCard
-                        label="MACD"
-                        value={
-                            data
-                                ? `${data.indicators.macd.macd_line} / ${data.indicators.macd.signal_line}`
-                                : null
-                        }
-                        description={`Hist: ${data?.indicators.macd.histogram ?? "—"} · MACD > Signal = bullish`}
-                        icon="📊"
-                        color="violet"
-                        isLoading={loading}
-                    />
-                </div>
-            </div>
-
             {/* ── Decision Badge ── */}
             <DecisionBadge
                 decision={data?.decision ?? null}
                 reasoning={data?.reasoning ?? []}
                 isLoading={loading}
             />
-
-
-
-            {/* ── Checkpoint Board ── */}
-            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.5rem" }}>
-                <CheckpointBoard symbol={selectedSymbol} />
-            </div>
 
             {/* ── Footer ── */}
             <div className="text-center pt-2">
@@ -342,3 +367,5 @@ export default function Dashboard() {
         </div >
     );
 }
+
+
