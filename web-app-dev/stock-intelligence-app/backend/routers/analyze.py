@@ -87,33 +87,52 @@ async def advanced_analyze(symbol: str = Query(default=None)):
     sym = symbol or settings.default_symbol
 
     try:
-        frames = await fetch_multi_timeframe(sym)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch data: {exc}")
+        try:
+            frames = await fetch_multi_timeframe(sym)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to fetch data: {exc}")
 
-    now = datetime.now(timezone.utc)
-    is_open, mkt_msg = is_indian_market_open(now)
-    result = run_advanced_analysis(frames, sym, now)
+        now = datetime.now(timezone.utc)
+        is_open, mkt_msg = is_indian_market_open(now)
+        result = run_advanced_analysis(frames, sym, now)
 
-    # Convert option dict to Pydantic model if present
-    opt = result.get("option_strike")
-    option_model = OptionStrikeData(**opt) if opt else None
+        # Convert option dict to Pydantic model if present
+        opt = result.get("option_strike")
+        option_model = OptionStrikeData(**opt) if opt else None
 
-    return AdvancedAnalysis(
-        prompt_version=result["prompt_version"],
-        date_time=result["date_time"],
-        index=result["index"],
-        spot_price=result["spot_price"],
-        scalp_signal=result["scalp_signal"],
-        three_min_confirm=result["three_min_confirm"],
-        htf_trend=result["htf_trend"],
-        trend_direction=result["trend_direction"],
-        option_strike=option_model,
-        execute=result["execute"],
-        execute_reason=result["execute_reason"],
-        is_market_open=is_open,
-        market_message=mkt_msg,
-        steps_detail=result["steps_detail"],
-    )
+        return AdvancedAnalysis(
+            prompt_version=result["prompt_version"],
+            date_time=result["date_time"],
+            index=result["index"],
+            spot_price=result["spot_price"],
+            scalp_signal=result["scalp_signal"],
+            three_min_confirm=result["three_min_confirm"],
+            htf_trend=result["htf_trend"],
+            trend_direction=result["trend_direction"],
+            option_strike=option_model,
+            execute=result["execute"],
+            execute_reason=result["execute_reason"],
+            is_market_open=is_open,
+            market_message=mkt_msg,
+            steps_detail=result["steps_detail"],
+        )
+    except Exception as e:
+        import traceback
+        return {
+            "prompt_version": 2,
+            "date_time": "ERROR",
+            "index": str(e),
+            "spot_price": 0,
+            "scalp_signal": "ERROR",
+            "three_min_confirm": "ERROR",
+            "htf_trend": "ERROR",
+            "trend_direction": "ERROR",
+            "execute": "ERROR",
+            "execute_reason": traceback.format_exc(),
+            "is_market_open": False,
+            "market_message": str(e),
+            "steps_detail": {}
+        }
+
