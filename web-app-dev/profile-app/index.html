@@ -4,13 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Binita Yadav | Mindset & Yoga</title>
+    <title>Binita Yadav | Mindset Coach & Yoga Instructor</title>
+    <meta name="description"
+        content="Certified Mindset Coach & Yoga Instructor helping you find balance through Breathwork, Coaching, and Yoga.">
+
     <!-- Premium Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap"
         rel="stylesheet">
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -18,156 +22,372 @@
 
 <body>
 
-    <div class="container">
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- 1. HERO SECTION                            -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="hero" id="hero">
+        <!-- Animated mesh background blobs -->
+        <div class="hero-blob blob-1"></div>
+        <div class="hero-blob blob-2"></div>
+        <div class="hero-blob blob-3"></div>
 
-        <!-- HERO SECTION -->
-        <header class="hero">
-            <div class="profile-wrapper">
+        <!-- Floating decorative elements -->
+        <div class="hero-deco leaf-1">🌿</div>
+        <div class="hero-deco leaf-2">✨</div>
+        <div class="hero-deco leaf-3">🍃</div>
+
+        <div class="hero-inner">
+            <!-- Profile image with animated halo -->
+            <div class="profile-halo-wrap">
+                <div class="halo-ring ring-1"></div>
+                <div class="halo-ring ring-2"></div>
                 <img src="assets/profile.png" alt="Binita Yadav" class="profile-img">
             </div>
-            <h1>Binita Yadav</h1>
-            <p class="bio">Helping you find balance through Mindset Coaching, Breathwork, and Yoga.</p>
 
-            <div class="social-links">
-                <a href="#" class="social-icon"><i class="fa-brands fa-instagram"></i></a>
-                <a href="#" class="social-icon"><i class="fa-brands fa-linkedin-in"></i></a>
-                <a href="#" class="social-icon"><i class="fa-brands fa-youtube"></i></a>
-                <a href="#" class="social-icon"><i class="fa-regular fa-envelope"></i></a>
-            </div>
-        </header>
+            <!-- Name -->
+            <h1 class="hero-name">Binita Yadav</h1>
 
-        <!-- ABOUT (Glass Card) -->
-        <section class="glass-card fade-in">
-            <h3>Start Your Journey</h3>
-            <p style="margin-top: 0.5rem;">
-                Namaste! I’m a certified instructor dedicated to your physical and mental well-being.
-                Choose a session below that fits your needs, from quick consultations to deep-dive coaching.
+            <!-- Typing tagline -->
+            <p class="hero-tagline">
+                <span class="typed-text" id="typed"></span><span class="cursor">|</span>
             </p>
-        </section>
 
-        <!-- FLOATING TABS -->
-        <div class="tabs-wrapper fade-in">
-            <div class="tabs">
-                <button class="tab-btn active" data-filter="all">All Services</button>
-                <button class="tab-btn" data-filter="Coaching">Coaching</button>
-                <button class="tab-btn" data-filter="Yoga">Yoga</button>
+            <!-- Bio -->
+            <p class="hero-bio">
+                Helping you unlock your truest self through mindset coaching, breathwork, and the transformative power
+                of yoga.
+            </p>
+
+            <!-- Social icons -->
+            <div class="social-links">
+                <a href="#" class="social-icon" data-tooltip="Instagram">
+                    <i class="fa-brands fa-instagram"></i>
+                </a>
+                <a href="#" class="social-icon" data-tooltip="LinkedIn">
+                    <i class="fa-brands fa-linkedin-in"></i>
+                </a>
+                <a href="#" class="social-icon" data-tooltip="YouTube">
+                    <i class="fa-brands fa-youtube"></i>
+                </a>
+                <a href="mailto:binita@example.com" class="social-icon" data-tooltip="Email">
+                    <i class="fa-regular fa-envelope"></i>
+                </a>
+            </div>
+
+            <!-- Scroll indicator -->
+            <div class="scroll-down">
+                <span>Scroll to explore</span>
+                <i class="fa-solid fa-chevron-down bounce"></i>
             </div>
         </div>
+    </section>
 
-        <!-- SERVICES GRID -->
-        <div class="services-grid" id="service-list">
-
-            <!-- Card 1 -->
-            <div class="service-card fade-in" data-category="Coaching">
-                <div class="card-content">
-                    <span class="tag">Priority DM</span>
-                    <h3>Ask Me Anything</h3>
-                    <p>Send your queries related to mindset coaching & yoga. 48hr response time.</p>
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- 2. STATS BAR                               -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="stats-section fade-in">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <p class="stat-number" data-target="200">0</p>
+                    <p class="stat-suffix">+ Clients</p>
+                    <p class="stat-label">Happy Students</p>
                 </div>
-                <div class="card-action">
-                    <span class="price">Free</span>
-                    <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <p class="stat-number" data-target="5">0</p>
+                    <p class="stat-suffix">Years</p>
+                    <p class="stat-label">Experience</p>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <p class="stat-number" data-target="4">0</p>
+                    <p class="stat-suffix">.9 ★</p>
+                    <p class="stat-label">Avg Rating</p>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <p class="stat-number" data-target="3">0</p>
+                    <p class="stat-suffix">+ Programs</p>
+                    <p class="stat-label">Specializations</p>
                 </div>
             </div>
-
-            <!-- Card 2 -->
-            <div class="service-card fade-in" data-category="Coaching">
-                <div class="card-content">
-                    <span class="tag">Exclusive</span>
-                    <h3>Priority Consultation</h3>
-                    <p>Personalized advice on your specific situation. Deep dive into your blockers.</p>
-                </div>
-                <div class="card-action">
-                    <span class="price">₹500</span>
-                    <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
-                </div>
-            </div>
-
-            <!-- Card 3 -->
-            <div class="service-card fade-in" data-category="Yoga">
-                <div class="card-content">
-                    <span class="tag">Video • 60 Mins</span>
-                    <h3>1st Yoga Session</h3>
-                    <p>Introductory session to alignment, breathwork, and basic flows.</p>
-                </div>
-                <div class="card-action">
-                    <span class="price">₹1,300</span>
-                    <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
-                </div>
-            </div>
-
-            <!-- Card 4 -->
-            <div class="service-card fade-in" data-category="Coaching">
-                <div class="card-content">
-                    <span class="tag">Video • 30 Mins</span>
-                    <h3>Follow-up Call</h3>
-                    <p>Check-in on your progress and adjust your personalized plan.</p>
-                </div>
-                <div class="card-action">
-                    <span class="price">₹800</span>
-                    <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
-                </div>
-            </div>
-
-            <!-- Card 5 -->
-            <div class="service-card fade-in" data-category="Yoga">
-                <div class="card-content">
-                    <span class="tag">Ongoing</span>
-                    <h3>Regular Session</h3>
-                    <p>Advanced flows, power yoga, and meditation techniques.</p>
-                </div>
-                <div class="card-action">
-                    <span class="price">₹1,300</span>
-                    <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
-                </div>
-            </div>
-
         </div>
+    </section>
 
-        <!-- LIFESTYLE SECTION -->
-        <section class="lifestyle-section">
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- 3. EXPERTISE GRID                          -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="expertise-section fade-in">
+        <div class="container">
+            <div class="section-header">
+                <p class="section-chip">What I Offer</p>
+                <h2>Areas of Expertise</h2>
+                <p class="section-sub">Every journey is unique. Here's how I guide you towards transformation.</p>
+            </div>
+            <div class="expertise-grid">
+                <div class="expertise-card fade-in">
+                    <div class="exp-icon">🧠</div>
+                    <h4>Mindset Coaching</h4>
+                    <p>Break limiting beliefs and reprogram your inner narrative for lasting growth.</p>
+                </div>
+                <div class="expertise-card fade-in">
+                    <div class="exp-icon">🌬️</div>
+                    <h4>Breathwork</h4>
+                    <p>Harness the power of breath to release stress, anxiety, and energetic blocks.</p>
+                </div>
+                <div class="expertise-card fade-in">
+                    <div class="exp-icon">🧘</div>
+                    <h4>Yoga Flows</h4>
+                    <p>From foundation to advanced flows — build strength, flexibility, and presence.</p>
+                </div>
+                <div class="expertise-card fade-in">
+                    <div class="exp-icon">🕯️</div>
+                    <h4>Meditation</h4>
+                    <p>Cultivate a daily stillness practice for clarity, focus, and deep inner peace.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-            <!-- Item 1: Image Left, Quote Right -->
-            <div class="split-layout fade-in">
-                <div class="split-image">
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- 4. SERVICES SECTION                        -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="services-section" id="services">
+        <div class="container">
+            <div class="section-header fade-in">
+                <p class="section-chip">Work With Me</p>
+                <h2>Start Your Journey</h2>
+                <p class="section-sub">Choose a session that resonates with where you are right now.</p>
+            </div>
+
+            <!-- Sticky Filter Tabs -->
+            <div class="tabs-wrapper fade-in">
+                <div class="tabs">
+                    <button class="tab-btn active" data-filter="all">All Services</button>
+                    <button class="tab-btn" data-filter="Coaching">Coaching</button>
+                    <button class="tab-btn" data-filter="Yoga">Yoga</button>
+                </div>
+            </div>
+
+            <!-- Services Grid -->
+            <div class="services-grid" id="service-list">
+
+                <div class="service-card fade-in" data-category="Coaching">
+                    <div class="card-accent"></div>
+                    <div class="card-content">
+                        <span class="tag">Priority DM</span>
+                        <h3>Ask Me Anything</h3>
+                        <p>Send your queries related to mindset coaching & yoga. 48hr response time.</p>
+                    </div>
+                    <div class="card-action">
+                        <span class="price">Free</span>
+                        <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
+                    </div>
+                </div>
+
+                <div class="service-card fade-in" data-category="Coaching">
+                    <div class="card-accent"></div>
+                    <div class="card-content">
+                        <span class="tag">Exclusive</span>
+                        <h3>Priority Consultation</h3>
+                        <p>Personalized advice on your specific situation. Deep dive into your blockers.</p>
+                    </div>
+                    <div class="card-action">
+                        <span class="price">₹500</span>
+                        <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
+                    </div>
+                </div>
+
+                <div class="service-card fade-in" data-category="Yoga">
+                    <div class="card-accent"></div>
+                    <div class="card-content">
+                        <span class="tag">Video · 60 Mins</span>
+                        <h3>1st Yoga Session</h3>
+                        <p>Introductory session to alignment, breathwork, and basic flows.</p>
+                    </div>
+                    <div class="card-action">
+                        <span class="price">₹1,300</span>
+                        <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
+                    </div>
+                </div>
+
+                <div class="service-card fade-in" data-category="Coaching">
+                    <div class="card-accent"></div>
+                    <div class="card-content">
+                        <span class="tag">Video · 30 Mins</span>
+                        <h3>Follow-up Call</h3>
+                        <p>Check-in on your progress and adjust your personalized plan.</p>
+                    </div>
+                    <div class="card-action">
+                        <span class="price">₹800</span>
+                        <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
+                    </div>
+                </div>
+
+                <div class="service-card fade-in" data-category="Yoga">
+                    <div class="card-accent"></div>
+                    <div class="card-content">
+                        <span class="tag">Ongoing</span>
+                        <h3>Regular Yoga Session</h3>
+                        <p>Advanced flows, power yoga, and meditation techniques.</p>
+                    </div>
+                    <div class="card-action">
+                        <span class="price">₹1,300</span>
+                        <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- 5. LIFESTYLE / PHILOSOPHY                  -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="lifestyle-section fade-in">
+        <div class="container">
+            <div class="section-header">
+                <p class="section-chip">Philosophy</p>
+                <h2>A Practice That Transforms</h2>
+            </div>
+
+            <div class="split-layout">
+                <div class="split-image parallax-img" data-speed="0.1">
                     <img src="assets/pose1.png" alt="Binita Yoga Pose">
                 </div>
                 <div class="split-text">
                     <h3>Empower Your Mind</h3>
-                    <p>"Yoga is not just about flexible bodies, it's about flexible minds. True strength comes from
-                        within, when you learn to breathe through the discomfort."</p>
+                    <blockquote>
+                        "Yoga is not just about flexible bodies — it's about flexible minds. True strength comes from
+                        within, when you learn to breathe through the discomfort."
+                    </blockquote>
                 </div>
             </div>
 
-            <!-- Item 2: Quote Left, Image Right -->
-            <div class="split-layout reverse fade-in">
-                <div class="split-image">
+            <div class="split-layout reverse">
+                <div class="split-image parallax-img" data-speed="0.15">
                     <img src="assets/pose2.png" alt="Binita Meditation">
                 </div>
                 <div class="split-text">
                     <h3>Find Your Calm</h3>
-                    <p>"In the chaos of everyday life, your breath is your anchor. Return to it, and you will always
-                        find your way home."</p>
+                    <blockquote>
+                        "In the chaos of everyday life, your breath is your anchor. Return to it, and you will always
+                        find your way home."
+                    </blockquote>
                 </div>
             </div>
+        </div>
+    </section>
 
-        </section>
-
-        <!-- TESTIMONIALS -->
-        <section class="testimonials fade-in">
-            <div class="glass-card">
-                <i class="fa-solid fa-quote-left" style="font-size: 2rem; color: var(--accent-gold);"></i>
-                <p class="quote-card">"My sessions with Binita have been transformative. The discovery session helped me
-                    identify mindset blocks I didn't know I had."</p>
-                <p style="margin-top: 1rem; font-weight: 600; color: var(--text-main);">- Shivangi</p>
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- 6. TESTIMONIALS CAROUSEL                   -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="testimonials-section fade-in">
+        <div class="container">
+            <div class="section-header">
+                <p class="section-chip">Testimonials</p>
+                <h2>Words From Students</h2>
+                <p class="section-sub">Real transformations from real people.</p>
             </div>
-        </section>
 
-        <footer class="footer">
-            <p>Powered by <strong>Antigravity</strong></p>
-        </footer>
+            <div class="carousel-wrapper">
+                <div class="carousel-track" id="carouselTrack">
+                    <div class="testimonial-card">
+                        <div class="stars">⭐⭐⭐⭐⭐</div>
+                        <p class="quote">"My sessions with Binita have been truly transformative. She helped me identify
+                            mindset blocks I didn't even know I had. I feel like a completely new person."</p>
+                        <div class="reviewer">
+                            <div class="reviewer-avatar">S</div>
+                            <div>
+                                <p class="reviewer-name">Shivangi R.</p>
+                                <p class="reviewer-role">Mindset Coaching Client</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial-card">
+                        <div class="stars">⭐⭐⭐⭐⭐</div>
+                        <p class="quote">"Binita's yoga sessions are unlike anything I've experienced. Her breathwork
+                            techniques alone reduced my anxiety significantly within just 2 weeks."</p>
+                        <div class="reviewer">
+                            <div class="reviewer-avatar">P</div>
+                            <div>
+                                <p class="reviewer-name">Priya M.</p>
+                                <p class="reviewer-role">Yoga Student</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial-card">
+                        <div class="stars">⭐⭐⭐⭐⭐</div>
+                        <p class="quote">"Her follow-up sessions are so refreshing. She genuinely tracks my progress
+                            and adapts the plan for me. Best investment in my well-being, ever."</p>
+                        <div class="reviewer">
+                            <div class="reviewer-avatar">A</div>
+                            <div>
+                                <p class="reviewer-name">Ananya K.</p>
+                                <p class="reviewer-role">Coaching & Yoga Client</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Dots -->
+                <div class="carousel-dots" id="carouselDots">
+                    <button class="dot active" data-index="0"></button>
+                    <button class="dot" data-index="1"></button>
+                    <button class="dot" data-index="2"></button>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    </div>
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- 7. BOOKING CTA                             -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="cta-section fade-in">
+        <div class="container">
+            <div class="cta-card">
+                <div class="cta-bg-leaf">🌿</div>
+                <p class="section-chip" style="color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.2);">
+                    Ready to Begin?</p>
+                <h2>Your Journey Starts Today</h2>
+                <p>Take the first step towards a more balanced, empowered, and intentional life.</p>
+                <a href="https://wa.me/91XXXXXXXXXX?text=Hi Binita! I'd like to book a session." class="cta-btn"
+                    target="_blank">
+                    <i class="fa-brands fa-whatsapp"></i>
+                    Book a Session on WhatsApp
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- 8. FOOTER                                  -->
+    <!-- ═══════════════════════════════════════════ -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-inner">
+                <div>
+                    <p class="footer-name">Binita Yadav</p>
+                    <p class="footer-tagline">Mindset Coach · Yoga Instructor · Breathwork Guide</p>
+                </div>
+                <div class="footer-social">
+                    <a href="#" class="social-icon sm"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="#" class="social-icon sm"><i class="fa-brands fa-linkedin-in"></i></a>
+                    <a href="#" class="social-icon sm"><i class="fa-brands fa-youtube"></i></a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2025 Binita Yadav · Designed & built by <strong>Rupendra Bukke</strong></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- WhatsApp Floating Button -->
+    <a href="https://wa.me/91XXXXXXXXXX?text=Hi Binita! I'd like to book a session." class="whatsapp-float"
+        target="_blank" title="Chat on WhatsApp">
+        <div class="wa-pulse"></div>
+        <i class="fa-brands fa-whatsapp"></i>
+    </a>
 
     <script src="script.js"></script>
 </body>
