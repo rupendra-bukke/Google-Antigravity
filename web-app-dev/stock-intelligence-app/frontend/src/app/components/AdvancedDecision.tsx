@@ -30,19 +30,22 @@ interface AdvancedDecisionProps {
     isLoading: boolean;
 }
 
-function SignalLine({ label, value }: { label: string; value: string }) {
-    const getColor = (v: string) => {
-        if (v.includes("🟢") || v.includes("GREEN") || v.includes("Bullish") || v.includes("BUY") || v.includes("Strong"))
-            return "text-emerald-400";
-        if (v.includes("🔴") || v.includes("RED") || v.includes("Bearish") || v.includes("SELL"))
-            return "text-rose-400";
-        return "text-amber-400";
-    };
+function getSignalColor(v: string) {
+    if (v.includes("🟢") || v.includes("GREEN") || v.includes("Bullish") || v.includes("BUY") || v.includes("Strong"))
+        return { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
+    if (v.includes("🔴") || v.includes("RED") || v.includes("Bearish") || v.includes("SELL"))
+        return { text: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/20" };
+    return { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" };
+}
 
+function SignalRow({ label, value }: { label: string; value: string }) {
+    const colors = getSignalColor(value);
     return (
-        <div className="flex items-center justify-between py-2 border-b border-gray-800/30 last:border-0">
-            <span className="text-xs text-gray-500 font-medium">{label}</span>
-            <span className={`text-sm font-bold ${getColor(value)}`}>{value}</span>
+        <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] text-gray-500 font-semibold uppercase tracking-wide shrink-0">{label}</span>
+            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg ${colors.bg} ${colors.text} border ${colors.border} text-right`}>
+                {value}
+            </span>
         </div>
     );
 }
@@ -77,15 +80,19 @@ export default function AdvancedDecision({ data, isLoading }: AdvancedDecisionPr
                 ? "🟡"
                 : "🔴";
 
+    const isBullish = data.execute === "Strong";
+    const isNoTrade = data.execute === "NO TRADE";
+    const executeBorderColor = isBullish ? "border-emerald-500" : isNoTrade ? "border-rose-500" : "border-amber-500";
+    const isCE = data.option_strike?.option_type === "CE";
+    const strikeColor = isCE ? "text-emerald-400" : "text-rose-400";
+    const strikeTicketBorder = isCE ? "border-emerald-500/30" : "border-rose-500/30";
+    const strikeTicketBg = isCE ? "from-emerald-900/20 to-transparent" : "from-rose-900/20 to-transparent";
+    const strikeHeaderBg = isCE ? "bg-emerald-500/10" : "bg-rose-500/10";
+
     return (
         <div className="glass-card p-6 md:p-8 animate-slide-up relative overflow-hidden">
             {/* Background glow */}
-            {data.execute === "Strong" && (
-                <div className="absolute -top-20 -right-20 w-60 h-60 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-            )}
-            {data.execute === "NO TRADE" && (
-                <div className="absolute -top-20 -right-20 w-60 h-60 bg-rose-500/5 rounded-full blur-3xl pointer-events-none" />
-            )}
+            <div className={`absolute -top-24 -right-24 w-72 h-72 ${isBullish ? 'bg-emerald-500/5' : isNoTrade ? 'bg-rose-500/5' : 'bg-amber-500/5'} rounded-full blur-3xl pointer-events-none`} />
 
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
@@ -95,13 +102,12 @@ export default function AdvancedDecision({ data, isLoading }: AdvancedDecisionPr
                 </span>
             </div>
 
-            {/* Execute Badge */}
-            <div className="mb-6">
-                <span
-                    className={`inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-xl font-black tracking-wide ${executeColor}`}
-                >
-                    <span className="text-xl">{executeEmoji}</span>
-                    {data.execute === "NO TRADE" ? "NO TRADE" : `EXECUTE: ${data.execute}`}
+            {/* Execute Badge — styled with left border accent + pulse */}
+            <div className={`mb-6 pl-4 border-l-4 ${executeBorderColor} rounded-r-xl`}>
+                <span className={`inline-flex items-center gap-2.5 px-5 py-3 rounded-xl text-xl font-black tracking-wide ${executeColor}`}>
+                    {isBullish && <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" /></span>}
+                    <span>{executeEmoji}</span>
+                    {isNoTrade ? "NO TRADE" : `EXECUTE: ${data.execute}`}
                 </span>
                 {data.execute_reason && (
                     <p className="text-[11px] text-gray-500 mt-2 ml-1 max-w-lg">{data.execute_reason}</p>
@@ -110,61 +116,60 @@ export default function AdvancedDecision({ data, isLoading }: AdvancedDecisionPr
 
             {/* Signal Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                {/* Left: Signals */}
-                <div className="bg-gray-800/20 rounded-xl p-4 border border-gray-800/30">
-                    <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">Signals</p>
-                    <SignalLine label="1-30 MIN SCALP" value={data.scalp_signal} />
-                    <SignalLine label="📊 3-MIN CONFIRM" value={data.three_min_confirm} />
-                    <SignalLine label="📉 HTF TREND (15m/1h)" value={data.htf_trend} />
-                    <SignalLine label="📉 TREND DIRECTION" value={data.trend_direction} />
+                {/* Left: Color-coded Signal Pills */}
+                <div className="bg-gray-900/40 rounded-2xl p-5 border border-gray-800/40 space-y-3">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">📡 Live Signals</p>
+                    <SignalRow label="Scalp (1-30 min)" value={data.scalp_signal} />
+                    <SignalRow label="3-Min Confirm" value={data.three_min_confirm} />
+                    <SignalRow label="HTF Trend (15m/1h)" value={data.htf_trend} />
+                    <SignalRow label="Trend Direction" value={data.trend_direction} />
                 </div>
 
-                {/* Right: Option Strike (if trade) */}
-                <div className="bg-gray-800/20 rounded-xl p-4 border border-gray-800/30">
-                    <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">🎯 Option Strike</p>
-                    {data.option_strike ? (
-                        <div className="space-y-2.5">
-                            <div className="flex justify-between items-baseline">
-                                <span className="text-xs text-gray-500">Strike</span>
-                                <span className="text-lg font-black text-white tabular-nums">
-                                    {data.option_strike.strike_label} {data.option_strike.strike}{" "}
-                                    <span className={data.option_strike.option_type === "CE" ? "text-emerald-400" : "text-rose-400"}>
-                                        {data.option_strike.option_type}
-                                    </span>
-                                </span>
+                {/* Right: Trading Ticket Style Option Strike */}
+                {data.option_strike ? (
+                    <div className={`rounded-2xl border ${strikeTicketBorder} overflow-hidden`}>
+                        {/* Ticket Header */}
+                        <div className={`${strikeHeaderBg} px-5 py-3 flex items-center justify-between border-b ${strikeTicketBorder}`}>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">🎯 Trade Ticket</p>
+                            <span className={`text-xs font-black px-2 py-0.5 rounded ${isCE ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                                {data.option_strike.option_type}
+                            </span>
+                        </div>
+                        {/* Ticket Body */}
+                        <div className={`bg-gradient-to-b ${strikeTicketBg} p-5 space-y-3`}>
+                            <div className="text-center pb-3 border-b border-gray-800/30">
+                                <p className="text-[10px] text-gray-500 mb-1">Strike</p>
+                                <p className="text-2xl font-black text-white tabular-nums">
+                                    {data.option_strike.strike_label} <span className={strikeColor}>{data.option_strike.strike}</span>
+                                </p>
+                                <p className={`text-xs font-bold mt-1 ${data.option_strike.premium_valid ? 'text-gray-400' : 'text-rose-400 line-through'}`}>
+                                    Est. Premium: ₹{data.option_strike.est_premium}
+                                </p>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Est. Premium</span>
-                                <span className={`text-sm font-bold tabular-nums ${data.option_strike.premium_valid ? "text-gray-200" : "text-rose-400 line-through"}`}>
-                                    ₹{data.option_strike.est_premium}
-                                </span>
-                            </div>
-                            <div className="h-px bg-gray-800/40 my-1" />
-                            <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Stoploss</span>
-                                <span className="text-sm font-bold text-rose-400 tabular-nums">
-                                    {data.option_strike.sl_points} pts
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Target</span>
-                                <span className="text-sm font-bold text-emerald-400 tabular-nums">
-                                    {data.option_strike.target_points} pts
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Risk:Reward</span>
-                                <span className="text-sm font-bold text-brand-400 tabular-nums">
-                                    1 : {Math.round(data.option_strike.target_points / data.option_strike.sl_points * 10) / 10}
-                                </span>
+                            <div className="grid grid-cols-3 gap-2 text-center">
+                                <div className="bg-rose-500/10 rounded-xl p-2 border border-rose-500/20">
+                                    <p className="text-[9px] text-gray-500 mb-0.5">SL</p>
+                                    <p className="text-sm font-black text-rose-400 tabular-nums">{data.option_strike.sl_points}<span className="text-[9px] ml-0.5">pts</span></p>
+                                </div>
+                                <div className="bg-brand-500/10 rounded-xl p-2 border border-brand-500/20">
+                                    <p className="text-[9px] text-gray-500 mb-0.5">R:R</p>
+                                    <p className="text-sm font-black text-brand-400 tabular-nums">1:{Math.round(data.option_strike.target_points / data.option_strike.sl_points * 10) / 10}</p>
+                                </div>
+                                <div className="bg-emerald-500/10 rounded-xl p-2 border border-emerald-500/20">
+                                    <p className="text-[9px] text-gray-500 mb-0.5">Target</p>
+                                    <p className="text-sm font-black text-emerald-400 tabular-nums">{data.option_strike.target_points}<span className="text-[9px] ml-0.5">pts</span></p>
+                                </div>
                             </div>
                         </div>
-                    ) : (
-                        <div className="flex items-center justify-center h-32 text-gray-600 text-sm">
-                            <span>⚪ No trade — strike not computed</span>
+                    </div>
+                ) : (
+                    <div className="rounded-2xl border border-gray-800/30 bg-gray-900/20 flex items-center justify-center">
+                        <div className="text-center">
+                            <p className="text-2xl mb-2">⚪</p>
+                            <p className="text-xs text-gray-600 font-semibold">No trade — strike not computed</p>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
 
             {/* Step Details (collapsible sections) */}
