@@ -121,9 +121,9 @@ export default function Dashboard() {
     const loading = isLoading && !data;
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6 pb-12 relative">
+        <div className="max-w-6xl mx-auto md:pl-64 space-y-6 pb-12 relative">
             {/* ── Background Watermark ── */}
-            <div className="fixed inset-0 pointer-events-none flex items-center justify-center -z-10 overflow-hidden">
+            <div className="fixed inset-0 md:ml-64 pointer-events-none flex items-center justify-center -z-10 overflow-hidden">
                 <img
                     src="/rb-logo.png"
                     alt="Watermark"
