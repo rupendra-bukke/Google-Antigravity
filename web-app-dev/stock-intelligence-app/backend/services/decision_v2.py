@@ -356,9 +356,13 @@ def option_strike_selection(
     # Estimated premium (simplified — not live data)
     # Rough estimate: ~0.4-0.6% of spot for ATM weekly
     distance = abs(spot_price - strike)
-    base_premium = spot_price * 0.005  # ~0.5% of spot
-    distance_adj = max(0, (distance / spot_price) * spot_price * 0.3)
-    est_premium = round(base_premium + distance_adj, 0)
+    if spot_price > 0:
+        base_premium = spot_price * 0.005  # ~0.5% of spot
+        distance_adj = max(0, (distance / spot_price) * spot_price * 0.3)
+        est_premium = round(base_premium + distance_adj, 0)
+    else:
+        est_premium = 0
+    
     est_premium = max(80, min(est_premium, 300))  # Clamp to ₹80–300
 
     # SL and target
