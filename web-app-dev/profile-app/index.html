@@ -7,96 +7,63 @@
     <title>Binita Yadav | Mindset Coach & Yoga Instructor</title>
     <meta name="description"
         content="Certified Mindset Coach & Yoga Instructor helping you find balance through Breathwork, Coaching, and Yoga.">
-
-    <!-- Premium Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap"
         rel="stylesheet">
-
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- 1. HERO SECTION                            -->
-    <!-- ═══════════════════════════════════════════ -->
+    <!-- 1. HERO -->
     <section class="hero" id="hero">
-        <!-- LEFT: Full-height photo panel -->
         <div class="hero-photo-panel">
             <img src="assets/hero.png" alt="Binita Yadav" class="hero-photo">
-            <!-- Subtle gradient overlay at bottom for blending -->
             <div class="hero-photo-overlay"></div>
         </div>
-
-        <!-- RIGHT: Content panel -->
         <div class="hero-content-panel">
-            <!-- Floating blobs (right side only) -->
             <div class="hero-blob blob-1"></div>
             <div class="hero-blob blob-2"></div>
-
-            <!-- Floating deco -->
             <div class="hero-deco leaf-1">🌿</div>
             <div class="hero-deco leaf-2">✨</div>
 
-            <!-- Small profile circle + verified badge -->
             <div class="profile-mini-wrap">
                 <img src="assets/profile.png" alt="Binita Yadav" class="profile-mini">
                 <span class="verified-badge" title="Certified Coach">✓</span>
             </div>
 
-            <!-- Name -->
             <h1 class="hero-name">Binita Yadav</h1>
-
-            <!-- Typing tagline -->
             <p class="hero-tagline">
                 <span class="typed-text" id="typed"></span><span class="cursor">|</span>
             </p>
-
-            <!-- Bio -->
             <p class="hero-bio">
                 Helping you unlock your truest self through mindset coaching, breathwork, and the transformative power
                 of yoga.
             </p>
 
-            <!-- Social icons -->
             <div class="social-links">
-                <a href="#" class="social-icon" data-tooltip="Instagram">
-                    <i class="fa-brands fa-instagram"></i>
-                </a>
-                <a href="#" class="social-icon" data-tooltip="LinkedIn">
-                    <i class="fa-brands fa-linkedin-in"></i>
-                </a>
-                <a href="#" class="social-icon" data-tooltip="YouTube">
-                    <i class="fa-brands fa-youtube"></i>
-                </a>
-                <a href="mailto:binita@example.com" class="social-icon" data-tooltip="Email">
-                    <i class="fa-regular fa-envelope"></i>
-                </a>
+                <a href="#" class="social-icon" data-tooltip="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                <a href="#" class="social-icon" data-tooltip="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+                <a href="#" class="social-icon" data-tooltip="YouTube"><i class="fa-brands fa-youtube"></i></a>
+                <a href="mailto:binita@example.com" class="social-icon" data-tooltip="Email"><i
+                        class="fa-regular fa-envelope"></i></a>
             </div>
 
-            <!-- CTA Buttons -->
             <div class="hero-cta-row">
-                <a href="#services" class="hero-cta-primary">
-                    Book a Session <i class="fa-solid fa-arrow-right"></i>
-                </a>
+                <a href="#services" class="hero-cta-primary">Book a Session <i class="fa-solid fa-arrow-right"></i></a>
                 <a href="#services" class="hero-cta-secondary">View Services</a>
             </div>
 
-            <!-- Scroll indicator -->
             <div class="scroll-down">
                 <i class="fa-solid fa-chevron-down bounce"></i>
             </div>
         </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- 2. STATS BAR                               -->
-    <!-- ═══════════════════════════════════════════ -->
+    <!-- 2. STATS BAR -->
     <section class="stats-section fade-in">
         <div class="container">
             <div class="stats-grid">
@@ -127,9 +94,7 @@
         </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- 3. EXPERTISE GRID                          -->
-    <!-- ═══════════════════════════════════════════ -->
+    <!-- 3. EXPERTISE GRID -->
     <section class="expertise-section fade-in">
         <div class="container">
             <div class="section-header">
@@ -162,9 +127,7 @@
         </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- 4. SERVICES SECTION                        -->
-    <!-- ═══════════════════════════════════════════ -->
+    <!-- 4. SERVICES -->
     <section class="services-section" id="services">
         <div class="container">
             <div class="section-header fade-in">
@@ -173,7 +136,6 @@
                 <p class="section-sub">Choose a session that resonates with where you are right now.</p>
             </div>
 
-            <!-- Sticky Filter Tabs -->
             <div class="tabs-wrapper fade-in">
                 <div class="tabs">
                     <button class="tab-btn active" data-filter="all">All Services</button>
@@ -182,23 +144,26 @@
                 </div>
             </div>
 
-            <!-- Services Grid -->
             <div class="services-grid" id="service-list">
 
-                <div class="service-card fade-in" data-category="Coaching">
+                <a class="service-card fade-in" data-category="Coaching"
+                    href="https://wa.me/91XXXXXXXXXX?text=Hi%20Binita!%20I%20have%20a%20question%20about%20Mindset%20Coaching.%20Can%20I%20Ask%20You%20Anything%3F"
+                    target="_blank">
                     <div class="card-accent"></div>
                     <div class="card-content">
                         <span class="tag">Priority DM</span>
                         <h3>Ask Me Anything</h3>
-                        <p>Send your queries related to mindset coaching & yoga. 48hr response time.</p>
+                        <p>Send your queries related to mindset coaching &amp; yoga. 48hr response time.</p>
                     </div>
                     <div class="card-action">
                         <span class="price">Free</span>
                         <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
                     </div>
-                </div>
+                </a>
 
-                <div class="service-card fade-in" data-category="Coaching">
+                <a class="service-card fade-in" data-category="Coaching"
+                    href="https://wa.me/91XXXXXXXXXX?text=Hi%20Binita!%20I%27d%20like%20to%20book%20a%20Priority%20Consultation%20(%E2%82%B9500).%20When%20are%20you%20available%3F"
+                    target="_blank">
                     <div class="card-accent"></div>
                     <div class="card-content">
                         <span class="tag">Exclusive</span>
@@ -209,9 +174,11 @@
                         <span class="price">₹500</span>
                         <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
                     </div>
-                </div>
+                </a>
 
-                <div class="service-card fade-in" data-category="Yoga">
+                <a class="service-card fade-in" data-category="Yoga"
+                    href="https://wa.me/91XXXXXXXXXX?text=Hi%20Binita!%20I%27d%20like%20to%20book%20my%201st%20Yoga%20Session%20(%E2%82%B91%2C300%20-%2060%20mins).%20Can%20we%20schedule%20it%3F"
+                    target="_blank">
                     <div class="card-accent"></div>
                     <div class="card-content">
                         <span class="tag">Video · 60 Mins</span>
@@ -222,9 +189,11 @@
                         <span class="price">₹1,300</span>
                         <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
                     </div>
-                </div>
+                </a>
 
-                <div class="service-card fade-in" data-category="Coaching">
+                <a class="service-card fade-in" data-category="Coaching"
+                    href="https://wa.me/91XXXXXXXXXX?text=Hi%20Binita!%20I%27d%20like%20to%20book%20a%20Follow-up%20Call%20(%E2%82%B9800%20-%2030%20mins).%20When%20are%20you%20free%3F"
+                    target="_blank">
                     <div class="card-accent"></div>
                     <div class="card-content">
                         <span class="tag">Video · 30 Mins</span>
@@ -235,9 +204,11 @@
                         <span class="price">₹800</span>
                         <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
                     </div>
-                </div>
+                </a>
 
-                <div class="service-card fade-in" data-category="Yoga">
+                <a class="service-card fade-in" data-category="Yoga"
+                    href="https://wa.me/91XXXXXXXXXX?text=Hi%20Binita!%20I%27d%20like%20to%20join%20your%20Regular%20Yoga%20Sessions%20(%E2%82%B91%2C300).%20How%20do%20I%20get%20started%3F"
+                    target="_blank">
                     <div class="card-accent"></div>
                     <div class="card-content">
                         <span class="tag">Ongoing</span>
@@ -248,22 +219,19 @@
                         <span class="price">₹1,300</span>
                         <div class="arrow-icon"><i class="fa-solid fa-arrow-right"></i></div>
                     </div>
-                </div>
+                </a>
 
             </div>
         </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- 5. LIFESTYLE / PHILOSOPHY                  -->
-    <!-- ═══════════════════════════════════════════ -->
+    <!-- 5. LIFESTYLE / PHILOSOPHY -->
     <section class="lifestyle-section fade-in">
         <div class="container">
             <div class="section-header">
                 <p class="section-chip">Philosophy</p>
                 <h2>A Practice That Transforms</h2>
             </div>
-
             <div class="split-layout">
                 <div class="split-image parallax-img" data-speed="0.1">
                     <img src="assets/pose1.png" alt="Binita Yoga Pose">
@@ -276,7 +244,6 @@
                     </blockquote>
                 </div>
             </div>
-
             <div class="split-layout reverse">
                 <div class="split-image parallax-img" data-speed="0.15">
                     <img src="assets/pose2.png" alt="Binita Meditation">
@@ -292,9 +259,7 @@
         </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- 6. TESTIMONIALS CAROUSEL                   -->
-    <!-- ═══════════════════════════════════════════ -->
+    <!-- 6. TESTIMONIALS CAROUSEL -->
     <section class="testimonials-section fade-in">
         <div class="container">
             <div class="section-header">
@@ -302,7 +267,6 @@
                 <h2>Words From Students</h2>
                 <p class="section-sub">Real transformations from real people.</p>
             </div>
-
             <div class="carousel-wrapper">
                 <div class="carousel-track" id="carouselTrack">
                     <div class="testimonial-card">
@@ -331,18 +295,17 @@
                     </div>
                     <div class="testimonial-card">
                         <div class="stars">⭐⭐⭐⭐⭐</div>
-                        <p class="quote">"Her follow-up sessions are so refreshing. She genuinely tracks my progress
-                            and adapts the plan for me. Best investment in my well-being, ever."</p>
+                        <p class="quote">"Her follow-up sessions are so refreshing. She genuinely tracks my progress and
+                            adapts the plan for me. Best investment in my well-being, ever."</p>
                         <div class="reviewer">
                             <div class="reviewer-avatar">A</div>
                             <div>
                                 <p class="reviewer-name">Ananya K.</p>
-                                <p class="reviewer-role">Coaching & Yoga Client</p>
+                                <p class="reviewer-role">Coaching &amp; Yoga Client</p>
                             </div>
                         </div>
                     </div>
                 </div>
-                <!-- Dots -->
                 <div class="carousel-dots" id="carouselDots">
                     <button class="dot active" data-index="0"></button>
                     <button class="dot" data-index="1"></button>
@@ -352,19 +315,17 @@
         </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- 7. BOOKING CTA                             -->
-    <!-- ═══════════════════════════════════════════ -->
+    <!-- 7. BOOKING CTA -->
     <section class="cta-section fade-in">
         <div class="container">
             <div class="cta-card">
                 <div class="cta-bg-leaf">🌿</div>
-                <p class="section-chip" style="color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.2);">
-                    Ready to Begin?</p>
+                <p class="section-chip" style="color:rgba(255,255,255,0.7);border-color:rgba(255,255,255,0.2);">Ready to
+                    Begin?</p>
                 <h2>Your Journey Starts Today</h2>
                 <p>Take the first step towards a more balanced, empowered, and intentional life.</p>
-                <a href="https://wa.me/91XXXXXXXXXX?text=Hi Binita! I'd like to book a session." class="cta-btn"
-                    target="_blank">
+                <a href="https://wa.me/91XXXXXXXXXX?text=Hi%20Binita!%20I%27d%20like%20to%20book%20a%20session."
+                    class="cta-btn" target="_blank">
                     <i class="fa-brands fa-whatsapp"></i>
                     Book a Session on WhatsApp
                 </a>
@@ -372,9 +333,7 @@
         </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- 8. FOOTER                                  -->
-    <!-- ═══════════════════════════════════════════ -->
+    <!-- 8. FOOTER -->
     <footer class="footer">
         <div class="container">
             <div class="footer-inner">
@@ -389,14 +348,14 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>© 2025 Binita Yadav · Designed & built by <strong>Rupendra Bukke</strong></p>
+                <p>© 2025 Binita Yadav · Designed &amp; built by <strong>Rupendra Bukke</strong></p>
             </div>
         </div>
     </footer>
 
     <!-- WhatsApp Floating Button -->
-    <a href="https://wa.me/91XXXXXXXXXX?text=Hi Binita! I'd like to book a session." class="whatsapp-float"
-        target="_blank" title="Chat on WhatsApp">
+    <a href="https://wa.me/91XXXXXXXXXX?text=Hi%20Binita!%20I%27d%20like%20to%20book%20a%20session."
+        class="whatsapp-float" target="_blank" title="Chat on WhatsApp">
         <div class="wa-pulse"></div>
         <i class="fa-brands fa-whatsapp"></i>
     </a>
