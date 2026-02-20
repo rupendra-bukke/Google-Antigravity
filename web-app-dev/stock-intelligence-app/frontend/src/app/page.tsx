@@ -164,38 +164,50 @@ export default function Dashboard() {
                     <div className="h-px w-2 bg-brand-500/40 rounded-full" />
                     <div className="h-px w-16 bg-gradient-to-l from-transparent to-gray-700/60" />
                 </div>
+
+                {/* ── NEW Floating Refresh Button ── */}
+                <div className="absolute top-6 right-0 md:right-4">
+                    <button
+                        onClick={() => fetchData(selectedSymbol)}
+                        disabled={isLoading}
+                        className="group relative p-3.5 rounded-2xl 
+                                   bg-brand-500/10 border border-brand-500/20
+                                   hover:bg-brand-500/20 active:scale-95
+                                   transition-all duration-300 shadow-xl"
+                        title="Refresh Dashboard"
+                    >
+                        {/* Glow effect */}
+                        <div className="absolute inset-0 rounded-2xl bg-brand-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                        <div className="relative flex items-center justify-center">
+                            <svg
+                                className={`w-6 h-6 text-brand-400 ${isLoading ? "animate-spin" : "group-hover:rotate-180"} transition-transform duration-700`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2.5}
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                />
+                            </svg>
+                        </div>
+                    </button>
+                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-2 text-center opacity-40 group-hover:opacity-100 transition-opacity">
+                        REFRESH
+                    </p>
+                </div>
             </div>
 
             {/* ── Controls Row ── */}
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end">
                 <IndexSelector
                     selected={selectedSymbol}
                     onSelect={handleSymbolChange}
                     disabled={isLoading}
                 />
-                <button
-                    onClick={() => fetchData(selectedSymbol)}
-                    disabled={isLoading}
-                    className="p-2.5 rounded-xl text-sm
-                       bg-brand-500/10 text-brand-400 border border-brand-500/20
-                       hover:bg-brand-500/20 transition-all duration-200
-                       disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                    title="Refresh"
-                >
-                    <svg
-                        className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                    </svg>
-                </button>
             </div>
 
             {/* ── Error ── */}
