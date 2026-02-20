@@ -70,16 +70,24 @@ function CheckpointCard({ panel, index, isLatest }: { panel: Panel; index: numbe
     return (
         <div
             style={{
-                background: isPopulated
-                    ? "rgba(30, 41, 59, 0.4)"
-                    : "rgba(15, 23, 42, 0.2)",
+                background: !isPopulated
+                    ? "rgba(15, 23, 42, 0.2)"
+                    : panel.data!.scalp_signal.includes("BUY")
+                        ? "rgba(34, 197, 94, 0.12)"
+                        : panel.data!.scalp_signal.includes("SELL")
+                            ? "rgba(239, 68, 68, 0.12)"
+                            : "rgba(148, 163, 184, 0.12)",
                 backdropFilter: "blur(16px)",
                 WebkitBackdropFilter: "blur(16px)",
                 border: isLatest
                     ? "1px solid rgba(212, 175, 55, 0.4)"
-                    : isPopulated
-                        ? "1px solid rgba(255, 255, 255, 0.08)"
-                        : "1px dashed rgba(255, 255, 255, 0.05)",
+                    : !isPopulated
+                        ? "1px dashed rgba(255, 255, 255, 0.05)"
+                        : panel.data!.scalp_signal.includes("BUY")
+                            ? "1px solid rgba(34, 197, 94, 0.3)"
+                            : panel.data!.scalp_signal.includes("SELL")
+                                ? "1px solid rgba(239, 68, 68, 0.3)"
+                                : "1px solid rgba(148, 163, 184, 0.3)",
                 borderRadius: "16px",
                 padding: "1.2rem",
                 minWidth: "220px",
