@@ -26,22 +26,27 @@
     <!-- 1. HERO SECTION                            -->
     <!-- ═══════════════════════════════════════════ -->
     <section class="hero" id="hero">
-        <!-- Animated mesh background blobs -->
-        <div class="hero-blob blob-1"></div>
-        <div class="hero-blob blob-2"></div>
-        <div class="hero-blob blob-3"></div>
+        <!-- LEFT: Full-height photo panel -->
+        <div class="hero-photo-panel">
+            <img src="assets/hero.png" alt="Binita Yadav" class="hero-photo">
+            <!-- Subtle gradient overlay at bottom for blending -->
+            <div class="hero-photo-overlay"></div>
+        </div>
 
-        <!-- Floating decorative elements -->
-        <div class="hero-deco leaf-1">🌿</div>
-        <div class="hero-deco leaf-2">✨</div>
-        <div class="hero-deco leaf-3">🍃</div>
+        <!-- RIGHT: Content panel -->
+        <div class="hero-content-panel">
+            <!-- Floating blobs (right side only) -->
+            <div class="hero-blob blob-1"></div>
+            <div class="hero-blob blob-2"></div>
 
-        <div class="hero-inner">
-            <!-- Profile image with animated halo -->
-            <div class="profile-halo-wrap">
-                <div class="halo-ring ring-1"></div>
-                <div class="halo-ring ring-2"></div>
-                <img src="assets/profile.png" alt="Binita Yadav" class="profile-img">
+            <!-- Floating deco -->
+            <div class="hero-deco leaf-1">🌿</div>
+            <div class="hero-deco leaf-2">✨</div>
+
+            <!-- Small profile circle + verified badge -->
+            <div class="profile-mini-wrap">
+                <img src="assets/profile.png" alt="Binita Yadav" class="profile-mini">
+                <span class="verified-badge" title="Certified Coach">✓</span>
             </div>
 
             <!-- Name -->
@@ -74,9 +79,16 @@
                 </a>
             </div>
 
+            <!-- CTA Buttons -->
+            <div class="hero-cta-row">
+                <a href="#services" class="hero-cta-primary">
+                    Book a Session <i class="fa-solid fa-arrow-right"></i>
+                </a>
+                <a href="#services" class="hero-cta-secondary">View Services</a>
+            </div>
+
             <!-- Scroll indicator -->
             <div class="scroll-down">
-                <span>Scroll to explore</span>
                 <i class="fa-solid fa-chevron-down bounce"></i>
             </div>
         </div>
