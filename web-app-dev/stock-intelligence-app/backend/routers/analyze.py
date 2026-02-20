@@ -93,6 +93,7 @@ async def advanced_analyze(symbol: str = Query(default=None)):
         raise HTTPException(status_code=500, detail=f"Failed to fetch data: {exc}")
 
     now = datetime.now(timezone.utc)
+    is_open, mkt_msg = is_indian_market_open(now)
     result = run_advanced_analysis(frames, sym, now)
 
     # Convert option dict to Pydantic model if present
@@ -111,5 +112,7 @@ async def advanced_analyze(symbol: str = Query(default=None)):
         option_strike=option_model,
         execute=result["execute"],
         execute_reason=result["execute_reason"],
+        is_market_open=is_open,
+        market_message=mkt_msg,
         steps_detail=result["steps_detail"],
     )

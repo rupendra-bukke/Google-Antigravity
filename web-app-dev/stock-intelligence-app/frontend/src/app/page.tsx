@@ -8,6 +8,7 @@ import CandlestickChart from "./components/CandlestickChart";
 import IndicatorCard from "./components/IndicatorCard";
 import DecisionBadge from "./components/DecisionBadge";
 import AdvancedDecision from "./components/AdvancedDecision";
+import MarketStatusBanner from "./components/MarketStatusBanner";
 
 /* ── Types ── */
 
@@ -173,6 +174,12 @@ export default function Dashboard() {
                     </div>
                 </div>
             )}
+
+            {/* ── Market Status Banner ── */}
+            <MarketStatusBanner
+                isOpen={advancedData?.is_market_open ?? true}
+                message={advancedData?.market_message ?? ""}
+            />
 
             {/* ── Stock Header ── */}
             <StockHeader

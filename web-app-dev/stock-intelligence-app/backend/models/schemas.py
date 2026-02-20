@@ -79,4 +79,7 @@ class AdvancedAnalysis(BaseModel):
     execute: str               # Strong | Weak | NO TRADE
     execute_reason: str
 
+    is_market_open: bool       # True if between 9:15-15:30 IST Mon-Fri
+    market_message: str      # E.g., "Market is CLOSED"
+
     steps_detail: dict[str, Any]  # Full reasoning per step

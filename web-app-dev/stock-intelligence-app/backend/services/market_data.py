@@ -1,9 +1,8 @@
 """Market data service — multi-timeframe fetching + technical indicator calculations."""
 
-import yfinance as yf
-import pandas as pd
 import numpy as np
-from datetime import datetime, timezone
+import pytz
+from datetime import datetime, timezone, time
 
 
 # ── Data Fetching ──────────────────────────────────────────
@@ -158,6 +157,31 @@ def get_ohlc_series(df: pd.DataFrame) -> list[dict]:
 
 def get_latest_price(df: pd.DataFrame) -> float:
     return round(float(df["Close"].iloc[-1]), 2)
+
+
+def is_indian_market_open(dt: datetime) -> tuple[bool, str]:
+    """
+    Check if the Indian stock market is currently open.
+    Hours: 09:15 to 15:30 IST, Mon-Fri.
+    """
+    ist = pytz.timezone("Asia/Kolkata")
+    now_ist = dt.astimezone(ist)
+    
+    # Weekday check (Mon=0, Sun=6)
+    if now_ist.weekday() >= 5:
+        return False, "Market is CLOSED (Weekend)"
+    
+    # Time check
+    market_start = time(9, 15)
+    market_end = time(15, 30)
+    current_time = now_ist.time()
+    
+    if current_time < market_start:
+        return False, f"Market Opens at 09:15 AM IST (Current: {current_time.strftime('%H:%M')})"
+    if current_time >= market_end:
+        return False, f"Market Closed at 03:30 PM IST (Current: {current_time.strftime('%H:%M')})"
+    
+    return True, "Market is OPEN"
 
 
 # ── Swing / Structure Detection ────────────────────────────
