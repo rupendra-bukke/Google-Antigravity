@@ -141,7 +141,7 @@ export default function Sidebar() {
                     <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-gray-800/20 to-gray-800/40 text-center border border-gray-800/30">
                         <p className="text-[9px] text-gray-600 font-semibold uppercase tracking-widest">Designed by</p>
                         <p className="text-[11px] font-bold bg-gradient-to-r from-brand-400 to-emerald-400 bg-clip-text text-transparent mt-0.5">
-                            Rupendra Bukke
+                            Trade-Craft
                         </p>
                     </div>
                 </div>
