@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+.next/
+out/
+
+# env
+.env
+.env.local
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/

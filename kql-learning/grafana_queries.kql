@@ -1,0 +1,42 @@
+// Basic query to get recent logs
+// Replace 'AppLogs' with your actual table name (e.g., specific service logs table)
+AppLogs
+| where TimeGenerated > ago(24h)
+| take 100
+
+// Filtering by Severity Level (e.g., Errors)
+// Useful for an "Error" panel in Grafana
+AppLogs
+| where TimeGenerated > ago(24h)
+| where Level == "Error" or Level == "Critical"
+| project TimeGenerated, Message, Component, Level
+| order by TimeGenerated desc
+
+// Time Series / Graph Query (Count of logs over time)
+// Suitable for a "Logs per Hour" graph
+AppLogs
+| where TimeGenerated > ago(24h)
+| summarize LogCount = count() by bin(TimeGenerated, 1h), Level
+| render timechart
+
+// Searching for specific text in messages
+AppLogs
+| where TimeGenerated > ago(6h)
+| where Message has "connection timeout" or Message has "failed"
+| project TimeGenerated, Message
+
+// Top 10 Sources of Errors
+AppLogs
+| where TimeGenerated > ago(24h)
+| where Level == "Error"
+| summarize ErrorCount = count() by Source
+| top 10 by ErrorCount
+
+// Parsing JSON logs (if Message field is JSON)
+// Example: Extract 'RequestDuration' from a JSON message
+AppLogs
+| where TimeGenerated > ago(1h)
+| extend LogData = parse_json(Message)
+| extend Duration = toint(LogData.RequestDuration)
+| where Duration > 500 // Filter slow requests > 500ms
+| project TimeGenerated, Duration, Message
