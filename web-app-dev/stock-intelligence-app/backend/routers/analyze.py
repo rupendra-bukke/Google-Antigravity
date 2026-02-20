@@ -34,13 +34,64 @@ router = APIRouter(prefix="/api/v1", tags=["analyze"])
 # ── Basic Analyze Endpoint (preserved) ─────────────────────
 
 
+def calculate_indicator_signals(price, indicators):
+    """Compute BUY/SELL/NEUTRAL signals based on indicator rules."""
+    # EMA 20 Signal
+    ema_sig = "NEUTRAL"
+    if price > indicators["ema20"] * 1.0005:  # Buffer
+        ema_sig = "BUY"
+    elif price < indicators["ema20"] * 0.9995:
+        ema_sig = "SELL"
+
+    # RSI Signal
+    rsi_sig = "NEUTRAL"
+    if indicators["rsi14"] < 35:
+        rsi_sig = "BUY"
+    elif indicators["rsi14"] > 65:
+        rsi_sig = "SELL"
+
+    # VWAP Signal
+    vwap_sig = "NEUTRAL"
+    if price > indicators["vwap"] * 1.0002:
+        vwap_sig = "BUY"
+    elif price < indicators["vwap"] * 0.9998:
+        vwap_sig = "SELL"
+
+    # Bollinger Bands Signal
+    bb_sig = "NEUTRAL"
+    if price < indicators["bollinger"][2]:  # Lower band
+        bb_sig = "BUY"
+    elif price > indicators["bollinger"][0]:  # Upper band
+        bb_sig = "SELL"
+
+    # MACD Signal
+    macd_sig = "NEUTRAL"
+    if indicators["macd"][0] > indicators["macd"][1]:  # MACD Line > Signal Line
+        macd_sig = "BUY"
+    elif indicators["macd"][0] < indicators["macd"][1]:
+        macd_sig = "SELL"
+
+    return {
+        "ema20": ema_sig,
+        "rsi14": rsi_sig,
+        "vwap": vwap_sig,
+        "bollinger": bb_sig,
+        "macd": macd_sig
+    }
+
+
 @router.get("/analyze", response_model=AnalyzeResponse)
 async def analyze(symbol: str = Query(default=None)):
-    """Basic single-timeframe analysis with indicators + decision."""
+    """Analyze endpoint using 3m timeframe for core indicators and signals."""
     sym = symbol or settings.default_symbol
 
     try:
-        df = await fetch_intraday(sym)
+        # Fetch multi-timeframe to get 3m data (resampled from 1m)
+        frames = await fetch_multi_timeframe(sym)
+        df = frames.get("3m")
+        if df is None or df.empty:
+            # Fallback to intraday if 3m fails
+            df = await fetch_intraday(sym, interval="1m")
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
@@ -54,11 +105,23 @@ async def analyze(symbol: str = Query(default=None)):
     macd_line, signal_line, histogram = calc_macd(df)
     candles = get_ohlc_series(df)
 
+    indicator_vals = {
+        "ema20": ema20,
+        "rsi14": rsi,
+        "vwap": vwap,
+        "bollinger": (bb_upper, bb_middle, bb_lower),
+        "macd": (macd_line, signal_line, histogram)
+    }
+    
+    signals = calculate_indicator_signals(price, indicator_vals)
+
     decision, reasoning = make_decision(
         price, ema20, rsi, vwap,
         bollinger=(bb_upper, bb_middle, bb_lower),
         macd=(macd_line, signal_line, histogram),
     )
+
+    from models.schemas import IndicatorSignals  # Import inside to avoid circular deps if any
 
     return AnalyzeResponse(
         symbol=sym,
@@ -67,6 +130,7 @@ async def analyze(symbol: str = Query(default=None)):
             ema20=ema20, rsi14=rsi, vwap=vwap,
             bollinger=BollingerData(upper=bb_upper, middle=bb_middle, lower=bb_lower),
             macd=MacdData(macd_line=macd_line, signal_line=signal_line, histogram=histogram),
+            signals=IndicatorSignals(**signals)
         ),
         decision=decision,
         reasoning=reasoning,

@@ -31,6 +31,13 @@ interface IndicatorData {
     vwap: number;
     bollinger: BollingerData;
     macd: MacdData;
+    signals: {
+        ema20: string;
+        rsi14: string;
+        vwap: string;
+        bollinger: string;
+        macd: string;
+    };
 }
 
 interface OhlcBar {
@@ -264,8 +271,12 @@ export default function Dashboard() {
                         display: "flex", alignItems: "center", gap: "0.4rem",
                     }}>
                         <span style={{ fontSize: "0.65rem", color: "#6366f1", fontWeight: 700 }}>EMA20</span>
-                        <span style={{ fontSize: "0.72rem", color: "#e2e8f0", fontWeight: 600 }}>
-                            {data ? data.indicators.ema20.toLocaleString("en-IN", { maximumFractionDigits: 2 }) : "—"}
+                        <span style={{
+                            fontSize: "0.72rem",
+                            color: data?.indicators.signals.ema20 === "BUY" ? "#22c55e" : data?.indicators.signals.ema20 === "SELL" ? "#ef4444" : "#94a3b8",
+                            fontWeight: 800
+                        }}>
+                            {data ? data.indicators.signals.ema20 : "—"}
                         </span>
                     </div>
                     {/* RSI */}
@@ -277,8 +288,12 @@ export default function Dashboard() {
                         display: "flex", alignItems: "center", gap: "0.4rem",
                     }}>
                         <span style={{ fontSize: "0.65rem", color: "#10b981", fontWeight: 700 }}>RSI(14)</span>
-                        <span style={{ fontSize: "0.72rem", color: "#e2e8f0", fontWeight: 600 }}>
-                            {data ? data.indicators.rsi14.toFixed(2) : "—"}
+                        <span style={{
+                            fontSize: "0.72rem",
+                            color: data?.indicators.signals.rsi14 === "BUY" ? "#22c55e" : data?.indicators.signals.rsi14 === "SELL" ? "#ef4444" : "#94a3b8",
+                            fontWeight: 800
+                        }}>
+                            {data ? data.indicators.signals.rsi14 : "—"}
                         </span>
                     </div>
                     {/* VWAP */}
@@ -290,8 +305,12 @@ export default function Dashboard() {
                         display: "flex", alignItems: "center", gap: "0.4rem",
                     }}>
                         <span style={{ fontSize: "0.65rem", color: "#06b6d4", fontWeight: 700 }}>VWAP</span>
-                        <span style={{ fontSize: "0.72rem", color: "#e2e8f0", fontWeight: 600 }}>
-                            {data ? data.indicators.vwap.toLocaleString("en-IN", { maximumFractionDigits: 2 }) : "—"}
+                        <span style={{
+                            fontSize: "0.72rem",
+                            color: data?.indicators.signals.vwap === "BUY" ? "#22c55e" : data?.indicators.signals.vwap === "SELL" ? "#ef4444" : "#94a3b8",
+                            fontWeight: 800
+                        }}>
+                            {data ? data.indicators.signals.vwap : "—"}
                         </span>
                     </div>
                     {/* BB */}
@@ -303,10 +322,12 @@ export default function Dashboard() {
                         display: "flex", alignItems: "center", gap: "0.4rem",
                     }}>
                         <span style={{ fontSize: "0.65rem", color: "#f59e0b", fontWeight: 700 }}>BB</span>
-                        <span style={{ fontSize: "0.72rem", color: "#e2e8f0", fontWeight: 600 }}>
-                            {data
-                                ? `${data.indicators.bollinger.lower.toLocaleString("en-IN")} – ${data.indicators.bollinger.upper.toLocaleString("en-IN")}`
-                                : "—"}
+                        <span style={{
+                            fontSize: "0.72rem",
+                            color: data?.indicators.signals.bollinger === "BUY" ? "#22c55e" : data?.indicators.signals.bollinger === "SELL" ? "#ef4444" : "#94a3b8",
+                            fontWeight: 800
+                        }}>
+                            {data ? data.indicators.signals.bollinger : "—"}
                         </span>
                     </div>
                     {/* MACD */}
@@ -318,20 +339,13 @@ export default function Dashboard() {
                         display: "flex", alignItems: "center", gap: "0.4rem",
                     }}>
                         <span style={{ fontSize: "0.65rem", color: "#8b5cf6", fontWeight: 700 }}>MACD</span>
-                        <span style={{ fontSize: "0.72rem", color: "#e2e8f0", fontWeight: 600 }}>
-                            {data
-                                ? `${data.indicators.macd.macd_line} / ${data.indicators.macd.signal_line}`
-                                : "—"}
+                        <span style={{
+                            fontSize: "0.72rem",
+                            color: data?.indicators.signals.macd === "BUY" ? "#22c55e" : data?.indicators.signals.macd === "SELL" ? "#ef4444" : "#94a3b8",
+                            fontWeight: 800
+                        }}>
+                            {data ? data.indicators.signals.macd : "—"}
                         </span>
-                        {data && (
-                            <span style={{
-                                fontSize: "0.62rem",
-                                color: data.indicators.macd.histogram > 0 ? "#22c55e" : "#ef4444",
-                                fontWeight: 600,
-                            }}>
-                                H:{data.indicators.macd.histogram}
-                            </span>
-                        )}
                     </div>
                 </div>
             </div>

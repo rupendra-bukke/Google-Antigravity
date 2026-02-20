@@ -28,12 +28,21 @@ class OhlcBar(BaseModel):
     close: float
 
 
+class IndicatorSignals(BaseModel):
+    ema20: str     # "BUY" | "SELL" | "NEUTRAL"
+    rsi14: str
+    vwap: str
+    bollinger: str
+    macd: str
+
+
 class IndicatorData(BaseModel):
     ema20: float
     rsi14: float
     vwap: float
     bollinger: BollingerData
     macd: MacdData
+    signals: IndicatorSignals
 
 
 class AnalyzeResponse(BaseModel):
