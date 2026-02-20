@@ -136,7 +136,7 @@ a {
 
 /* LEFT: Sticky photo panel */
 .hero-photo-panel {
-    flex: 0 0 48%;
+    flex: 0 0 40%;
     position: sticky;
     top: 0;
     height: 100vh;
@@ -175,22 +175,33 @@ a {
     background: var(--bg);
 }
 
-/* Brand logo — top-right of hero */
+/* Brand logo — top nav bar inside content panel */
 .brand-logo {
     position: absolute;
-    top: 1.5rem;
-    right: 1.5rem;
-    height: 64px;
-    width: auto;
-    object-fit: contain;
-    z-index: 2;
-    opacity: 0.88;
-    transition: opacity 0.3s, transform 0.3s;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    padding: 1.2rem 2rem;
+    display: flex;
+    align-items: center;
+    z-index: 10;
+    background: linear-gradient(to bottom, rgba(253, 251, 247, 0.95) 60%, transparent);
+    backdrop-filter: blur(4px);
 }
 
-.brand-logo:hover {
-    opacity: 1;
-    transform: scale(1.06);
+.brand-logo img,
+.brand-logo-img {
+    height: 90px;
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 3px 10px rgba(30, 57, 50, 0.12));
+    transition: transform 0.3s;
+}
+
+.brand-logo img:hover,
+.brand-logo-img:hover {
+    transform: scale(1.04);
 }
 
 /* Blobs */
