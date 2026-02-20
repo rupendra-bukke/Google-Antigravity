@@ -9,6 +9,7 @@ import IndicatorCard from "./components/IndicatorCard";
 import DecisionBadge from "./components/DecisionBadge";
 import AdvancedDecision from "./components/AdvancedDecision";
 import MarketStatusBanner from "./components/MarketStatusBanner";
+import CheckpointBoard from "./components/CheckpointBoard";
 
 /* ── Types ── */
 
@@ -321,6 +322,11 @@ export default function Dashboard() {
             />
 
 
+
+            {/* ── Checkpoint Board ── */}
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.5rem" }}>
+                <CheckpointBoard symbol={selectedSymbol} />
+            </div>
 
             {/* ── Footer ── */}
             <div className="text-center pt-2">
