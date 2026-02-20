@@ -22,6 +22,7 @@ from services.market_data import (
     calc_macd,
     get_ohlc_series,
     get_latest_price,
+    is_indian_market_open,
 )
 from services.decision import make_decision
 from services.decision_v2 import run_advanced_analysis
