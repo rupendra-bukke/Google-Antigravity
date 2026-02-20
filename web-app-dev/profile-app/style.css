@@ -175,6 +175,24 @@ a {
     background: var(--bg);
 }
 
+/* Brand logo — top-right of hero */
+.brand-logo {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    height: 64px;
+    width: auto;
+    object-fit: contain;
+    z-index: 2;
+    opacity: 0.88;
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.brand-logo:hover {
+    opacity: 1;
+    transform: scale(1.06);
+}
+
 /* Blobs */
 .hero-blob {
     position: absolute;
