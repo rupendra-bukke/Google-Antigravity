@@ -123,45 +123,80 @@ export default function Dashboard() {
                 />
             </div>
 
-            {/* ── Header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-xl font-black text-white tracking-tight italic">Trade-Craft Dashboard</h1>
-                    <p className="text-[10px] text-gray-500 mt-1 font-medium tracking-wide">
-                        Real-time intraday intelligence · Built for precision
-                    </p>
+            {/* ── Hero Header ── */}
+            <div className="text-center py-6 relative">
+                {/* Gradient glow behind title */}
+                <div className="absolute inset-x-0 top-0 flex justify-center pointer-events-none">
+                    <div className="w-96 h-24 bg-gradient-to-b from-brand-500/10 via-emerald-500/5 to-transparent blur-2xl rounded-full" />
                 </div>
-                <div className="flex items-center gap-2">
-                    <IndexSelector
-                        selected={selectedSymbol}
-                        onSelect={handleSymbolChange}
-                        disabled={isLoading}
-                    />
-                    <button
-                        onClick={() => fetchData(selectedSymbol)}
-                        disabled={isLoading}
-                        className="p-2.5 rounded-xl text-sm
+
+                {/* Brand chip */}
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-4 rounded-full bg-brand-500/10 border border-brand-500/20 text-[10px] font-black text-brand-400 uppercase tracking-[0.2em]">
+                    <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                    </span>
+                    Live Intelligence
+                </div>
+
+                {/* Main title with gradient */}
+                <h1
+                    className="text-4xl md:text-5xl font-black tracking-tight leading-none"
+                    style={{
+                        background: "linear-gradient(135deg, #fff 0%, #a5b4fc 40%, #34d399 80%, #6ee7b7 100%)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        backgroundClip: "text",
+                        letterSpacing: "-0.03em"
+                    }}
+                >
+                    Trade-Craft
+                </h1>
+
+                {/* Subtitle */}
+                <p className="text-[11px] text-gray-500 mt-2 font-medium tracking-[0.15em] uppercase">
+                    Real-time intraday intelligence
+                </p>
+
+                {/* Divider line */}
+                <div className="flex items-center justify-center mt-5 gap-3">
+                    <div className="h-px w-16 bg-gradient-to-r from-transparent to-gray-700/60" />
+                    <div className="h-px w-2 bg-brand-500/40 rounded-full" />
+                    <div className="h-px w-16 bg-gradient-to-l from-transparent to-gray-700/60" />
+                </div>
+            </div>
+
+            {/* ── Controls Row ── */}
+            <div className="flex items-center justify-end gap-2">
+                <IndexSelector
+                    selected={selectedSymbol}
+                    onSelect={handleSymbolChange}
+                    disabled={isLoading}
+                />
+                <button
+                    onClick={() => fetchData(selectedSymbol)}
+                    disabled={isLoading}
+                    className="p-2.5 rounded-xl text-sm
                        bg-brand-500/10 text-brand-400 border border-brand-500/20
                        hover:bg-brand-500/20 transition-all duration-200
                        disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                        title="Refresh"
+                    title="Refresh"
+                >
+                    <svg
+                        className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                     >
-                        <svg
-                            className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                        </svg>
-                    </button>
-                </div>
-            </div >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                    </svg>
+                </button>
+            </div>
 
             {/* ── Error ── */}
             {
