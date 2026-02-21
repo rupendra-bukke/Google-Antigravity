@@ -17,38 +17,38 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── PREMIUM UTILITIES ── */
-
-@utility magazine-shadow {
-  box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.08), 0 30px 60px -30px rgba(229, 57, 53, 0.1);
-}
+/* ── DESIGNER UTILITIES ── */
 
 @utility red-glass {
-  background-color: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(30px) saturate(180%);
+  background-color: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(25px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.08);
 }
 
-@utility glass-effect {
-  background-color: rgba(255, 253, 253, 0.7);
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(229, 57, 53, 0.08);
-}
-
-@utility section-spacing {
-  @apply py-24 md:py-40 px-6 md:px-12;
+@utility designer-shadow {
+  box-shadow: 0 60px 120px -20px rgba(0, 0, 0, 0.05), 0 30px 60px -30px rgba(229, 57, 53, 0.08);
 }
 
 @utility nav-link {
-  @apply text-[11px] font-black uppercase tracking-[0.3em] text-[#2d1a1a]/60 hover:text-brand-red transition-all;
+  @apply text-[11px] font-black uppercase tracking-[0.3em] text-[#1a1515]/50 hover:text-brand-red transition-all;
 }
 
 /* ── ANIMATIONS ── */
 
-@keyframes slide-reveal {
+@keyframes slow-zoom {
+  0% {
+    transform: scale(1);
+  }
+
+  100% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes reveal-up {
   from {
-    transform: translateY(100%);
+    transform: translateY(40px);
     opacity: 0;
   }
 
@@ -58,10 +58,19 @@ body {
   }
 }
 
-.animate-reveal {
-  animation: slide-reveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.animate-zoom {
+  animation: slow-zoom 20s ease-in-out infinite alternate;
 }
 
-.logo-glow {
-  filter: drop-shadow(0 0 15px rgba(229, 57, 53, 0.2));
+.animate-reveal {
+  animation: reveal-up 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ── TICKET FONT (For that journal feel) ── */
+.text-label {
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.5em;
+  color: rgba(26, 21, 21, 0.4);
 }
