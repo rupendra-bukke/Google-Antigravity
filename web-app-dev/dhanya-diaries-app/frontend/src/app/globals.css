@@ -33,7 +33,10 @@ body {
 }
 
 @utility designer-card-hover {
-  @apply hover:-translate-y-2 hover:shadow-[0_40px_80px_-20px_rgba(211, 47, 47, 0.1)];
+  &:hover {
+    transform: translateY(-0.5rem);
+    box-shadow: 0 40px 80px -20px rgba(211, 47, 47, 0.1);
+  }
 }
 
 /* ── ANIMATIONS ── */
