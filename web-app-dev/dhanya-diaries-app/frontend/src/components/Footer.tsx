@@ -10,11 +10,12 @@ export default function Footer() {
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-16">
                     {/* Brand Info */}
                     <div className="lg:col-span-2 space-y-8">
-                        <Link href="/" className="flex items-center gap-4">
-                            <img src="/DD-Logo.png" alt="Logo" className="w-12 h-12 grayscale opacity-40 hover:grayscale-0 transition-all cursor-pointer" />
-                            <div className="h-8">
-                                <img src="/DD-Title.png" alt="Dhanya Diaries" className="h-full w-auto opacity-30" />
-                            </div>
+                        <Link href="/" className="block">
+                            <img
+                                src="/DD-Title.png"
+                                alt="Dhanya Diaries"
+                                className="w-full max-w-[280px] h-auto opacity-40 hover:opacity-60 transition-all duration-700"
+                            />
                         </Link>
                         <p className="text-brand-text/50 font-medium leading-relaxed max-w-sm italic">
                             A cozy corner of the internet dedicated to home, heart, and the simple joys of lifestyle creation. Joining you in every season of life.
@@ -38,7 +39,7 @@ export default function Footer() {
                         <nav className="flex flex-col gap-4 text-sm font-medium text-brand-text/60">
                             <a href="https://www.youtube.com/channel/UC_UoV11Yx2u66CaBsvHPJiw" target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">YouTube</a>
                             <a href="https://www.instagram.com/dhanya.diaries" target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">Instagram</a>
-                            <a href="#" className="hover:text-brand-red transition-colors">Facebook</a>
+                            <a href="https://facebook.com/Dhanya.Diaries" target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">Facebook</a>
                             <a href="#" className="hover:text-brand-red transition-colors">WhatsApp Community</a>
                         </nav>
                     </div>
