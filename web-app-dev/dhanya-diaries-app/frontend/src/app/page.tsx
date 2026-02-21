@@ -29,15 +29,14 @@ export default function Home() {
         <div className="max-w-4xl mx-auto space-y-8 animate-reveal">
           <div className="flex flex-col items-center gap-6">
             <span className="text-[10px] font-black uppercase tracking-[0.5em] text-brand-red">Curating the Home</span>
-            <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-x-12">
-              <h1 className="text-[18vw] lg:text-[14rem] leading-[1] text-center scale-110 md:scale-100 py-10">
-                <span className="dhanya-style block md:inline-block">Dhanya</span>
-                <span className="diaries-style block md:inline-block md:ml-8">Diaries</span>
-              </h1>
+
+            <div className="flex flex-col items-center">
+              <img
+                src="/DD-Title.png"
+                alt="Dhanya Diaries"
+                className="w-full max-w-[900px] h-auto animate-reveal drop-shadow-2xl"
+              />
             </div>
-            <p className="telugu-signature text-4xl md:text-6xl mt-4">
-              ఇంటి ఆత్మీయత...
-            </p>
           </div>
 
           <p className="text-lg md:text-xl text-gray-500 max-w-xl mx-auto font-medium leading-relaxed">
@@ -100,12 +99,15 @@ export default function Home() {
       {/* ── SECTION 3: REFINED FOOTER ── */}
       <footer className="py-40 bg-brand-charcoal text-white text-center px-6">
         <div className="max-w-4xl mx-auto space-y-12">
-          <img src="/DD-Logo.png" className="w-24 h-24 mx-auto opacity-40 grayscale invert" />
+          <img src="/DD-Logo.png" className="w-20 h-20 mx-auto opacity-20 grayscale invert" />
 
-          <h2 className="text-6xl md:text-8xl flex flex-col md:flex-row gap-4 items-center justify-center py-10">
-            <span className="dhanya-style">Dhanya</span>
-            <span className="diaries-style">diaries</span>
-          </h2>
+          <div className="flex justify-center py-10">
+            <img
+              src="/DD-Title.png"
+              alt="Dhanya Diaries"
+              className="w-full max-w-[600px] h-auto opacity-80 invert brightness-200"
+            />
+          </div>
 
           <h3 className="text-4xl md:text-6xl font-serif italic text-white/10 tracking-tighter">ఇంకా ఎంతో ఉంది...</h3>
           <div className="h-[1px] w-20 bg-brand-red/30 mx-auto" />

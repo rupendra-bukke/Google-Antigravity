@@ -20,15 +20,15 @@ export default function Header() {
         <header className="fixed top-0 inset-x-0 z-50 subtle-glass h-20 md:h-24 flex items-center px-6 md:px-12">
             <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
 
-                {/* BRANDING: Simple & High-Contrast */}
+                {/* BRANDING: Logo + PNG Title */}
                 <div className="flex items-center gap-4 cursor-pointer group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
                     <img src="/DD-Logo.png" alt="Logo" className="w-10 h-10 md:w-14 md:h-14 object-contain transition-transform group-hover:scale-110" />
-                    <div className="flex flex-col">
-                        <h1 className="text-xl md:text-2xl leading-none flex gap-1">
-                            <span className="dhanya-style">Dhanya</span>
-                            <span className="diaries-style">diaries</span>
-                        </h1>
-                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400 mt-1">Lifestyle Studio</span>
+                    <div className="h-8 md:h-12 overflow-hidden">
+                        <img
+                            src="/DD-Title.png"
+                            alt="Dhanya Diaries"
+                            className="h-full w-auto object-contain brightness-110"
+                        />
                     </div>
                 </div>
 
