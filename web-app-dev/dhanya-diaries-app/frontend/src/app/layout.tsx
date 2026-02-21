@@ -27,7 +27,7 @@ export default function RootLayout({
       <body className={`${playfair.variable} ${outfit.variable} font-sans antialiased`}>
         {/* -- Floating Header -- */}
         <header className="fixed top-0 inset-x-0 z-50 py-4 px-6 md:px-12">
-          <div className="max-w-7xl mx-auto flex items-center justify-between glass-card rounded-2xl py-3 px-6">
+          <div className="max-w-7xl mx-auto flex items-center justify-between glass-nav rounded-2xl py-3 px-6">
             <div className="flex items-center gap-3">
               <img src="/DD-Logo.png" alt="Logo" className="w-10 h-10 object-contain" />
               <span className="font-serif text-xl font-bold tracking-tight text-brand-primary">Dhanya.diaries</span>

@@ -1,58 +1,57 @@
 @import "tailwindcss";
 
-:root {
-  --background: #fffdf5;
-  --foreground: #2d2d2d;
-  --primary: #e2725b; /* Terracotta / Warm Red */
-  --secondary: #b4c3a2; /* Sage Green */
-  --accent: #ffb74d; /* Soft Flame Orange */
-  --card: #ffffff;
-}
-
 @theme {
   --font-serif: "Playfair Display", serif;
   --font-sans: "Outfit", sans-serif;
-  --color-brand-primary: var(--primary);
-  --color-brand-secondary: var(--secondary);
-  --color-brand-accent: var(--accent);
+
+  /* Vibrant Logo-Matching Palette */
+  --color-brand-primary: #e53935;
+  /* Warm Vibrant Red (Logo House) */
+  --color-brand-secondary: #ffb300;
+  /* Flame Gold (Logo Pot/Flame) */
+  --color-brand-accent: #fff5f5;
+  /* Soft Blush Background */
+
+  --background: #fffdfd;
+  --foreground: #2d1a1a;
+  /* Warm Dark Charcoal */
 }
 
+/* Base Styles */
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: #fffdfd;
+  color: #2d1a1a;
   font-family: var(--font-sans);
-  overflow-x: hidden;
 }
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3 {
   font-family: var(--font-serif);
+  letter-spacing: -0.02em;
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px 0 rgba(180, 195, 162, 0.1);
-}
-
-.nav-link {
+/* Custom Editorial Utilities */
+@utility editorial-card {
   position: relative;
-  transition: all 0.3s ease;
+  overflow: hidden;
+  transition: all 700ms cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 2.5rem;
+  background-color: white;
+  border: 1px solid rgba(229, 57, 53, 0.05);
+  /* Soft red border */
+
+  &:hover {
+    transform: translateY(-0.5rem);
+    box-shadow: 0 30px 60px -15px rgba(229, 57, 53, 0.15);
+    /* Red tinted shadow */
+  }
 }
 
-.nav-link::after {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 2px;
-  bottom: -4px;
-  left: 0;
-  background-color: var(--primary);
-  transition: width 0.3s ease;
-}
-
-.nav-link:hover::after {
-  width: 100%;
+@utility glass-nav {
+  background-color: rgba(255, 253, 253, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(229, 57, 53, 0.1);
 }
 
 @keyframes fade-up {
@@ -60,6 +59,7 @@ h1, h2, h3, h4 {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
