@@ -58,10 +58,21 @@ export default function Header() {
                 </nav>
 
                 {/* Action Group: Matching Pill Search */}
-                <div className="flex items-center gap-6">
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        const query = (e.currentTarget.elements.namedItem('search') as HTMLInputElement).value;
+                        if (query) {
+                            alert(`Searching for "${query}"... In a real app, this would filter recipes or vlogs!`);
+                            e.currentTarget.reset();
+                        }
+                    }}
+                    className="flex items-center gap-6"
+                >
                     <div className="hidden md:flex items-center bg-white/60 px-6 py-4 rounded-full border border-brand-peach focus-within:border-brand-red/30 focus-within:shadow-xl focus-within:shadow-brand-red/5 transition-all duration-500 backdrop-blur-sm">
                         <span className="text-sm mr-3 opacity-30">🔍</span>
                         <input
+                            name="search"
                             type="text"
                             placeholder="SEARCH RECIPES..."
                             className="bg-transparent border-none outline-none text-[11px] font-black uppercase tracking-[0.2em] w-32 focus:w-48 transition-all text-brand-text placeholder:text-brand-text/30"
@@ -69,12 +80,13 @@ export default function Header() {
                     </div>
 
                     <button
+                        type="button"
                         className="lg:hidden text-2xl"
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
                     >
                         {isMenuOpen ? "✕" : "☰"}
                     </button>
-                </div>
+                </form>
             </div>
 
             {/* Mobile Menu: High-End Studio Layout */}

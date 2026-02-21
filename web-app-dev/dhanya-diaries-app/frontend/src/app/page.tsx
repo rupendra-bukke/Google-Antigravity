@@ -22,6 +22,7 @@ export default function Home() {
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [stats, setStats] = useState<ChannelStats | null>(null);
   const [currentQuote, setCurrentQuote] = useState(0);
+  const [status, setStatus] = useState<'idle' | 'signed-up'>('idle');
 
   useEffect(() => {
     setIsLoaded(true);
@@ -169,27 +170,48 @@ export default function Home() {
         <div className="absolute bottom-20 right-10 text-6xl opacity-10 -rotate-12">🍂</div>
       </section>
 
-      {/* ── EMAIL CTA ── */}
-      <section className="section-spacing bg-[#fdfaf5]">
-        <div className="max-w-3xl mx-auto px-6 text-center soft-card !bg-brand-peach/40 border-none space-y-10">
-          <div className="space-y-4">
-            <h3 className="text-4xl md:text-5xl font-serif">A little love in your inbox.</h3>
-            <p className="text-brand-text/60 max-w-md mx-auto">Join my email list for exclusive recipes, checklists, and a little bit of daily warmth.</p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-            <input
-              type="email"
-              placeholder="Your email address"
-              className="flex-1 bg-white px-8 py-5 rounded-2xl outline-none focus:ring-2 ring-brand-red/20 text-sm font-medium"
-            />
-            <button
-              onClick={() => alert("Welcome to the family! You'll receive a little update from me soon.")}
-              className="bg-brand-text text-white px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-red transition-all shadow-xl"
-            >
-              Sign Up
-            </button>
-          </div>
-          <p className="text-[9px] font-bold text-brand-text/20 uppercase tracking-[0.4em]">No spam, just warmth.</p>
+      {/* ── EMAIL CTA: INTERACTIVE ── */}
+      <section className="section-spacing bg-brand-red/[0.02]">
+        <div className="max-w-3xl mx-auto px-6 text-center soft-card !bg-white border-none space-y-10 group relative overflow-hidden shadow-2xl">
+          {/* Background Decoration */}
+          <div className="absolute -top-10 -left-10 w-40 h-40 bg-brand-red/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000" />
+
+          {status !== 'signed-up' ? (
+            <>
+              <div className="space-y-4 relative z-10">
+                <h3 className="text-4xl md:text-5xl font-serif">A little love in your inbox.</h3>
+                <p className="text-brand-text/60 max-w-md mx-auto">Join my email list for exclusive recipes, checklists, and a little bit of daily warmth.</p>
+              </div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setStatus('signed-up');
+                }}
+                className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto relative z-10"
+              >
+                <input
+                  type="email"
+                  required
+                  placeholder="Your email address"
+                  className="flex-1 bg-brand-red/[0.03] px-8 py-5 rounded-2xl outline-none focus:ring-2 ring-brand-red/20 text-sm font-medium"
+                />
+                <button
+                  type="submit"
+                  className="bg-brand-text text-white px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-red transition-all shadow-xl active:scale-95"
+                >
+                  Sign Up
+                </button>
+              </form>
+            </>
+          ) : (
+            <div className="py-10 space-y-6 animate-reveal relative z-10">
+              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 scale-110">✓</div>
+              <h3 className="text-4xl font-serif">You're in the family!</h3>
+              <p className="text-brand-text/60 italic">Check your inbox soon for some warm surprises. 🌸</p>
+              <button onClick={() => setStatus('idle')} className="text-[10px] font-black uppercase tracking-widest text-brand-red/40 hover:text-brand-red">Not you? Reset</button>
+            </div>
+          )}
+          <p className="text-[9px] font-bold text-brand-text/20 uppercase tracking-[0.4em] relative z-10">Safe and warm • Verified by Dhanya</p>
         </div>
       </section>
 
