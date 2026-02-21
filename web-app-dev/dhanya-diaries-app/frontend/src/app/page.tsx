@@ -45,14 +45,18 @@ export default function Home() {
     <div className={`transition-opacity duration-1000 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
 
       {/* ── HERO SECTION: WARM GREETING ── */}
-      <section className="relative min-h-screen flex items-center pt-32 pb-20 px-6 md:px-12 bg-brand-peach/30">
+      <section className="relative min-h-screen flex items-center pt-32 pb-20 px-6 md:px-12 bg-brand-red/[0.03]">
         <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-12 items-center">
 
           <div className="space-y-10 order-2 lg:order-1 text-center lg:text-left">
             <div className="space-y-4">
               <span className="text-[11px] font-black uppercase tracking-[0.5em] text-brand-red inline-block">Welcome to my world</span>
-              <img src="/DD-Title.png" alt="Dhanya Diaries" className="w-full max-w-md mx-auto lg:mx-0 h-auto" />
-              <p className="text-xl md:text-2xl text-brand-text/60 font-serif italic italic leading-relaxed">
+              <img
+                src="/DD-Title.png"
+                alt="Dhanya Diaries"
+                className="w-[85%] max-w-[300px] md:max-w-md mx-auto lg:mx-0 h-auto"
+              />
+              <p className="text-xl md:text-2xl text-brand-text/60 font-serif italic leading-relaxed">
                 Celebrating the quiet beauty of everyday living, <br className="hidden md:block" /> one diary entry at a time.
               </p>
             </div>

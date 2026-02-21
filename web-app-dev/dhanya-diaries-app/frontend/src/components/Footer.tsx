@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export default function Footer() {
     return (
-        <footer className="bg-brand-peach/20 pt-32 pb-20 px-6 mt-20 border-t border-brand-peach/50">
+        <footer className="bg-brand-red/[0.02] pt-32 pb-20 px-6 mt-20 border-t border-brand-red/10">
             <div className="max-w-7xl mx-auto space-y-24">
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-16">

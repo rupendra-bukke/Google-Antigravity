@@ -77,19 +77,28 @@ export default function Header() {
                 </div>
             </div>
 
-            {/* Mobile Menu */}
+            {/* Mobile Menu: High-End Studio Layout */}
             {isMenuOpen && (
-                <div className="lg:hidden absolute top-full inset-x-0 bg-white border-b border-brand-peach p-8 flex flex-col gap-6 animate-reveal">
-                    {navItems.map((item) => (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={() => setIsMenuOpen(false)}
-                            className="text-lg font-serif font-black text-brand-text hover:text-brand-red"
-                        >
-                            {item.name}
-                        </Link>
-                    ))}
+                <div className="lg:hidden absolute top-full inset-x-4 mt-4 bg-white/95 backdrop-blur-2xl rounded-[3rem] border border-brand-peach/50 p-10 flex flex-col gap-8 shadow-2xl animate-reveal border-b-0">
+                    <div className="flex flex-col gap-6">
+                        {navItems.map((item) => (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={() => setIsMenuOpen(false)}
+                                className={`text-2xl font-serif font-black transition-colors ${pathname === item.href ? "text-brand-red" : "text-brand-text/60"}`}
+                            >
+                                {item.name}
+                            </Link>
+                        ))}
+                    </div>
+                    <div className="pt-8 border-t border-brand-peach/30">
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-text/30 mb-4">Quick Search</p>
+                        <div className="flex items-center bg-brand-peach/30 px-6 py-4 rounded-2xl">
+                            <input type="text" placeholder="FIND RECIPES..." className="bg-transparent border-none outline-none text-xs font-bold w-full" />
+                            <span>🔍</span>
+                        </div>
+                    </div>
                 </div>
             )}
         </header>

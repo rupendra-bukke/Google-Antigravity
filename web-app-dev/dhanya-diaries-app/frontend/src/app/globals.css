@@ -6,10 +6,11 @@
   --font-playful: var(--font-fredoka), sans-serif;
 
   --color-brand-peach: #fff1ed;
-  --color-brand-sage: #f2f7f1;
-  --color-brand-beige: #faf7f2;
+  --color-brand-sage: #fff5f5;
+  --color-brand-beige: #fff9f9;
+  /* Warm Blush White */
   --color-brand-red: #e57373;
-  --color-brand-text: #4a4444;
+  --color-brand-text: #484242;
 }
 
 body {
@@ -25,8 +26,15 @@ body {
 @utility soft-card {
   background-color: white;
   border-radius: 2.5rem;
-  padding: 2rem;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.03);
+  padding: 1.5rem;
+
+  /* Reduced for mobile-first */
+  @media (min-width: 768px) {
+    padding: 2.5rem;
+  }
+
+  box-shadow: 0 10px 30px -5px rgba(229, 115, 115, 0.05);
+  /* Reddish shadow tint */
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
