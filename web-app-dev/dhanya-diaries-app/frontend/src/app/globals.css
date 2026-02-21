@@ -24,10 +24,10 @@ body {
 }
 
 @utility red-glass {
-  background-color: rgba(229, 57, 53, 0.05);
-  backdrop-filter: blur(25px);
-  border: 1px solid rgba(229, 57, 53, 0.15);
-  box-shadow: 0 20px 40px -15px rgba(229, 57, 53, 0.1);
+  background-color: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.1);
 }
 
 @utility glass-effect {
