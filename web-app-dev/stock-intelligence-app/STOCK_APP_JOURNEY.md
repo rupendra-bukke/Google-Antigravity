@@ -50,8 +50,13 @@ If you want to explain this project to a friend, just use your hand:
 ### Phase 6: Professional Branding (Trade-Craft)
 *   **Analogy:** This is the signing of the masterpiece. Every great tool has a name and a logo.
 *   **What we did:** We integrated "Trade-Craft" as the brand name and Rupendra's custom "RB" logo into the sidebar.
-*   **Why we did it:** To give the application a professional, enterprise-grade identity. It's no longer just a "stock app"—it's a product.
 *   **Outcome:** A personalized dashboard that carries your signature and brand identity.
+
+### Phase 7: The Market Timeline (Checkpoint Snapshots)
+*   **Analogy:** Imagine having a photographer take a picture of the scoreboard at the most important minutes of a match, so you can review the whole game later.
+*   **What we did:** We built a memory system. The app automatically runs the "Deep Intelligence" engine at 7 key times (9:15 AM, 9:30 AM, etc.) and saves the advice in a permanent daily board.
+*   **Why we did it:** Traders often forget what the signal was an hour ago. Now, you can see the "Story of the Day" fold out in 7 dedicated panels.
+*   **Outcome:** A professional "Market Timeline" that shows exactly when the trend shifted and what the expert advice was at that moment.
 
 ---
 

@@ -4,68 +4,57 @@
   --font-serif: "Playfair Display", serif;
   --font-sans: "Outfit", sans-serif;
 
-  /* Vibrant Logo-Matching Palette */
-  --color-brand-primary: #e53935;
-  /* Warm Vibrant Red (Logo House) */
-  --color-brand-secondary: #ffb300;
-  /* Flame Gold (Logo Pot/Flame) */
-  --color-brand-accent: #fff5f5;
-  /* Soft Blush Background */
-
-  --background: #fffdfd;
-  --foreground: #2d1a1a;
-  /* Warm Dark Charcoal */
+  --color-brand-red: #e53935;
+  --color-brand-gold: #ffb300;
+  --color-paper: #fffdfd;
+  --color-ink: #1a1515;
 }
 
-/* Base Styles */
 body {
-  background-color: #fffdfd;
-  color: #2d1a1a;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
-h1,
-h2,
-h3 {
-  font-family: var(--font-serif);
-  letter-spacing: -0.02em;
+/* ── PREMIUM UTILITIES ── */
+
+@utility magazine-shadow {
+  box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.08), 0 30px 60px -30px rgba(229, 57, 53, 0.1);
 }
 
-/* Custom Editorial Utilities */
-@utility editorial-card {
-  position: relative;
-  overflow: hidden;
-  transition: all 700ms cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 2.5rem;
-  background-color: white;
-  border: 1px solid rgba(229, 57, 53, 0.05);
-  /* Soft red border */
-
-  &:hover {
-    transform: translateY(-0.5rem);
-    box-shadow: 0 30px 60px -15px rgba(229, 57, 53, 0.15);
-    /* Red tinted shadow */
-  }
+@utility glass-effect {
+  background-color: rgba(255, 253, 253, 0.7);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(229, 57, 53, 0.08);
 }
 
-@utility glass-nav {
-  background-color: rgba(255, 253, 253, 0.85);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(229, 57, 53, 0.1);
+@utility section-spacing {
+  @apply py-24 md:py-40 px-6 md:px-12;
 }
 
-@keyframes fade-up {
+@utility nav-link {
+  @apply text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 hover:text-brand-red transition-all;
+}
+
+/* ── ANIMATIONS ── */
+
+@keyframes slide-reveal {
   from {
+    transform: translateY(100%);
     opacity: 0;
-    transform: translateY(20px);
   }
 
   to {
-    opacity: 1;
     transform: translateY(0);
+    opacity: 1;
   }
 }
 
-.animate-fade-up {
-  animation: fade-up 0.8s ease-out forwards;
+.animate-reveal {
+  animation: slide-reveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.logo-glow {
+  filter: drop-shadow(0 0 15px rgba(229, 57, 53, 0.2));
 }

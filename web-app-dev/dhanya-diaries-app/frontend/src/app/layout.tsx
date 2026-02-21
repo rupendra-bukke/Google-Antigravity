@@ -24,29 +24,32 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${playfair.variable} ${outfit.variable} font-sans antialiased`}>
-        {/* -- Floating Header -- */}
-        <header className="fixed top-0 inset-x-0 z-50 py-4 px-6 md:px-12">
-          <div className="max-w-7xl mx-auto flex items-center justify-between glass-nav rounded-2xl py-3 px-6">
-            <div className="flex items-center gap-3">
-              <img src="/DD-Logo.png" alt="Logo" className="w-10 h-10 object-contain" />
-              <span className="font-serif text-xl font-bold tracking-tight text-brand-primary">Dhanya.diaries</span>
+      <body className={`${playfair.variable} ${outfit.variable} font-sans antialiased overflow-x-hidden`}>
+        {/* -- Minimalist Editorial Header -- */}
+        <header className="fixed top-0 inset-x-0 z-50 pt-8 px-6 md:px-12 pointer-events-none">
+          <div className="max-w-7xl mx-auto flex items-center justify-between pointer-events-auto">
+
+            <div className="flex items-center gap-6 group">
+              <img src="/DD-Logo.png" alt="Logo" className="w-16 h-16 object-contain logo-glow transition-transform group-hover:scale-110" />
+              <div className="hidden lg:block border-l border-gray-100 h-10 pl-6">
+                <span className="font-serif text-2xl font-black text-[#1a1515] tracking-tighter">Dhanya.diaries</span>
+              </div>
             </div>
 
-            <nav className="hidden md:flex items-center gap-8 text-sm font-semibold uppercase tracking-widest text-[#555]">
-              <a href="#" className="nav-link">Home</a>
-              <a href="#" className="nav-link">Recipes</a>
-              <a href="#" className="nav-link">Home Tips</a>
+            <nav className="hidden xl:flex items-center gap-12 bg-white/50 backdrop-blur-md px-10 py-4 rounded-full border border-gray-50 shadow-sm">
+              <a href="#" className="nav-link !text-brand-red">Journal</a>
+              <a href="#" className="nav-link">Kitchen</a>
+              <a href="#" className="nav-link">Home Styling</a>
               <a href="#" className="nav-link">Vlogs</a>
             </nav>
 
-            <button className="bg-brand-primary text-white text-xs font-bold px-5 py-2.5 rounded-full hover:shadow-lg hover:shadow-brand-primary/30 transition-all active:scale-95 uppercase tracking-widest">
+            <button className="bg-[#1a1515] text-white text-[10px] font-black px-8 py-4 rounded-xl hover:bg-brand-red transition-all uppercase tracking-[0.2em] shadow-xl">
               Subscribe
             </button>
           </div>
         </header>
 
-        <main className="pt-24 min-h-screen">
+        <main className="min-h-screen">
           {children}
         </main>
 
