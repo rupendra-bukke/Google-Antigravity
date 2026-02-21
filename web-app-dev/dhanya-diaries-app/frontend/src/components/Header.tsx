@@ -5,58 +5,79 @@ import { getChannelStats, ChannelStats } from "@/lib/youtube";
 
 export default function Header() {
     const [stats, setStats] = useState<ChannelStats | null>(null);
+    const [scrolled, setScrolled] = useState(false);
 
     useEffect(() => {
+        const handleScroll = () => setScrolled(window.scrollY > 50);
+        window.addEventListener("scroll", handleScroll);
+
         async function fetchStats() {
             const data = await getChannelStats();
             setStats(data);
         }
         fetchStats();
+
+        return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
     const subscribeUrl = "https://www.youtube.com/channel/UC_UoV11Yx2u66CaBsvHPJiw?sub_confirmation=1";
 
     return (
-        <header className="fixed top-0 inset-x-0 z-50 subtle-glass h-20 md:h-24 flex items-center px-6 md:px-12">
-            <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+        <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${scrolled ? "glass-nav py-4" : "py-8"}`}>
+            <div className="section-container flex items-center justify-between font-sans">
 
-                {/* BRANDING: Logo + PNG Title */}
-                <div className="flex items-center gap-4 cursor-pointer group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                    <img src="/DD-Logo.png" alt="Logo" className="w-10 h-10 md:w-14 md:h-14 object-contain transition-transform group-hover:scale-110" />
-                    <div className="h-8 md:h-12 overflow-hidden">
+                {/* BRANDING: Symmetric & Balanced */}
+                <div
+                    className="flex items-center gap-5 cursor-pointer group"
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                >
+                    <div className="relative">
+                        <img
+                            src="/DD-Logo.png"
+                            alt="Logo"
+                            className="w-10 h-10 md:w-12 md:h-12 object-contain transition-transform duration-500 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-brand-red opacity-0 group-hover:opacity-10 rounded-full blur-xl transition-opacity" />
+                    </div>
+                    <div className="h-7 md:h-9">
                         <img
                             src="/DD-Title.png"
                             alt="Dhanya Diaries"
-                            className="h-full w-auto object-contain brightness-110"
+                            className="h-full w-auto object-contain"
                         />
                     </div>
                 </div>
 
-                {/* NAVIGATION: Clean & Centered Focus */}
+                {/* NAVIGATION: Minimalist Designer Links */}
                 <nav className="hidden lg:flex items-center gap-10">
-                    {['Journal', 'Kitchen', 'Home', 'Vlogs'].map((item) => (
-                        <a key={item} href={`#${item.toLowerCase()}`} className="text-[10px] font-black uppercase tracking-widest text-brand-charcoal/40 hover:text-brand-red transition-all">
+                    {['Journal', 'Kitchen', 'Lifestyle', 'Vlogs'].map((item) => (
+                        <a
+                            key={item}
+                            href={`#${item.toLowerCase()}`}
+                            className="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-dark/40 hover:text-brand-red hover:tracking-[0.4em] transition-all duration-300"
+                        >
                             {item}
                         </a>
                     ))}
                 </nav>
 
-                {/* CTA & STATS: Refined */}
-                <div className="flex items-center gap-8">
+                {/* STATS & CTA: High-End UI */}
+                <div className="flex items-center gap-6 md:gap-10">
                     <div className="hidden sm:flex flex-col items-end">
-                        <span className="text-base md:text-lg font-serif italic text-gray-500 leading-none">
-                            {stats?.subscriberCount || "24.5K"} Subscribers
+                        <span className="text-xl md:text-2xl font-serif italic text-brand-dark/30 leading-none">
+                            {stats?.subscriberCount || "24.5K"}
                         </span>
-                        <span className="text-[8px] font-black uppercase tracking-widest text-brand-red mt-1">Active Community</span>
+                        <span className="text-[7px] font-black uppercase tracking-[0.2em] text-brand-red mt-1">Founding Souls</span>
                     </div>
 
                     <a
                         href={subscribeUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="bg-brand-red text-white text-[10px] font-black px-8 py-4 rounded-xl hover:bg-brand-charcoal transition-all uppercase tracking-widest shadow-lg shadow-brand-red/10"
+                        className="relative overflow-hidden bg-brand-dark text-white text-[9px] font-black px-10 py-4.5 rounded-full transition-all duration-500 hover:bg-brand-red hover:px-12 flex items-center gap-2 group"
                     >
-                        Subscribe
+                        <span className="uppercase tracking-[0.2em]">Subscribe</span>
+                        <span className="text-sm transition-transform group-hover:translate-x-1">→</span>
                     </a>
                 </div>
 

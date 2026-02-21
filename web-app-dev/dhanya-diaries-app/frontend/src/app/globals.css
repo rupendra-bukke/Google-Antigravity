@@ -5,95 +5,84 @@
   --font-sans: var(--font-outfit), sans-serif;
   --font-playful: var(--font-fredoka), sans-serif;
 
-  --color-brand-red: #d32f2f;
-  --color-brand-charcoal: #1a1515;
-  --color-brand-paper: #fffcfc;
-  --color-brand-gold: #ffb300;
+  --color-brand-red: #c62828;
+  --color-brand-dark: #121212;
+  --color-brand-cream: #faf7f2;
 }
 
 body {
-  background-color: var(--color-brand-paper);
-  color: var(--color-brand-charcoal);
+  background-color: var(--color-brand-cream);
+  color: var(--color-brand-dark);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  letter-spacing: -0.01em;
+  selection-background-color: var(--color-brand-red);
+  selection-color: white;
 }
 
-/* ── REFINED UTILITIES ── */
+/* ── PROFESSIONAL DESIGN SYSTEM ── */
 
-@utility subtle-glass {
-  background-color: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+@utility glass-nav {
+  background-color: rgba(250, 247, 242, 0.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-@utility designer-card {
-  @apply rounded-[2rem] overflow-hidden transition-all duration-700;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.05);
+@utility premium-shadow {
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.08), 0 18px 36px -18px rgba(0, 0, 0, 0.03);
 }
 
-@utility designer-card-hover {
-  &:hover {
-    transform: translateY(-0.5rem);
-    box-shadow: 0 40px 80px -20px rgba(211, 47, 47, 0.1);
-  }
+@utility section-container {
+  @apply max-w-7xl mx-auto px-6 md:px-12;
 }
 
 /* ── ANIMATIONS ── */
 
-@keyframes fade-up {
+@keyframes reveal-skew {
   from {
+    transform: translateY(60px) skewY(2deg);
     opacity: 0;
-    transform: translateY(20px);
   }
 
   to {
+    transform: translateY(0) skewY(0);
     opacity: 1;
-    transform: translateY(0);
+  }
+}
+
+@keyframes slow-pan {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+
+  50% {
+    transform: scale(1.05) translate(-1%, -1%);
+  }
+
+  100% {
+    transform: scale(1) translate(0, 0);
   }
 }
 
 .animate-reveal {
-  opacity: 0;
-  animation: fade-up 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: reveal-skew 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pan {
+  animation: slow-pan 20s ease-in-out infinite;
+}
+
+/* ── IMAGE WRAPPERS ── */
+.editorial-img-wrapper {
+  @apply relative overflow-hidden rounded-[3rem] premium-shadow transition-all duration-700;
+}
+
+.editorial-img-wrapper:hover {
+  @apply -translate-y-2;
+  box-shadow: 0 50px 100px -20px rgba(198, 40, 40, 0.15);
 }
 
 /* ── TYPOGRAPHY ── */
-
-h1,
-h2,
-h3 {
-  font-family: var(--font-serif);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
-.telugu-signature {
-  font-family: inherit;
-  color: var(--color-brand-red);
-  font-style: italic;
-  font-weight: 300;
-}
-
-/* ── DHANYA BUBBLE STYLE ── */
-.dhanya-style {
-  font-family: var(--font-playful);
-  color: #FF4533;
-  background: linear-gradient(to bottom, #FF4533 20%, #B71C1C 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
+.text-stroke {
+  -webkit-text-stroke: 1px currentColor;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 4px 0 #5D1010) drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
-  -webkit-text-stroke: 1.5px white;
-}
-
-.diaries-style {
-  font-family: var(--font-playful);
-  color: #FFE600;
-  background: linear-gradient(to bottom, #FFE600 20%, #FF8F00 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 4px 0 #824900) drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
-  -webkit-text-stroke: 1.5px white;
 }
