@@ -32,16 +32,23 @@ export default function Vlogs() {
                     {videos.map((v, i) => (
                         <div key={v.id} className={`grid lg:grid-cols-12 gap-12 items-center ${i % 2 !== 0 ? 'lg:direction-rtl' : ''}`}>
                             <div className={`lg:col-span-8 ${i % 2 !== 0 ? 'lg:order-2' : ''}`}>
-                                <div className="soft-card p-4 h-full">
-                                    <div className="aspect-video rounded-[2.5rem] overflow-hidden">
-                                        <iframe
-                                            src={`https://www.youtube.com/embed/${v.id}`}
-                                            className="w-full h-full border-none"
-                                            title={v.title}
-                                            allowFullScreen
-                                        ></iframe>
+                                <a
+                                    href={`https://youtube.com/watch?v=${v.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="soft-card p-4 block h-full group/thumb overflow-hidden"
+                                >
+                                    <div className="aspect-video rounded-[2.5rem] overflow-hidden relative">
+                                        <img
+                                            src={v.thumbnail}
+                                            alt={v.title}
+                                            className="w-full h-full object-cover group-hover/thumb:scale-110 transition-transform duration-1000"
+                                        />
+                                        <div className="absolute inset-0 bg-brand-red/10 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+                                            <span className="bg-white/90 p-5 rounded-full text-brand-red shadow-2xl scale-0 group-hover/thumb:scale-100 transition-transform">▶</span>
+                                        </div>
                                     </div>
-                                </div>
+                                </a>
                             </div>
                             <div className={`lg:col-span-4 space-y-6 text-center lg:text-left ${i % 2 !== 0 ? 'lg:order-1' : ''}`}>
                                 <span className="text-[10px] font-bold text-brand-red opacity-40 uppercase tracking-[0.5em]">Episode #{videos.length - i}</span>
@@ -50,7 +57,10 @@ export default function Vlogs() {
                                         {v.title}
                                     </a>
                                 </h2>
-                                <p className="text-brand-text/50 font-medium">Published on {v.publishedAt}</p>
+                                <p className="text-brand-text/60 leading-relaxed line-clamp-3">
+                                    {v.description || "A quiet moment shared from my life. Watch the full story to see more."}
+                                </p>
+                                <p className="text-brand-text/40 text-[10px] font-black uppercase tracking-widest">Published on {v.publishedAt}</p>
                                 <div className="pt-4">
                                     <button className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 hover:text-brand-red flex items-center gap-2 mx-auto lg:mx-0">
                                         Share this Story <span>⟡</span>

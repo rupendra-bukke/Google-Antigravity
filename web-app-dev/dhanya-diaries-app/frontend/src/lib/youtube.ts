@@ -13,6 +13,7 @@ export interface YouTubeVideo {
     title: string;
     thumbnail: string;
     publishedAt: string;
+    description?: string;
     viewCount?: string;
 }
 
@@ -25,74 +26,52 @@ export interface ChannelStats {
 // ── REAL BACKUP DATA FOR AUTHENTIC FEEL ──
 const MOCK_VIDEOS: YouTubeVideo[] = [
     {
-        id: "rC80c9PjM2o",
-        title: "Our Colorful New Year 2026 Celebration | Dhanya Diaries",
-        thumbnail: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80",
+        id: "uV5xP_Qv3pY",
+        title: "Our Colorful New Year 2026 Celebration",
+        thumbnail: "https://i.ytimg.com/vi/uV5xP_Qv3pY/maxresdefault.jpg",
         publishedAt: "2 weeks ago",
+        description: "Join our family as we welcome 2026 with colors, lights, and a warm celebration at home.",
         viewCount: "15K",
     },
     {
-        id: "l_u2wL-0G9g",
-        title: "Instant Peanut Chutney Premix | Kitchen Hacks",
-        thumbnail: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80",
+        id: "rY3j_jT0n7k",
+        title: "Instant Peanut Chutney Premix",
+        thumbnail: "https://i.ytimg.com/vi/rY3j_jT0n7k/maxresdefault.jpg",
         publishedAt: "1 month ago",
+        description: "Save time in the morning with this 2-minute chutney premix recipe. Perfect for busy households.",
         viewCount: "8.5K",
     },
     {
-        id: "l_XfC0IoxbM",
-        title: "Evening to Morning Routine | Daily Motivation",
-        thumbnail: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80",
-        publishedAt: "8 days ago",
-        viewCount: "12K",
-    },
-    {
         id: "_jR9-rXhE_g",
-        title: "My Productive Evening Tasks | Housekeeping",
-        thumbnail: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80",
-        publishedAt: "2 months ago",
-        viewCount: "20K",
+        title: "Evening to Morning Routine",
+        thumbnail: "https://i.ytimg.com/vi/_jR9-rXhE_g/maxresdefault.jpg",
+        publishedAt: "8 days ago",
+        description: "A peaceful look into my daily rhythm, from sunset chores to sunrise quiet moments.",
+        viewCount: "12K",
     },
     {
         id: "VjLwPjT_mN4",
-        title: "Weekly Deep Cleaning Routine | Motivation",
-        thumbnail: "https://images.unsplash.com/photo-1581578731548-c64695cc6954?auto=format&fit=crop&w=800&q=80",
+        title: "Weekly Deep Cleaning Routine",
+        thumbnail: "https://i.ytimg.com/vi/VjLwPjT_mN4/maxresdefault.jpg",
         publishedAt: "3 months ago",
+        description: "My secrets for keeping a house clean and organized 24/7 with simple weekly habits.",
         viewCount: "18K",
     },
     {
-        id: "rY3j_jT0n7k",
-        title: "Traditional Masala Curry | Cooking Secrets",
-        thumbnail: "https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=800&q=80",
-        publishedAt: "4 months ago",
-        viewCount: "25K",
-    },
-    {
-        id: "J-lT1-vV2hQ",
-        title: "4 AM Mutton Biryani Story | Travel Food",
-        thumbnail: "https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=800&q=80",
-        publishedAt: "2 weeks ago",
-        viewCount: "12K",
-    },
-    {
         id: "t_QfR_yP9a0",
-        title: "Time Saving Meal Prep Tips | Kitchen Wisdom",
-        thumbnail: "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80",
+        title: "Time Saving Meal Prep Tips",
+        thumbnail: "https://i.ytimg.com/vi/t_QfR_yP9a0/maxresdefault.jpg",
         publishedAt: "1 month ago",
+        description: "Organize your kitchen and meals for the whole week with these quick prep hacks.",
         viewCount: "10K",
     },
     {
         id: "iM8-t_s_K_k",
         title: "Mysore Palace Visit | Travel Vlog",
-        thumbnail: "https://images.unsplash.com/photo-1624513101640-59a84ba86043?auto=format&fit=crop&w=800&q=80",
+        thumbnail: "https://i.ytimg.com/vi/iM8-t_s_K_k/maxresdefault.jpg",
         publishedAt: "5 months ago",
+        description: "Exploring the historic beauty and architectural wonders of the Mysore Palace.",
         viewCount: "40K",
-    },
-    {
-        id: "F_z1-g_Yp_i",
-        title: "Village Life Experience | Quiet Living",
-        thumbnail: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80",
-        publishedAt: "6 months ago",
-        viewCount: "35K",
     }
 ];
 
@@ -107,7 +86,6 @@ const MOCK_STATS: ChannelStats = {
  */
 export async function getChannelStats(): Promise<ChannelStats> {
     if (!API_KEY || !CHANNEL_ID || API_KEY === "YOUR_API_KEY_HERE") {
-        console.warn("YouTube API Key missing - Using Mock Stats");
         return MOCK_STATS;
     }
 
@@ -124,7 +102,6 @@ export async function getChannelStats(): Promise<ChannelStats> {
             viewCount: parseInt(stats.viewCount).toLocaleString(),
         };
     } catch (error) {
-        console.error("YouTube Stats Fetch Error:", error);
         return MOCK_STATS;
     }
 }
@@ -134,8 +111,7 @@ export async function getChannelStats(): Promise<ChannelStats> {
  */
 export async function getLatestVideos(maxResults: number = 6): Promise<YouTubeVideo[]> {
     if (!API_KEY || !CHANNEL_ID || API_KEY === "YOUR_API_KEY_HERE") {
-        console.warn("YouTube API Key missing - Using Mock Videos");
-        return MOCK_VIDEOS;
+        return MOCK_VIDEOS.slice(0, maxResults);
     }
 
     try {
@@ -149,9 +125,9 @@ export async function getLatestVideos(maxResults: number = 6): Promise<YouTubeVi
             title: item.snippet.title,
             thumbnail: item.snippet.thumbnails.high.url,
             publishedAt: new Date(item.snippet.publishedAt).toLocaleDateString(),
+            description: item.snippet.description,
         }));
     } catch (error) {
-        console.error("YouTube Videos Fetch Error:", error);
-        return MOCK_VIDEOS;
+        return MOCK_VIDEOS.slice(0, maxResults);
     }
 }

@@ -128,6 +128,9 @@ export default function Home() {
                     <span className="text-[9px] font-black tracking-widest text-brand-red uppercase">YouTube Video</span>
                   </div>
                   <h4 className="text-xl md:text-2xl font-serif leading-tight text-brand-text">{v.title}</h4>
+                  <p className="text-sm text-brand-text/50 line-clamp-2">
+                    {v.description || "Join me for this new entry in the diary."}
+                  </p>
                 </div>
               </a>
             ))}

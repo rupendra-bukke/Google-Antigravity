@@ -30,14 +30,21 @@ export default function Recipes() {
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12">
                     {videos.slice(0, 6).map((v) => (
                         <div key={v.id} className="soft-card soft-card-hover group h-full flex flex-col">
-                            <div className="aspect-video rounded-[2rem] overflow-hidden mb-8 relative">
-                                <iframe
-                                    src={`https://www.youtube.com/embed/${v.id}`}
-                                    className="w-full h-full border-none"
-                                    title={v.title}
-                                    allowFullScreen
-                                ></iframe>
-                            </div>
+                            <a
+                                href={`https://youtube.com/watch?v=${v.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="aspect-video rounded-[2rem] overflow-hidden mb-8 relative block group-hover:scale-95 transition-transform duration-500 shadow-xl"
+                            >
+                                <img
+                                    src={v.thumbnail}
+                                    alt={v.title}
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+                                />
+                                <div className="absolute inset-0 bg-brand-red/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <span className="bg-white/90 p-4 rounded-full text-brand-red shadow-2xl scale-0 group-hover:scale-100 transition-transform">▶</span>
+                                </div>
+                            </a>
                             <div className="space-y-4 flex-1">
                                 <div className="flex items-center gap-4 text-[9px] font-black uppercase text-brand-text/40 tracking-widest">
                                     <span>⏱ {Math.floor(Math.random() * 30 + 15)} mins</span>
@@ -49,8 +56,8 @@ export default function Recipes() {
                                         {v.title}
                                     </a>
                                 </h3>
-                                <p className="text-sm text-brand-text/60 line-clamp-2">
-                                    This recipe focuses on the balance of spices and the warmth of slow-cooked ingredients.
+                                <p className="text-sm text-brand-text/60 line-clamp-3">
+                                    {v.description || "Join me in the kitchen for this special recipe and step-by-step guide."}
                                 </p>
                                 <div className="pt-6 border-t border-brand-peach/50 flex justify-between items-center">
                                     <button
