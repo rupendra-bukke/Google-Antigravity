@@ -45,7 +45,11 @@ export default function Vlogs() {
                             </div>
                             <div className={`lg:col-span-4 space-y-6 text-center lg:text-left ${i % 2 !== 0 ? 'lg:order-1' : ''}`}>
                                 <span className="text-[10px] font-bold text-brand-red opacity-40 uppercase tracking-[0.5em]">Episode #{videos.length - i}</span>
-                                <h2 className="text-4xl font-serif leading-tight">{v.title}</h2>
+                                <h2 className="text-4xl font-serif leading-tight hover:text-brand-red transition-colors">
+                                    <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noopener noreferrer">
+                                        {v.title}
+                                    </a>
+                                </h2>
                                 <p className="text-brand-text/50 font-medium">Published on {v.publishedAt}</p>
                                 <div className="pt-4">
                                     <button className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 hover:text-brand-red flex items-center gap-2 mx-auto lg:mx-0">

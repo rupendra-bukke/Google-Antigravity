@@ -44,7 +44,11 @@ export default function Recipes() {
                                     <span>•</span>
                                     <span className="text-brand-red">Level: Easy</span>
                                 </div>
-                                <h3 className="text-3xl font-serif leading-tight">{v.title}</h3>
+                                <h3 className="text-3xl font-serif leading-tight hover:text-brand-red transition-colors cursor-pointer">
+                                    <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noopener noreferrer">
+                                        {v.title}
+                                    </a>
+                                </h3>
                                 <p className="text-sm text-brand-text/60 line-clamp-2">
                                     This recipe focuses on the balance of spices and the warmth of slow-cooked ingredients.
                                 </p>

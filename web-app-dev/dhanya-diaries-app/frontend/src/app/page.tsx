@@ -114,7 +114,7 @@ export default function Home() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
             {videos.slice(0, 6).map((v) => (
-              <a key={v.id} href={`https://youtube.com/watch?v=${v.id}`} className="soft-card soft-card-hover group block space-y-6">
+              <a key={v.id} href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noopener noreferrer" className="soft-card soft-card-hover group block space-y-6">
                 <div className="aspect-video rounded-[1.5rem] overflow-hidden relative">
                   <img src={v.thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
                   <div className="absolute inset-0 bg-brand-red/5 opacity-0 group-hover:opacity-100 transition-opacity" />
