@@ -4,73 +4,69 @@
   --font-serif: "Playfair Display", serif;
   --font-sans: "Outfit", sans-serif;
 
-  --color-brand-red: #e53935;
+  --color-brand-red: #d32f2f;
+  --color-brand-charcoal: #1a1515;
+  --color-brand-paper: #fffcfc;
   --color-brand-gold: #ffb300;
-  --color-paper: #fffdfd;
-  --color-ink: #1a1515;
 }
 
 body {
-  background-color: var(--color-paper);
-  color: var(--color-ink);
+  background-color: var(--color-brand-paper);
+  color: var(--color-brand-charcoal);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
 }
 
-/* ── DESIGNER UTILITIES ── */
+/* ── REFINED UTILITIES ── */
 
-@utility red-glass {
-  background-color: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(25px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.08);
+@utility subtle-glass {
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-@utility designer-shadow {
-  box-shadow: 0 60px 120px -20px rgba(0, 0, 0, 0.05), 0 30px 60px -30px rgba(229, 57, 53, 0.08);
+@utility designer-card {
+  @apply rounded-[2rem] overflow-hidden transition-all duration-700;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.05);
 }
 
-@utility nav-link {
-  @apply text-[11px] font-black uppercase tracking-[0.3em] text-[#1a1515]/50 hover:text-brand-red transition-all;
+@utility designer-card-hover {
+  @apply hover:-translate-y-2 hover:shadow-[0_40px_80px_-20px_rgba(211, 47, 47, 0.1)];
 }
 
 /* ── ANIMATIONS ── */
 
-@keyframes slow-zoom {
-  0% {
-    transform: scale(1);
-  }
-
-  100% {
-    transform: scale(1.1);
-  }
-}
-
-@keyframes reveal-up {
+@keyframes fade-up {
   from {
-    transform: translateY(40px);
     opacity: 0;
+    transform: translateY(20px);
   }
 
   to {
-    transform: translateY(0);
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.animate-zoom {
-  animation: slow-zoom 20s ease-in-out infinite alternate;
-}
-
 .animate-reveal {
-  animation: reveal-up 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  animation: fade-up 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ── TICKET FONT (For that journal feel) ── */
-.text-label {
-  font-size: 9px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.5em;
-  color: rgba(26, 21, 21, 0.4);
+/* ── TYPOGRAPHY ── */
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.telugu-signature {
+  font-family: inherit;
+  color: var(--color-brand-red);
+  font-style: italic;
+  font-weight: 300;
 }
