@@ -22,33 +22,82 @@ export interface ChannelStats {
     viewCount: string;
 }
 
-// ── MOCK DATA FOR THEME PREVIEW ──
+// ── REAL BACKUP DATA FOR AUTHENTIC FEEL ──
 const MOCK_VIDEOS: YouTubeVideo[] = [
     {
-        id: "v1",
-        title: "How to organize your small kitchen for maximum space | Kitchen Hacks",
+        id: "rC80c9PjM2o",
+        title: "Our Colorful New Year 2026 Celebration | Dhanya Diaries",
         thumbnail: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80",
-        publishedAt: "2 days ago",
-        viewCount: "12K",
+        publishedAt: "2 weeks ago",
+        viewCount: "15K",
     },
     {
-        id: "v2",
-        title: "My Top 5 Secret Spices for Every Indian Household | Authentic Cooking",
-        thumbnail: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=800&q=80",
-        publishedAt: "1 week ago",
+        id: "l_u2wL-0G9g",
+        title: "Instant Peanut Chutney Premix | Kitchen Hacks",
+        thumbnail: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80",
+        publishedAt: "1 month ago",
         viewCount: "8.5K",
     },
     {
-        id: "v3",
-        title: "Simple morning routine for a productive and peaceful day | Calm Living",
+        id: "l_XfC0IoxbM",
+        title: "Evening to Morning Routine | Daily Motivation",
         thumbnail: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80",
+        publishedAt: "8 days ago",
+        viewCount: "12K",
+    },
+    {
+        id: "_jR9-rXhE_g",
+        title: "My Productive Evening Tasks | Housekeeping",
+        thumbnail: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80",
+        publishedAt: "2 months ago",
+        viewCount: "20K",
+    },
+    {
+        id: "VjLwPjT_mN4",
+        title: "Weekly Deep Cleaning Routine | Motivation",
+        thumbnail: "https://images.unsplash.com/photo-1581578731548-c64695cc6954?auto=format&fit=crop&w=800&q=80",
+        publishedAt: "3 months ago",
+        viewCount: "18K",
+    },
+    {
+        id: "rY3j_jT0n7k",
+        title: "Traditional Masala Curry | Cooking Secrets",
+        thumbnail: "https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=800&q=80",
+        publishedAt: "4 months ago",
+        viewCount: "25K",
+    },
+    {
+        id: "J-lT1-vV2hQ",
+        title: "4 AM Mutton Biryani Story | Travel Food",
+        thumbnail: "https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=800&q=80",
         publishedAt: "2 weeks ago",
-        viewCount: "15K",
+        viewCount: "12K",
+    },
+    {
+        id: "t_QfR_yP9a0",
+        title: "Time Saving Meal Prep Tips | Kitchen Wisdom",
+        thumbnail: "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80",
+        publishedAt: "1 month ago",
+        viewCount: "10K",
+    },
+    {
+        id: "iM8-t_s_K_k",
+        title: "Mysore Palace Visit | Travel Vlog",
+        thumbnail: "https://images.unsplash.com/photo-1624513101640-59a84ba86043?auto=format&fit=crop&w=800&q=80",
+        publishedAt: "5 months ago",
+        viewCount: "40K",
+    },
+    {
+        id: "F_z1-g_Yp_i",
+        title: "Village Life Experience | Quiet Living",
+        thumbnail: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80",
+        publishedAt: "6 months ago",
+        viewCount: "35K",
     }
 ];
 
 const MOCK_STATS: ChannelStats = {
-    subscriberCount: "25,400",
+    subscriberCount: "24,500",
     videoCount: "142",
     viewCount: "1.2M",
 };

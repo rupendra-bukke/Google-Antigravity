@@ -3,12 +3,6 @@
 import { useEffect, useState } from "react";
 import { getLatestVideos, YouTubeVideo } from "@/lib/youtube";
 
-const MOCK_RECIPES = [
-    { id: "r1", title: "Traditional Sambar", time: "30 mins", diff: "Easy", vid: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
-    { id: "r2", title: "Crispy Dosa Secrets", time: "45 mins", diff: "Medium", vid: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
-    { id: "r3", title: "Mango Avakaya", time: "2 hrs", diff: "Hard", vid: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
-];
-
 export default function Recipes() {
     const [isLoaded, setIsLoaded] = useState(false);
     const [videos, setVideos] = useState<YouTubeVideo[]>([]);
