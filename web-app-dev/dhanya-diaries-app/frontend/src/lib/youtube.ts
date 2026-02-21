@@ -31,7 +31,7 @@ const MOCK_VIDEOS: YouTubeVideo[] = [
         thumbnail: "https://i.ytimg.com/vi/uV5xP_Qv3pY/maxresdefault.jpg",
         publishedAt: "2 weeks ago",
         description: "Join our family as we welcome 2026 with colors, lights, and a warm celebration at home.",
-        viewCount: "15K",
+        viewCount: "25K",
     },
     {
         id: "rY3j_jT0n7k",
@@ -39,7 +39,7 @@ const MOCK_VIDEOS: YouTubeVideo[] = [
         thumbnail: "https://i.ytimg.com/vi/rY3j_jT0n7k/maxresdefault.jpg",
         publishedAt: "1 month ago",
         description: "Save time in the morning with this 2-minute chutney premix recipe. Perfect for busy households.",
-        viewCount: "8.5K",
+        viewCount: "18K",
     },
     {
         id: "_jR9-rXhE_g",
@@ -47,15 +47,15 @@ const MOCK_VIDEOS: YouTubeVideo[] = [
         thumbnail: "https://i.ytimg.com/vi/_jR9-rXhE_g/maxresdefault.jpg",
         publishedAt: "8 days ago",
         description: "A peaceful look into my daily rhythm, from sunset chores to sunrise quiet moments.",
-        viewCount: "12K",
+        viewCount: "32K",
     },
     {
         id: "VjLwPjT_mN4",
         title: "Weekly Deep Cleaning Routine",
         thumbnail: "https://i.ytimg.com/vi/VjLwPjT_mN4/maxresdefault.jpg",
-        publishedAt: "3 months ago",
+        publishedAt: "3 weeks ago",
         description: "My secrets for keeping a house clean and organized 24/7 with simple weekly habits.",
-        viewCount: "18K",
+        viewCount: "22K",
     },
     {
         id: "t_QfR_yP9a0",
@@ -63,7 +63,7 @@ const MOCK_VIDEOS: YouTubeVideo[] = [
         thumbnail: "https://i.ytimg.com/vi/t_QfR_yP9a0/maxresdefault.jpg",
         publishedAt: "1 month ago",
         description: "Organize your kitchen and meals for the whole week with these quick prep hacks.",
-        viewCount: "10K",
+        viewCount: "15K",
     },
     {
         id: "iM8-t_s_K_k",
@@ -71,7 +71,39 @@ const MOCK_VIDEOS: YouTubeVideo[] = [
         thumbnail: "https://i.ytimg.com/vi/iM8-t_s_K_k/maxresdefault.jpg",
         publishedAt: "5 months ago",
         description: "Exploring the historic beauty and architectural wonders of the Mysore Palace.",
-        viewCount: "40K",
+        viewCount: "45K",
+    },
+    {
+        id: "J-lT1-vV2hQ",
+        title: "4 AM Mutton Biryani Adventure",
+        thumbnail: "https://i.ytimg.com/vi/J-lT1-vV2hQ/maxresdefault.jpg",
+        publishedAt: "2 weeks ago",
+        description: "A late-night (or early morning!) food journey in Bangalore to find the best Biryani.",
+        viewCount: "28K",
+    },
+    {
+        id: "F_z1-g_Yp_i",
+        title: "Village Cooking & KFC Secret",
+        thumbnail: "https://i.ytimg.com/vi/F_z1-g_Yp_i/maxresdefault.jpg",
+        publishedAt: "6 months ago",
+        description: "Cooking local favorites with a twist in the beautiful, serene setting of my village.",
+        viewCount: "50K",
+    },
+    {
+        id: "a_R8-f_hT_s",
+        title: "Back to Daily Routine Work",
+        thumbnail: "https://i.ytimg.com/vi/a_R8-f_hT_s/maxresdefault.jpg",
+        publishedAt: "1 month ago",
+        description: "Re-adjusting and getting back to my productive daily rhythm after a short break.",
+        viewCount: "12K",
+    },
+    {
+        id: "X_w0-d_eS_q",
+        title: "My Special Masala Curry",
+        thumbnail: "https://i.ytimg.com/vi/X_w0-d_eS_q/maxresdefault.jpg",
+        publishedAt: "4 months ago",
+        description: "Sharing the recipe for my favorite aromatic and flavorful masala curry.",
+        viewCount: "19K",
     }
 ];
 
