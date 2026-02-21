@@ -23,6 +23,13 @@ body {
   box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.08), 0 30px 60px -30px rgba(229, 57, 53, 0.1);
 }
 
+@utility red-glass {
+  background-color: rgba(229, 57, 53, 0.05);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(229, 57, 53, 0.15);
+  box-shadow: 0 20px 40px -15px rgba(229, 57, 53, 0.1);
+}
+
 @utility glass-effect {
   background-color: rgba(255, 253, 253, 0.7);
   backdrop-filter: blur(15px);
@@ -34,7 +41,7 @@ body {
 }
 
 @utility nav-link {
-  @apply text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 hover:text-brand-red transition-all;
+  @apply text-[11px] font-black uppercase tracking-[0.3em] text-[#2d1a1a]/60 hover:text-brand-red transition-all;
 }
 
 /* ── ANIMATIONS ── */
