@@ -5,84 +5,109 @@
   --font-sans: var(--font-outfit), sans-serif;
   --font-playful: var(--font-fredoka), sans-serif;
 
-  --color-brand-red: #c62828;
-  --color-brand-dark: #121212;
-  --color-brand-cream: #faf7f2;
+  --color-brand-peach: #fff1ed;
+  --color-brand-sage: #f2f7f1;
+  --color-brand-beige: #faf7f2;
+  --color-brand-red: #e57373;
+  --color-brand-text: #4a4444;
 }
 
 body {
-  background-color: var(--color-brand-cream);
-  color: var(--color-brand-dark);
+  background-color: var(--color-brand-beige);
+  color: var(--color-brand-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  selection-background-color: var(--color-brand-red);
-  selection-color: white;
+  overflow-x: hidden;
 }
 
-/* ── PROFESSIONAL DESIGN SYSTEM ── */
+/* ── HOMELY MINIMALIST UTILITIES ── */
 
-@utility glass-nav {
-  background-color: rgba(250, 247, 242, 0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+@utility soft-card {
+  background-color: white;
+  border-radius: 2.5rem;
+  padding: 2rem;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.03);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@utility premium-shadow {
-  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.08), 0 18px 36px -18px rgba(0, 0, 0, 0.03);
+@utility soft-card-hover {
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 30px 60px -15px rgba(229, 115, 115, 0.1);
+  }
 }
 
-@utility section-container {
-  @apply max-w-7xl mx-auto px-6 md:px-12;
+@utility pastel-gradient {
+  background: linear-gradient(135deg, #fff1ed 0%, #f2f7f1 100%);
+}
+
+@utility section-spacing {
+  @apply py-24 md:py-32;
 }
 
 /* ── ANIMATIONS ── */
 
-@keyframes reveal-skew {
+@keyframes count-up {
   from {
-    transform: translateY(60px) skewY(2deg);
     opacity: 0;
+    transform: translateY(10px);
   }
 
   to {
-    transform: translateY(0) skewY(0);
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@keyframes slow-pan {
+@keyframes float {
   0% {
-    transform: scale(1) translate(0, 0);
+    transform: translateY(0px);
   }
 
   50% {
-    transform: scale(1.05) translate(-1%, -1%);
+    transform: translateY(-10px);
   }
 
   100% {
-    transform: scale(1) translate(0, 0);
+    transform: translateY(0px);
   }
 }
 
-.animate-reveal {
-  animation: reveal-skew 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 }
 
-.animate-pan {
-  animation: slow-pan 20s ease-in-out infinite;
-}
-
-/* ── IMAGE WRAPPERS ── */
-.editorial-img-wrapper {
-  @apply relative overflow-hidden rounded-[3rem] premium-shadow transition-all duration-700;
-}
-
-.editorial-img-wrapper:hover {
-  @apply -translate-y-2;
-  box-shadow: 0 50px 100px -20px rgba(198, 40, 40, 0.15);
+.animate-count {
+  animation: count-up 1s ease-out forwards;
 }
 
 /* ── TYPOGRAPHY ── */
-.text-stroke {
-  -webkit-text-stroke: 1px currentColor;
-  -webkit-text-fill-color: transparent;
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.telugu-text {
+  font-family: inherit;
+  font-style: italic;
+  font-weight: 300;
+  opacity: 0.8;
+}
+
+/* Custom Scrollbar for that 'Diary' look */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-brand-beige);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e0d7c8;
+  border-radius: 10px;
 }

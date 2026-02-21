@@ -1,87 +1,88 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getChannelStats, ChannelStats } from "@/lib/youtube";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Header() {
-    const [stats, setStats] = useState<ChannelStats | null>(null);
     const [scrolled, setScrolled] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const pathname = usePathname();
 
     useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 50);
+        const handleScroll = () => setScrolled(window.scrollY > 20);
         window.addEventListener("scroll", handleScroll);
-
-        async function fetchStats() {
-            const data = await getChannelStats();
-            setStats(data);
-        }
-        fetchStats();
-
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    const subscribeUrl = "https://www.youtube.com/channel/UC_UoV11Yx2u66CaBsvHPJiw?sub_confirmation=1";
+    const navItems = [
+        { name: "Home", href: "/" },
+        { name: "Recipes", href: "/recipes" },
+        { name: "Cleaning", href: "/cleaning" },
+        { name: "Vlogs", href: "/vlogs" },
+        { name: "Community", href: "/community" },
+    ];
 
     return (
-        <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${scrolled ? "glass-nav py-4" : "py-8"}`}>
-            <div className="section-container flex items-center justify-between font-sans">
+        <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${scrolled ? "bg-white/80 backdrop-blur-xl py-3 shadow-sm" : "py-6"}`}>
+            <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
 
-                {/* BRANDING: Symmetric & Balanced */}
-                <div
-                    className="flex items-center gap-5 cursor-pointer group"
-                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                >
-                    <div className="relative">
-                        <img
-                            src="/DD-Logo.png"
-                            alt="Logo"
-                            className="w-10 h-10 md:w-12 md:h-12 object-contain transition-transform duration-500 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-brand-red opacity-0 group-hover:opacity-10 rounded-full blur-xl transition-opacity" />
+                {/* Logo Group */}
+                <Link href="/" className="flex items-center gap-4 group">
+                    <img src="/DD-Logo.png" alt="Logo" className="w-10 h-10 md:w-12 md:h-12 object-contain group-hover:rotate-12 transition-transform" />
+                    <div className="h-7 md:h-10 hidden sm:block">
+                        <img src="/DD-Title.png" alt="Dhanya Diaries" className="h-full w-auto object-contain" />
                     </div>
-                    <div className="h-7 md:h-9">
-                        <img
-                            src="/DD-Title.png"
-                            alt="Dhanya Diaries"
-                            className="h-full w-auto object-contain"
-                        />
-                    </div>
-                </div>
+                </Link>
 
-                {/* NAVIGATION: Minimalist Designer Links */}
-                <nav className="hidden lg:flex items-center gap-10">
-                    {['Journal', 'Kitchen', 'Lifestyle', 'Vlogs'].map((item) => (
-                        <a
-                            key={item}
-                            href={`#${item.toLowerCase()}`}
-                            className="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-dark/40 hover:text-brand-red hover:tracking-[0.4em] transition-all duration-300"
+                {/* Desktop Navigation */}
+                <nav className="hidden lg:flex items-center gap-8">
+                    {navItems.map((item) => (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className={`text-[11px] font-black uppercase tracking-[0.2em] transition-colors ${pathname === item.href ? "text-brand-red" : "text-brand-text/50 hover:text-brand-red"}`}
                         >
-                            {item}
-                        </a>
+                            {item.name}
+                        </Link>
                     ))}
                 </nav>
 
-                {/* STATS & CTA: High-End UI */}
-                <div className="flex items-center gap-6 md:gap-10">
-                    <div className="hidden sm:flex flex-col items-end">
-                        <span className="text-xl md:text-2xl font-serif italic text-brand-dark/30 leading-none">
-                            {stats?.subscriberCount || "24.5K"}
-                        </span>
-                        <span className="text-[7px] font-black uppercase tracking-[0.2em] text-brand-red mt-1">Founding Souls</span>
+                {/* Action Group */}
+                <div className="flex items-center gap-6">
+                    <div className="hidden md:flex items-center bg-brand-peach px-4 py-2 rounded-full border border-brand-red/10">
+                        <span className="text-sm mr-2 opacity-30">🔍</span>
+                        <input
+                            type="text"
+                            placeholder="Search recipes..."
+                            className="bg-transparent border-none outline-none text-[10px] font-bold uppercase tracking-widest w-24 focus:w-40 transition-all text-brand-text"
+                        />
                     </div>
 
-                    <a
-                        href={subscribeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="relative overflow-hidden bg-brand-dark text-white text-[9px] font-black px-10 py-4.5 rounded-full transition-all duration-500 hover:bg-brand-red hover:px-12 flex items-center gap-2 group"
+                    <button
+                        className="lg:hidden text-2xl"
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
                     >
-                        <span className="uppercase tracking-[0.2em]">Subscribe</span>
-                        <span className="text-sm transition-transform group-hover:translate-x-1">→</span>
-                    </a>
+                        {isMenuOpen ? "✕" : "☰"}
+                    </button>
                 </div>
-
             </div>
+
+            {/* Mobile Menu */}
+            {isMenuOpen && (
+                <div className="lg:hidden absolute top-full inset-x-0 bg-white border-b border-brand-peach p-8 flex flex-col gap-6 animate-reveal">
+                    {navItems.map((item) => (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setIsMenuOpen(false)}
+                            className="text-lg font-serif font-black text-brand-text hover:text-brand-red"
+                        >
+                            {item.name}
+                        </Link>
+                    ))}
+                </div>
+            )}
         </header>
     );
 }
