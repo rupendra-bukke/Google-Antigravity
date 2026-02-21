@@ -51,19 +51,40 @@ export default function Cleaning() {
                 <div className="space-y-16">
                     <h3 className="text-4xl font-serif text-center">Transformations</h3>
                     <div className="grid md:grid-cols-2 gap-12">
+                        {/* BEFORE CARD */}
                         <div className="space-y-6">
-                            <div className="aspect-video rounded-[3rem] overflow-hidden bg-gray-100 relative group">
-                                <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6954?auto=format&fit=crop&w=800&q=80" className="w-full h-full object-cover" alt="Before" />
-                                <div className="absolute top-6 left-6 bg-brand-text text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest">Before</div>
+                            <div className="aspect-video rounded-[3.5rem] overflow-hidden bg-gray-100 relative group shadow-sm">
+                                <img
+                                    src="https://images.unsplash.com/photo-1595111000631-f52554e2f9f1?q=80&w=1200&auto=format&fit=crop"
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+                                    alt="Cluttered Pantry - Before"
+                                />
+                                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                <div className="absolute top-8 left-8 bg-brand-text text-white px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg">Before</div>
                             </div>
-                            <p className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-brand-text/30">Pantry Overload</p>
+                            <div className="space-y-2 text-center">
+                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red/60">Stage One</p>
+                                <p className="text-lg font-serif text-brand-text/40">Pantry Overload</p>
+                            </div>
                         </div>
+
+                        {/* AFTER CARD */}
                         <div className="space-y-6">
-                            <div className="aspect-video rounded-[3rem] overflow-hidden bg-gray-100 relative group">
-                                <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80" className="w-full h-full object-cover" alt="After" />
-                                <div className="absolute top-6 left-6 bg-green-500 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest">After ✨</div>
+                            <div className="aspect-video rounded-[3.5rem] overflow-hidden bg-gray-100 relative group shadow-sm">
+                                <img
+                                    src="https://images.unsplash.com/photo-1584622781564-1d9876a13d00?q=80&w=1200&auto=format&fit=crop"
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+                                    alt="Organized Pantry - After"
+                                />
+                                <div className="absolute inset-0 bg-brand-red/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                <div className="absolute top-8 left-8 bg-green-500 text-white px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg flex items-center gap-2">
+                                    After <span className="animate-pulse">✨</span>
+                                </div>
                             </div>
-                            <p className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-brand-text/30">Minimalist Organization</p>
+                            <div className="space-y-2 text-center">
+                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-green-600/60">Final Result</p>
+                                <p className="text-lg font-serif text-brand-text/80">Minimalist Organization</p>
+                            </div>
                         </div>
                     </div>
                 </div>
