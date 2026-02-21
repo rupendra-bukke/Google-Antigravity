@@ -89,7 +89,7 @@ export default function Community() {
                                 <h4 className="text-xl font-bold">YouTube</h4>
                                 <span className="text-[9px] font-black uppercase tracking-widest text-brand-red">Follow Now</span>
                             </a>
-                            <a href="#" className="soft-card text-center p-10 space-y-4 hover:bg-brand-peach/10 cursor-pointer block">
+                            <a href="https://www.instagram.com/dhanya.diaries" target="_blank" rel="noopener noreferrer" className="soft-card text-center p-10 space-y-4 hover:bg-brand-peach/10 cursor-pointer block">
                                 <span className="text-2xl">📸</span>
                                 <h4 className="text-xl font-bold">Instagram</h4>
                                 <span className="text-[9px] font-black uppercase tracking-widest text-brand-red">Follow Now</span>
