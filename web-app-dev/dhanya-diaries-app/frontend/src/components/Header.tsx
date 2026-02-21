@@ -27,12 +27,12 @@ export default function Header() {
         <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${scrolled ? "bg-white/80 backdrop-blur-xl py-3 shadow-sm" : "py-6"}`}>
             <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
 
-                {/* Logo Group: Single Clean Branding */}
+                {/* Logo Group: Prominent Single Branding */}
                 <Link href="/" className="flex items-center group">
                     <img
                         src="/DD-Logo.png"
                         alt="Dhanya Diaries Logo"
-                        className="w-14 h-14 md:w-20 md:h-20 object-contain hover:scale-110 transition-transform duration-500"
+                        className="w-20 h-20 md:w-36 md:h-36 object-contain hover:scale-105 transition-transform duration-700"
                     />
                 </Link>
 
