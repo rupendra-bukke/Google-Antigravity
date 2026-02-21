@@ -21,13 +21,14 @@ export default function Header() {
             <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
 
                 {/* BRANDING: Simple & High-Contrast */}
-                <div className="flex items-center gap-4 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                    <img src="/DD-Logo.png" alt="Logo" className="w-10 h-10 md:w-12 md:h-12 object-contain" />
+                <div className="flex items-center gap-4 cursor-pointer group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                    <img src="/DD-Logo.png" alt="Logo" className="w-10 h-10 md:w-14 md:h-14 object-contain transition-transform group-hover:scale-110" />
                     <div className="flex flex-col">
-                        <span className="text-lg md:text-xl font-serif font-black tracking-tight leading-none text-brand-charcoal">
-                            Dhanya diaries
-                        </span>
-                        <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-gray-400 mt-1">Lifestyle Studio</span>
+                        <h1 className="text-xl md:text-2xl leading-none flex gap-1">
+                            <span className="dhanya-style">Dhanya</span>
+                            <span className="diaries-style">diaries</span>
+                        </h1>
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400 mt-1">Lifestyle Studio</span>
                     </div>
                 </div>
 

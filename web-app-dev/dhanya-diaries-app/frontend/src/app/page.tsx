@@ -27,13 +27,15 @@ export default function Home() {
       {/* ── SECTION 1: THE STUDIO MASTHEAD ── */}
       <section className="relative pt-40 pb-20 px-6 md:px-12 text-center">
         <div className="max-w-4xl mx-auto space-y-8 animate-reveal">
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-6">
             <span className="text-[10px] font-black uppercase tracking-[0.5em] text-brand-red">Curating the Home</span>
-            <h1 className="text-6xl md:text-9xl leading-[0.9] tracking-tight text-brand-charcoal">
-              Warmth of <br />
-              <span className="italic font-light opacity-30">Home Stories.</span>
-            </h1>
-            <p className="telugu-signature text-3xl md:text-5xl mt-2">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-x-12">
+              <h1 className="text-[18vw] lg:text-[14rem] leading-[1] text-center scale-110 md:scale-100 py-10">
+                <span className="dhanya-style block md:inline-block">Dhanya</span>
+                <span className="diaries-style block md:inline-block md:ml-8">Diaries</span>
+              </h1>
+            </div>
+            <p className="telugu-signature text-4xl md:text-6xl mt-4">
               ఇంటి ఆత్మీయత...
             </p>
           </div>
@@ -98,8 +100,14 @@ export default function Home() {
       {/* ── SECTION 3: REFINED FOOTER ── */}
       <footer className="py-40 bg-brand-charcoal text-white text-center px-6">
         <div className="max-w-4xl mx-auto space-y-12">
-          <img src="/DD-Logo.png" className="w-20 h-20 mx-auto opacity-20 grayscale invert" />
-          <h2 className="text-4xl md:text-6xl font-serif italic text-white/10 tracking-tighter">ఇంకా ఎంతో ఉంది...</h2>
+          <img src="/DD-Logo.png" className="w-24 h-24 mx-auto opacity-40 grayscale invert" />
+
+          <h2 className="text-6xl md:text-8xl flex flex-col md:flex-row gap-4 items-center justify-center py-10">
+            <span className="dhanya-style">Dhanya</span>
+            <span className="diaries-style">diaries</span>
+          </h2>
+
+          <h3 className="text-4xl md:text-6xl font-serif italic text-white/10 tracking-tighter">ఇంకా ఎంతో ఉంది...</h3>
           <div className="h-[1px] w-20 bg-brand-red/30 mx-auto" />
           <div className="flex justify-center gap-10">
             {['Instagram', 'YouTube', 'Email'].map(social => (

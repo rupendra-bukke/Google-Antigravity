@@ -3,6 +3,7 @@
 @theme {
   --font-serif: "Playfair Display", serif;
   --font-sans: "Outfit", sans-serif;
+  --font-playful: "var(--font-fredoka)", sans-serif;
 
   --color-brand-red: #d32f2f;
   --color-brand-charcoal: #1a1515;
@@ -69,4 +70,25 @@ h3 {
   color: var(--color-brand-red);
   font-style: italic;
   font-weight: 300;
+}
+
+/* ── DHANYA BUBBLE STYLE ── */
+.dhanya-style {
+  font-family: var(--font-playful);
+  background: linear-gradient(to bottom, #FF4533 20%, #B71C1C 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 0 #5D1010) drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+  -webkit-text-stroke: 1.5px white;
+}
+
+.diaries-style {
+  font-family: var(--font-playful);
+  background: linear-gradient(to bottom, #FFE600 20%, #FF8F00 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 0 #824900) drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+  -webkit-text-stroke: 1.5px white;
 }

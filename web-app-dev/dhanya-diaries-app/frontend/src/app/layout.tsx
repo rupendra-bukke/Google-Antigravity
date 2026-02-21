@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Outfit } from "next/font/google";
+import { Playfair_Display, Outfit, Fredoka } from "next/font/google";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -10,6 +10,12 @@ const playfair = Playfair_Display({
 const outfit = Outfit({
   subsets: ["latin"],
   variable: "--font-outfit"
+});
+
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  variable: "--font-fredoka",
+  weight: ["700"]
 });
 
 export const metadata: Metadata = {
@@ -26,7 +32,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${playfair.variable} ${outfit.variable} font-sans antialiased overflow-x-hidden`}>
+      <body className={`${playfair.variable} ${outfit.variable} ${fredoka.variable} font-sans antialiased overflow-x-hidden`}>
         <Header />
         <main className="min-h-screen">
           {children}
