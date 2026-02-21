@@ -55,8 +55,23 @@ export default function Recipes() {
                                     This recipe focuses on the balance of spices and the warmth of slow-cooked ingredients.
                                 </p>
                                 <div className="pt-6 border-t border-brand-peach/50 flex justify-between items-center">
-                                    <button className="text-[10px] font-black uppercase tracking-widest text-brand-red hover:underline">Full Details</button>
-                                    <span className="text-xl opacity-20 group-hover:opacity-100 transition-opacity">❤</span>
+                                    <button
+                                        onClick={() => alert("The full step-by-step guide is loading! Get your apron ready.")}
+                                        className="text-[10px] font-black uppercase tracking-widest text-brand-red hover:underline"
+                                    >
+                                        Full Details
+                                    </button>
+                                    <button
+                                        className="text-xl opacity-20 hover:opacity-100 focus:opacity-100 transition-opacity active:scale-125"
+                                        onClick={(e) => {
+                                            const target = e.currentTarget;
+                                            target.classList.toggle('opacity-100');
+                                            target.classList.toggle('text-brand-red');
+                                            target.classList.toggle('opacity-20');
+                                        }}
+                                    >
+                                        ❤
+                                    </button>
                                 </div>
                             </div>
                         </div>

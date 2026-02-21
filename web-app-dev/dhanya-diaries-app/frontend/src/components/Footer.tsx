@@ -36,7 +36,7 @@ export default function Footer() {
                     <div className="space-y-6">
                         <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-brand-red">Connect</h4>
                         <nav className="flex flex-col gap-4 text-sm font-medium text-brand-text/60">
-                            <a href="#" className="hover:text-brand-red transition-colors">YouTube</a>
+                            <a href="https://www.youtube.com/channel/UC_UoV11Yx2u66CaBsvHPJiw" target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">YouTube</a>
                             <a href="#" className="hover:text-brand-red transition-colors">Instagram</a>
                             <a href="#" className="hover:text-brand-red transition-colors">Facebook</a>
                             <a href="#" className="hover:text-brand-red transition-colors">WhatsApp Community</a>

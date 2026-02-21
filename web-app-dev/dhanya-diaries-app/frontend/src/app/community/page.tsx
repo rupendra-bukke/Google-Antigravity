@@ -74,20 +74,26 @@ export default function Community() {
                             <div className="space-y-4">
                                 <input type="text" placeholder="Your Name" className="w-full bg-white/80 p-5 rounded-2xl text-sm outline-none" />
                                 <textarea placeholder="Message Dhanya..." rows={4} className="w-full bg-white/80 p-5 rounded-2xl text-sm outline-none" />
-                                <button className="bg-brand-text text-white w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-red transition-all">
+                                <button
+                                    onClick={() => alert("Thank you for your message! Dhanya will read it soon.")}
+                                    className="bg-brand-text text-white w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-red transition-all"
+                                >
                                     Send Message
                                 </button>
                             </div>
                         </div>
 
                         <div className="grid md:grid-cols-2 gap-8">
-                            {['YouTube', 'Instagram'].map(social => (
-                                <div key={social} className="soft-card text-center p-10 space-y-4 hover:bg-brand-peach/10 cursor-pointer">
-                                    <span className="text-2xl">{social === 'YouTube' ? '📹' : '📸'}</span>
-                                    <h4 className="text-xl font-bold">{social}</h4>
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-brand-red">Follow Now</span>
-                                </div>
-                            ))}
+                            <a href="https://www.youtube.com/channel/UC_UoV11Yx2u66CaBsvHPJiw" target="_blank" rel="noopener noreferrer" className="soft-card text-center p-10 space-y-4 hover:bg-brand-peach/10 cursor-pointer block">
+                                <span className="text-2xl">📹</span>
+                                <h4 className="text-xl font-bold">YouTube</h4>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-brand-red">Follow Now</span>
+                            </a>
+                            <a href="#" className="soft-card text-center p-10 space-y-4 hover:bg-brand-peach/10 cursor-pointer block">
+                                <span className="text-2xl">📸</span>
+                                <h4 className="text-xl font-bold">Instagram</h4>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-brand-red">Follow Now</span>
+                            </a>
                         </div>
                     </div>
 

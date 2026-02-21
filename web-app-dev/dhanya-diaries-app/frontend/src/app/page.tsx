@@ -136,7 +136,7 @@ export default function Home() {
           <h3 className="text-center text-label !text-brand-text/30 mb-16">Pick Your Journey</h3>
           <div className="grid md:grid-cols-3 gap-12">
             {CATEGORIES.map((cat) => (
-              <a key={cat.name} href={`/${cat.name.toLowerCase()}`} className="soft-card soft-card-hover group text-center space-y-8 flex flex-col items-center">
+              <a key={cat.name} href={cat.name === "Cooking" ? "/recipes" : `/${cat.name.toLowerCase()}`} className="soft-card soft-card-hover group text-center space-y-8 flex flex-col items-center">
                 <div className={`w-24 h-24 ${cat.color} rounded-full flex items-center justify-center text-4xl group-hover:scale-110 transition-transform`}>
                   {cat.icon}
                 </div>
@@ -178,7 +178,10 @@ export default function Home() {
               placeholder="Your email address"
               className="flex-1 bg-white px-8 py-5 rounded-2xl outline-none focus:ring-2 ring-brand-red/20 text-sm font-medium"
             />
-            <button className="bg-brand-text text-white px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-red transition-all shadow-xl">
+            <button
+              onClick={() => alert("Welcome to the family! You'll receive a little update from me soon.")}
+              className="bg-brand-text text-white px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-red transition-all shadow-xl"
+            >
               Sign Up
             </button>
           </div>

@@ -37,7 +37,10 @@ export default function Cleaning() {
                                 <h3 className="text-3xl font-serif">{tip.title}</h3>
                                 <p className="text-sm text-brand-text/60 leading-relaxed">{tip.desc}</p>
                             </div>
-                            <button className="bg-brand-text text-white w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red transition-all">
+                            <button
+                                onClick={() => alert("Your companion checklist is preparing for download! Check your downloads folder in a moment.")}
+                                className="bg-brand-text text-white w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red transition-all"
+                            >
                                 Download Checklist
                             </button>
                         </div>
