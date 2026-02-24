@@ -11,8 +11,8 @@ The APScheduler inside main.py calls the trigger automatically at each
 checkpoint time (IST) on weekdays.
 """
 
-from fastapi import APIRouter, HTTPException, Query
-from datetime import datetime, timezone, timedelta
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
+from datetime import datetime, timezone, timedelta, time
 
 from services.market_data import fetch_multi_timeframe, is_indian_market_open
 from services.decision_v2 import run_advanced_analysis
@@ -37,17 +37,48 @@ def _today_ist() -> str:
 
 @router.get("")
 async def get_checkpoints(
+    background_tasks: BackgroundTasks,
     symbol: str = Query(default="^NSEI"),
     date: str = Query(default=None),
 ):
-    """Return all 7 checkpoint snapshots for a given day."""
+    """
+    Return all 7 checkpoint snapshots for a given day.
+    If today's checkpoints are missing but should have been captured, 
+    trigger a catch-up in the background.
+    """
     date_str = date or _today_ist()
     panels = await load_all_checkpoints(date_str, symbol)
+
+    # ── Catch-up Logic ──
+    # Only run catch-up for Today during market days (Mon-Fri)
+    now_ist = datetime.now(IST)
+    is_today = date_str == now_ist.strftime("%Y-%m-%d")
+    is_weekday = now_ist.weekday() < 5
+
+    if is_today and is_weekday:
+        missing_ids = []
+        current_time_str = now_ist.strftime("%H%M")
+        
+        for p in panels:
+            if p["data"] is None:
+                # Slot is empty, check if it should have been filled
+                # checkpoint time is e.g. "09:15" -> "0915"
+                cp_time_id = p["id"]
+                if current_time_str >= cp_time_id:
+                    # Time has passed, but slot is empty -> Catch up!
+                    missing_ids.append(cp_time_id)
+        
+        if missing_ids:
+            # Trigger background tasks for all missing checkpoints
+            for cp_id in missing_ids:
+                background_tasks.add_task(run_checkpoint_for_all_symbols, cp_id)
+
     return {
         "date": date_str,
         "symbol": symbol,
         "panels": panels,
         "checkpoints_meta": CHECKPOINTS,
+        "catchup_triggered": is_today and is_weekday and len(missing_ids) > 0 if 'missing_ids' in locals() else False
     }
 
 
