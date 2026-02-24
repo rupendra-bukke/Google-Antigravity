@@ -49,9 +49,39 @@ def _ttl_seconds() -> int:
     return max(int((expire_at - now).total_seconds()), 60)
 
 
+def _get_base_url() -> str:
+    """Normalize Upstash URL to base (no trailing slash)."""
+    url = UPSTASH_URL.strip()
+    if url.endswith("/"):
+        url = url[:-1]
+    # If user accidentally included '/set' or others, strip it
+    for suffix in ["/set", "/get", "/keys", "/pipeline"]:
+        if url.endswith(suffix):
+            url = url[:-len(suffix)]
+    return url
+
+
+async def log_debug(msg: str):
+    """Save a durable debug log to Redis."""
+    try:
+        url = _get_base_url()
+        timestamp = datetime.now(IST).strftime("%H:%M:%S")
+        entry = f"[{timestamp}] {msg}"
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                url,
+                json=["SET", "debug:last_run", entry, "EX", "3600"],
+                headers=_headers(),
+                timeout=5
+            )
+    except:
+        pass
+
+
 async def save_checkpoint(date_str: str, checkpoint_id: str, symbol: str, payload: dict) -> bool:
     """Save checkpoint payload to Upstash Redis using command array for safety."""
-    if not UPSTASH_URL or not UPSTASH_TOKEN:
+    base_url = _get_base_url()
+    if not base_url or not UPSTASH_TOKEN:
         print("[REDIS] ❌ Missing credentials - cannot save.")
         return False
 
@@ -64,7 +94,7 @@ async def save_checkpoint(date_str: str, checkpoint_id: str, symbol: str, payloa
             # Use JSON array command for absolute safety with JSON strings
             command = ["SET", key, value, "EX", str(ttl)]
             resp = await client.post(
-                UPSTASH_URL,
+                base_url,
                 json=command,
                 headers=_headers(),
                 timeout=15,
@@ -80,7 +110,8 @@ async def save_checkpoint(date_str: str, checkpoint_id: str, symbol: str, payloa
 
 async def load_checkpoint(date_str: str, checkpoint_id: str, symbol: str) -> dict | None:
     """Load a single checkpoint snapshot using GET command."""
-    if not UPSTASH_URL or not UPSTASH_TOKEN:
+    base_url = _get_base_url()
+    if not base_url or not UPSTASH_TOKEN:
         return None
 
     key = _make_key(date_str, checkpoint_id, symbol)
@@ -88,7 +119,7 @@ async def load_checkpoint(date_str: str, checkpoint_id: str, symbol: str) -> dic
     async with httpx.AsyncClient() as client:
         try:
             resp = await client.post(
-                UPSTASH_URL,
+                base_url,
                 json=["GET", key],
                 headers=_headers(),
                 timeout=10,

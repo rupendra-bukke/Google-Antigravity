@@ -19,9 +19,11 @@ from services.decision_v2 import run_advanced_analysis
 from services.checkpoint_store import (
     save_checkpoint,
     load_all_checkpoints,
+    load_checkpoint,
     CHECKPOINTS,
     UPSTASH_URL,
     UPSTASH_TOKEN,
+    log_debug,
 )
 
 router = APIRouter(prefix="/api/v1/checkpoints", tags=["checkpoints"])
@@ -79,15 +81,17 @@ LAST_ERROR = "None yet"
 async def checkpoint_diag():
     """Diagnostic endpoint to check backend status on live server."""
     now_ist = datetime.now(IST)
+    debug_val = await load_checkpoint("debug", "last", "run")
     return {
         "status": "ok",
         "server_time_ist": now_ist.isoformat(),
         "weekday": now_ist.weekday(),
         "is_weekday": now_ist.weekday() < 5,
         "redis_configured": bool(UPSTASH_URL and UPSTASH_TOKEN),
-        "redis_url": UPSTASH_URL[:15] + "..." if UPSTASH_URL else None,
+        "redis_url_normalized": UPSTASH_URL[:15] + "..." if UPSTASH_URL else None,
         "checkpoints_count": len(CHECKPOINTS),
-        "last_error": LAST_ERROR
+        "last_error": LAST_ERROR,
+        "durable_debug": debug_val
     }
 
 
@@ -95,15 +99,15 @@ async def run_catchup_sequential(checkpoint_ids: list[str]):
     """Runs missing checkpoints one by one with a small delay."""
     import asyncio
     global LAST_ERROR
-    print(f"[CATCH-UP] 🚀 Starting sequential catch-up for: {checkpoint_ids}")
+    await log_debug(f"Starting catch-up for {checkpoint_ids}")
     for cp_id in checkpoint_ids:
         try:
             await run_checkpoint_for_all_symbols(cp_id)
-            await asyncio.sleep(2)  # 2s breather to avoid yfinance rate limits
+            await asyncio.sleep(2)
         except Exception as e:
             LAST_ERROR = str(e)
-            print(f"[CATCH-UP] ❌ Failed slot {cp_id}: {e}")
-    print(f"[CATCH-UP] ✅ Completed catch-up check.")
+            await log_debug(f"Error in {cp_id}: {e}")
+    await log_debug("Catch-up sequence finished")
 
 
 # ── Manual / Scheduled Trigger ─────────────────────────────────────────────
