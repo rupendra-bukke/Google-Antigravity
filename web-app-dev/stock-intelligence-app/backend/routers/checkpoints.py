@@ -20,6 +20,8 @@ from services.checkpoint_store import (
     save_checkpoint,
     load_all_checkpoints,
     CHECKPOINTS,
+    UPSTASH_URL,
+    UPSTASH_TOKEN,
 )
 
 router = APIRouter(prefix="/api/v1/checkpoints", tags=["checkpoints"])
@@ -67,7 +69,23 @@ async def get_checkpoints(
         "symbol": symbol,
         "panels": panels,
         "checkpoints_meta": CHECKPOINTS,
-        "catchup_triggered": is_today and is_weekday and len(missing_ids) > 0 if 'missing_ids' in locals() else False
+        "catchup_triggered": is_today and is_weekday and len(missing_ids) > 0
+    }
+
+
+@router.get("/diag")
+async def checkpoint_diag():
+    """Diagnostic endpoint to check backend status on live server."""
+    now_ist = datetime.now(IST)
+    return {
+        "status": "ok",
+        "server_time_ist": now_ist.isoformat(),
+        "weekday": now_ist.weekday(),
+        "is_weekday": now_ist.weekday() < 5,
+        "redis_configured": bool(UPSTASH_URL and UPSTASH_TOKEN),
+        "redis_url_present": bool(UPSTASH_URL),
+        "redis_token_present": bool(UPSTASH_TOKEN),
+        "checkpoints_count": len(CHECKPOINTS),
     }
 
 
