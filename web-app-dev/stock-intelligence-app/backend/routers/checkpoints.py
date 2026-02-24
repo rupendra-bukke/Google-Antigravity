@@ -56,22 +56,11 @@ async def get_checkpoints(
     is_weekday = now_ist.weekday() < 5
 
     if is_today and is_weekday:
-        missing_ids = []
-        current_time_str = now_ist.strftime("%H%M")
-        
-        for p in panels:
-            if p["data"] is None:
-                # Slot is empty, check if it should have been filled
-                # checkpoint time is e.g. "09:15" -> "0915"
-                cp_time_id = p["id"]
-                if current_time_str >= cp_time_id:
-                    # Time has passed, but slot is empty -> Catch up!
-                    missing_ids.append(cp_time_id)
+        missing_ids = [p["id"] for p in panels if p["data"] is None and now_ist.strftime("%H%M") >= p["id"]]
         
         if missing_ids:
-            # Trigger background tasks for all missing checkpoints
-            for cp_id in missing_ids:
-                background_tasks.add_task(run_checkpoint_for_all_symbols, cp_id)
+            # Trigger a single sequential catch-up task
+            background_tasks.add_task(run_catchup_sequential, missing_ids)
 
     return {
         "date": date_str,
@@ -80,6 +69,16 @@ async def get_checkpoints(
         "checkpoints_meta": CHECKPOINTS,
         "catchup_triggered": is_today and is_weekday and len(missing_ids) > 0 if 'missing_ids' in locals() else False
     }
+
+
+async def run_catchup_sequential(checkpoint_ids: list[str]):
+    """Runs missing checkpoints one by one with a small delay."""
+    import asyncio
+    print(f"[CATCH-UP] 🚀 Starting sequential catch-up for: {checkpoint_ids}")
+    for cp_id in checkpoint_ids:
+        await run_checkpoint_for_all_symbols(cp_id)
+        await asyncio.sleep(2)  # 2s breather to avoid yfinance rate limits
+    print(f"[CATCH-UP] ✅ Completed catch-up for {len(checkpoint_ids)} slots.")
 
 
 # ── Manual / Scheduled Trigger ─────────────────────────────────────────────
