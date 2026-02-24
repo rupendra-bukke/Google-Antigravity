@@ -59,13 +59,17 @@ async def save_checkpoint(date_str: str, checkpoint_id: str, symbol: str, payloa
     value = json.dumps(payload)
 
     async with httpx.AsyncClient() as client:
-        # SET key value EX ttl
-        resp = await client.post(
-            f"{UPSTASH_URL}/set/{key}/{value}/ex/{ttl}",
-            headers=_headers(),
-            timeout=10,
-        )
-        return resp.status_code == 200
+        try:
+            # SET key value EX ttl
+            resp = await client.post(
+                f"{UPSTASH_URL}/set/{key}/{value}/ex/{ttl}",
+                headers=_headers(),
+                timeout=10,
+            )
+            return resp.status_code == 200
+        except Exception as e:
+            print(f"[REDIS] ❌ Failed to save checkpoint {key}: {e}")
+            return False
 
 
 async def load_checkpoint(date_str: str, checkpoint_id: str, symbol: str) -> dict | None:
@@ -76,17 +80,22 @@ async def load_checkpoint(date_str: str, checkpoint_id: str, symbol: str) -> dic
     key = _make_key(date_str, checkpoint_id, symbol)
 
     async with httpx.AsyncClient() as client:
-        resp = await client.get(
-            f"{UPSTASH_URL}/get/{key}",
-            headers=_headers(),
-            timeout=10,
-        )
-        if resp.status_code != 200:
+        try:
+            resp = await client.get(
+                f"{UPSTASH_URL}/get/{key}",
+                headers=_headers(),
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                print(f"[REDIS] ⚠️ Get failed for {key} | Status: {resp.status_code}")
+                return None
+            result = resp.json().get("result")
+            if not result:
+                return None
+            return json.loads(result)
+        except Exception as e:
+            print(f"[REDIS] ❌ Failed to load checkpoint {key}: {e}")
             return None
-        result = resp.json().get("result")
-        if not result:
-            return None
-        return json.loads(result)
 
 
 async def load_all_checkpoints(date_str: str, symbol: str) -> list[dict]:
