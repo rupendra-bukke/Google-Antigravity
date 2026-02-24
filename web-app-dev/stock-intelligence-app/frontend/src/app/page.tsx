@@ -354,16 +354,6 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* ── Chart ── */}
-            <div>
-                <p className="section-label mb-3 ml-1">Price Action</p>
-                <CandlestickChart
-                    candles={data?.candles ?? []}
-                    ema20={data?.indicators.ema20 ?? null}
-                    isLoading={loading}
-                />
-            </div>
-
             {/* ── Decision Badge ── */}
             <DecisionBadge
                 decision={data?.decision ?? null}

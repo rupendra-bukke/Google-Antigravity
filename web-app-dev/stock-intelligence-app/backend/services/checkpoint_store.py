@@ -50,8 +50,9 @@ def _ttl_seconds() -> int:
 
 
 async def save_checkpoint(date_str: str, checkpoint_id: str, symbol: str, payload: dict) -> bool:
-    """Save checkpoint payload to Upstash Redis with auto-expiry at 21:00 IST."""
+    """Save checkpoint payload to Upstash Redis using command array for safety."""
     if not UPSTASH_URL or not UPSTASH_TOKEN:
+        print("[REDIS] ❌ Missing credentials - cannot save.")
         return False
 
     key = _make_key(date_str, checkpoint_id, symbol)
@@ -60,20 +61,25 @@ async def save_checkpoint(date_str: str, checkpoint_id: str, symbol: str, payloa
 
     async with httpx.AsyncClient() as client:
         try:
-            # SET key value EX ttl
+            # Use JSON array command for absolute safety with JSON strings
+            command = ["SET", key, value, "EX", str(ttl)]
             resp = await client.post(
-                f"{UPSTASH_URL}/set/{key}/{value}/ex/{ttl}",
+                UPSTASH_URL,
+                json=command,
                 headers=_headers(),
-                timeout=10,
+                timeout=15,
             )
-            return resp.status_code == 200
+            if resp.status_code != 200:
+                print(f"[REDIS] ❌ SET failed for {key} | Status: {resp.status_code} | Body: {resp.text}")
+                return False
+            return True
         except Exception as e:
-            print(f"[REDIS] ❌ Failed to save checkpoint {key}: {e}")
+            print(f"[REDIS] ❌ Connection error during SET {key}: {e}")
             return False
 
 
 async def load_checkpoint(date_str: str, checkpoint_id: str, symbol: str) -> dict | None:
-    """Load a single checkpoint snapshot. Returns None if not yet captured."""
+    """Load a single checkpoint snapshot using GET command."""
     if not UPSTASH_URL or not UPSTASH_TOKEN:
         return None
 
@@ -81,20 +87,23 @@ async def load_checkpoint(date_str: str, checkpoint_id: str, symbol: str) -> dic
 
     async with httpx.AsyncClient() as client:
         try:
-            resp = await client.get(
-                f"{UPSTASH_URL}/get/{key}",
+            resp = await client.post(
+                UPSTASH_URL,
+                json=["GET", key],
                 headers=_headers(),
                 timeout=10,
             )
             if resp.status_code != 200:
-                print(f"[REDIS] ⚠️ Get failed for {key} | Status: {resp.status_code}")
+                print(f"[REDIS] ⚠️ GET failed for {key} | Status: {resp.status_code}")
                 return None
+            
+            # Upstash returns {"result": "..."} for command arrays
             result = resp.json().get("result")
             if not result:
                 return None
             return json.loads(result)
         except Exception as e:
-            print(f"[REDIS] ❌ Failed to load checkpoint {key}: {e}")
+            print(f"[REDIS] ❌ Connection error during GET {key}: {e}")
             return None
 
 
