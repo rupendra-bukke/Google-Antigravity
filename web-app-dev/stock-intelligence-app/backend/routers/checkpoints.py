@@ -73,6 +73,8 @@ async def get_checkpoints(
     }
 
 
+LAST_ERROR = "None yet"
+
 @router.get("/diag")
 async def checkpoint_diag():
     """Diagnostic endpoint to check backend status on live server."""
@@ -83,20 +85,25 @@ async def checkpoint_diag():
         "weekday": now_ist.weekday(),
         "is_weekday": now_ist.weekday() < 5,
         "redis_configured": bool(UPSTASH_URL and UPSTASH_TOKEN),
-        "redis_url_present": bool(UPSTASH_URL),
-        "redis_token_present": bool(UPSTASH_TOKEN),
+        "redis_url": UPSTASH_URL[:15] + "..." if UPSTASH_URL else None,
         "checkpoints_count": len(CHECKPOINTS),
+        "last_error": LAST_ERROR
     }
 
 
 async def run_catchup_sequential(checkpoint_ids: list[str]):
     """Runs missing checkpoints one by one with a small delay."""
     import asyncio
+    global LAST_ERROR
     print(f"[CATCH-UP] 🚀 Starting sequential catch-up for: {checkpoint_ids}")
     for cp_id in checkpoint_ids:
-        await run_checkpoint_for_all_symbols(cp_id)
-        await asyncio.sleep(2)  # 2s breather to avoid yfinance rate limits
-    print(f"[CATCH-UP] ✅ Completed catch-up for {len(checkpoint_ids)} slots.")
+        try:
+            await run_checkpoint_for_all_symbols(cp_id)
+            await asyncio.sleep(2)  # 2s breather to avoid yfinance rate limits
+        except Exception as e:
+            LAST_ERROR = str(e)
+            print(f"[CATCH-UP] ❌ Failed slot {cp_id}: {e}")
+    print(f"[CATCH-UP] ✅ Completed catch-up check.")
 
 
 # ── Manual / Scheduled Trigger ─────────────────────────────────────────────
