@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Use relative path — Next.js rewrites /api/* to the backend via next.config.mjs
+const API_BASE = "/api";
 const FIXED_SYMBOL = "^NSEI"; // Always track Nifty 50 only
 
 interface CheckpointData {
@@ -171,8 +172,7 @@ export default function CheckpointBoard() {
 
     const fetchPanels = useCallback(async () => {
         try {
-            // Hardcoded to FIXED_SYMBOL (^NSEI) regardless of dashboard state
-            const res = await fetch(`${API_URL}/api/v1/checkpoints?symbol=${encodeURIComponent(FIXED_SYMBOL)}`);
+            const res = await fetch(`${API_BASE}/v1/checkpoints?symbol=${encodeURIComponent(FIXED_SYMBOL)}`);
             if (!res.ok) return;
             const json = await res.json();
             setPanels(json.panels || []);
