@@ -68,6 +68,70 @@ async def fetch_multi_timeframe(symbol: str = "^NSEI") -> dict[str, pd.DataFrame
     return frames
 
 
+async def fetch_multi_timeframe_at_time(
+    symbol: str,
+    checkpoint_id: str,  # e.g. "0915", "1130"
+    date_str: str,       # e.g. "2026-02-27"
+) -> dict[str, pd.DataFrame]:
+    """
+    Fetch intraday data for a specific date and slice it up to the checkpoint time.
+    This ensures the V2 engine sees the market exactly as it was at 9:15, 9:30 etc.
+    Returns the same frame dict as fetch_multi_timeframe.
+    """
+    from datetime import timedelta
+    import pytz
+
+    IST = pytz.timezone("Asia/Kolkata")
+
+    # Parse checkpoint time (e.g. "0915" -> hour=9, min=15)
+    cp_hour = int(checkpoint_id[:2])
+    cp_min = int(checkpoint_id[2:])
+
+    # Build the cutoff datetime in IST
+    date = datetime.strptime(date_str, "%Y-%m-%d")
+    cutoff_ist = IST.localize(date.replace(hour=cp_hour, minute=cp_min, second=59))
+
+    frames: dict[str, pd.DataFrame] = {}
+    configs = [
+        ("1m", "7d"),
+        ("5m", "5d"),
+        ("15m", "5d"),
+        ("1h", "5d"),
+    ]
+
+    for interval, period in configs:
+        try:
+            df = await fetch_intraday(symbol, interval=interval, period=period)
+            if df.empty:
+                frames[interval] = pd.DataFrame()
+                continue
+
+            # Ensure index is timezone-aware
+            if df.index.tzinfo is None:
+                df.index = df.index.tz_localize("UTC").tz_convert(IST)
+            else:
+                df.index = df.index.tz_convert(IST)
+
+            # Slice: only keep rows UP TO the checkpoint time
+            sliced = df[df.index <= cutoff_ist]
+            frames[interval] = sliced if not sliced.empty else pd.DataFrame()
+        except Exception:
+            frames[interval] = pd.DataFrame()
+
+    # Resample 1m → 3m from the sliced data
+    if not frames.get("1m", pd.DataFrame()).empty:
+        df1 = frames["1m"].copy()
+        df3 = df1.resample("3min").agg({
+            "Open": "first", "High": "max",
+            "Low": "min", "Close": "last", "Volume": "sum",
+        }).dropna()
+        frames["3m"] = df3
+    else:
+        frames["3m"] = pd.DataFrame()
+
+    return frames
+
+
 # ── Indicator Calculations ─────────────────────────────────
 
 

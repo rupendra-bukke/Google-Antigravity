@@ -14,7 +14,11 @@ checkpoint time (IST) on weekdays.
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from datetime import datetime, timezone, timedelta, time
 
-from services.market_data import fetch_multi_timeframe, is_indian_market_open
+from services.market_data import (
+    fetch_multi_timeframe,
+    fetch_multi_timeframe_at_time,
+    is_indian_market_open,
+)
 from services.decision_v2 import run_advanced_analysis
 from services.checkpoint_store import (
     save_checkpoint,
@@ -100,18 +104,19 @@ async def checkpoint_diag():
 
 
 async def run_catchup_sequential(checkpoint_ids: list[str]):
-    """Runs missing checkpoints one by one with a small delay."""
+    """Runs missing checkpoints using HISTORICAL data at each slot's time."""
     import asyncio
     global LAST_ERROR
-    await log_debug(f"Starting catch-up for {checkpoint_ids}")
+    date_str = _today_ist()
+    await log_debug(f"Starting historical catch-up for {checkpoint_ids} on {date_str}")
     for cp_id in checkpoint_ids:
         try:
-            await run_checkpoint_for_all_symbols(cp_id)
-            await asyncio.sleep(2)
+            await run_checkpoint_for_all_symbols(cp_id, date_str=date_str, use_historical=True)
+            await asyncio.sleep(3)  # extra breathing room between historical fetches
         except Exception as e:
             LAST_ERROR = str(e)
             await log_debug(f"Error in {cp_id}: {e}")
-    await log_debug("Catch-up sequence finished")
+    await log_debug("Historical catch-up finished")
 
 
 # ── Manual / Scheduled Trigger ─────────────────────────────────────────────
@@ -183,17 +188,27 @@ async def trigger_checkpoint(
 
 # ── Trigger ALL symbols for a checkpoint ──────────────────────────────────
 
-async def run_checkpoint_for_all_symbols(checkpoint_id: str):
+async def run_checkpoint_for_all_symbols(
+    checkpoint_id: str,
+    date_str: str = None,
+    use_historical: bool = False,
+):
     """
-    Internal function called by APScheduler.
-    Runs V2 for both Nifty50 + BankNifty at the given checkpoint.
+    Internal function called by APScheduler (use_historical=False)
+    or catch-up (use_historical=True).
     """
     now_utc = datetime.now(timezone.utc)
-    date_str = _today_ist()
+    date_str = date_str or _today_ist()
 
     for sym in SYMBOLS:
         try:
-            frames = await fetch_multi_timeframe(sym)
+            if use_historical:
+                # Catch-up: use data sliced at checkpoint time for accurate historical price
+                frames = await fetch_multi_timeframe_at_time(sym, checkpoint_id, date_str)
+            else:
+                # Live: use current market data
+                frames = await fetch_multi_timeframe(sym)
+
             result = run_advanced_analysis(frames, sym, now_utc)
             is_open, mkt_msg = is_indian_market_open(now_utc)
 

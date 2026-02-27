@@ -41,12 +41,18 @@ def _make_key(date_str: str, checkpoint_id: str, symbol: str) -> str:
 
 
 def _ttl_seconds() -> int:
-    """Seconds until 21:00 IST today (safe end-of-day expiry)."""
+    """
+    Seconds until 09:00 AM IST the NEXT trading day.
+    Data persists overnight for review, then auto-clears before market open.
+    """
     now = datetime.now(IST)
-    expire_at = now.replace(hour=21, minute=0, second=0, microsecond=0)
-    if expire_at <= now:
-        expire_at += timedelta(days=1)
-    return max(int((expire_at - now).total_seconds()), 60)
+    # Next day at 9:00 AM IST
+    next_day = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    # If today is Friday (weekday=4), skip to Monday (add 3 days instead of 1)
+    if now.weekday() == 4:  # Friday
+        next_day = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=3)
+    ttl = int((next_day - now).total_seconds())
+    return max(ttl, 60)
 
 
 def _get_base_url() -> str:
