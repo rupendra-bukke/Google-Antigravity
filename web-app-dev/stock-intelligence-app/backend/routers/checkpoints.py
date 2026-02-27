@@ -160,6 +160,7 @@ async def trigger_checkpoint(
         "execute": result.get("execute"),
         "execute_reason": result.get("execute_reason"),
         "option_strike": result.get("option_strike"),
+        "forecast": result.get("forecast"),
         "steps_detail": result.get("steps_detail"),
     }
 
@@ -210,6 +211,7 @@ async def run_checkpoint_for_all_symbols(checkpoint_id: str):
                 "execute": result.get("execute"),
                 "execute_reason": result.get("execute_reason"),
                 "option_strike": result.get("option_strike"),
+                "forecast": result.get("forecast"),
                 "steps_detail": result.get("steps_detail"),
             }
             await save_checkpoint(date_str, checkpoint_id, sym, payload)

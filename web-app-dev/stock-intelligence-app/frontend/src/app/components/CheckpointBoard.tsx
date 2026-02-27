@@ -23,6 +23,12 @@ interface CheckpointData {
         stop_loss?: number;
         target?: number;
     } | null;
+    forecast?: {
+        direction: string;   // "UP" | "DOWN" | "FLAT"
+        arrow: string;       // emoji arrow
+        confidence: number;  // 0-100
+        reasons: string[];
+    } | null;
 }
 
 interface Panel {
@@ -147,6 +153,50 @@ function CheckpointCard({ panel, index, isLatest }: { panel: Panel; index: numbe
                             border: "1px solid rgba(212, 175, 55, 0.1)"
                         }}>
                             🎯 {panel.data!.option_strike.option_type} {panel.data!.option_strike.strike}
+                        </div>
+                    )}
+
+                    {/* ── Forward Prediction: Next 15–20 Min ── */}
+                    {panel.data!.forecast && (
+                        <div style={{
+                            padding: "8px 10px",
+                            borderRadius: "10px",
+                            background: panel.data!.forecast.direction === "UP"
+                                ? "rgba(74,222,128,0.08)"
+                                : panel.data!.forecast.direction === "DOWN"
+                                    ? "rgba(248,113,113,0.08)"
+                                    : "rgba(148,163,184,0.08)",
+                            border: panel.data!.forecast.direction === "UP"
+                                ? "1px solid rgba(74,222,128,0.2)"
+                                : panel.data!.forecast.direction === "DOWN"
+                                    ? "1px solid rgba(248,113,113,0.2)"
+                                    : "1px solid rgba(148,163,184,0.15)",
+                        }}>
+                            <div style={{ fontSize: "0.55rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: "4px" }}>
+                                Next 15–20 Min
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span style={{ fontSize: "1.2rem" }}>{panel.data!.forecast.arrow}</span>
+                                <span style={{
+                                    fontSize: "0.75rem",
+                                    fontWeight: 800,
+                                    color: panel.data!.forecast.direction === "UP" ? "#4ade80" : panel.data!.forecast.direction === "DOWN" ? "#f87171" : "#94a3b8"
+                                }}>
+                                    {panel.data!.forecast.direction}
+                                </span>
+                                <span style={{ marginLeft: "auto", fontSize: "0.65rem", color: "#64748b", fontWeight: 600 }}>
+                                    {panel.data!.forecast.confidence}% conf
+                                </span>
+                            </div>
+                            <div style={{ height: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "2px", marginTop: "5px" }}>
+                                <div style={{
+                                    height: "100%",
+                                    width: `${panel.data!.forecast.confidence}%`,
+                                    borderRadius: "2px",
+                                    background: panel.data!.forecast.direction === "UP" ? "#4ade80" : panel.data!.forecast.direction === "DOWN" ? "#f87171" : "#94a3b8",
+                                    transition: "width 0.6s ease"
+                                }} />
+                            </div>
                         </div>
                     )}
                 </div>

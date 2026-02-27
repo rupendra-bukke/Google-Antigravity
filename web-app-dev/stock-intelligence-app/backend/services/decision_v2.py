@@ -9,6 +9,9 @@ Six-step pipeline:
   3.  3-Min Confirmation
   4.  Option Strike Selection
   5.  Risk & Trade Management
+
+PLUS:
+  6.  10–20 Min Momentum Forecast
 """
 
 import math
@@ -446,6 +449,101 @@ def risk_management(
     return result
 
 
+# ── Step 6: 10–20 Min Momentum Forecast ────────────────────────────────────
+
+
+def momentum_forecast(
+    df_1m: pd.DataFrame,
+    df_3m: pd.DataFrame,
+    df_5m: pd.DataFrame,
+) -> dict:
+    """
+    Predict the likely price direction over the next 10–20 minutes.
+    Uses rate-of-change, RSI trajectory, MACD histogram slope, and volume.
+    Returns: direction ('UP', 'DOWN', 'FLAT'), confidence (0–100), and reasons.
+    """
+    up_score = 0
+    dn_score = 0
+    reasons = []
+
+    for label, df, weight in [("1m", df_1m, 1), ("3m", df_3m, 2), ("5m", df_5m, 2)]:
+        if df is None or df.empty or len(df) < 10:
+            continue
+
+        close = df["Close"]
+        volume = df["Volume"] if "Volume" in df.columns else None
+
+        # 1. Rate of Change — last 5 candles vs previous 5
+        roc_now = close.iloc[-1] / close.iloc[-6] - 1 if len(close) >= 6 else 0
+        if roc_now > 0.0015:
+            up_score += weight
+            reasons.append(f"{label}: ROC +{roc_now*100:.2f}% → rising")
+        elif roc_now < -0.0015:
+            dn_score += weight
+            reasons.append(f"{label}: ROC {roc_now*100:.2f}% → falling")
+
+        # 2. RSI trajectory (last 3 readings)
+        rsi_series = calc_rsi_series(df)
+        if len(rsi_series) >= 3:
+            rsi_now = rsi_series.iloc[-1]
+            rsi_prev = rsi_series.iloc[-3]
+            if rsi_now > rsi_prev + 3 and rsi_now < 75:
+                up_score += weight
+                reasons.append(f"{label}: RSI rising {rsi_prev:.1f}→{rsi_now:.1f}")
+            elif rsi_now < rsi_prev - 3 and rsi_now > 25:
+                dn_score += weight
+                reasons.append(f"{label}: RSI falling {rsi_prev:.1f}→{rsi_now:.1f}")
+
+        # 3. MACD histogram slope (expanding or contracting)
+        _, _, hist_series = calc_macd(df)
+        if len(hist_series) >= 3:
+            h_now = hist_series.iloc[-1]
+            h_prev = hist_series.iloc[-3]
+            if h_now > h_prev and h_now > 0:
+                up_score += weight
+                reasons.append(f"{label}: MACD hist expanding bullish")
+            elif h_now < h_prev and h_now < 0:
+                dn_score += weight
+                reasons.append(f"{label}: MACD hist expanding bearish")
+
+        # 4. Volume surging on green candles (bullish) or red candles (bearish)
+        if volume is not None and len(df) >= 3:
+            avg_vol = volume.iloc[-6:-1].mean() if len(volume) >= 6 else volume.mean()
+            last_vol = volume.iloc[-1]
+            is_green = close.iloc[-1] > df["Open"].iloc[-1]
+            if last_vol > avg_vol * 1.3:
+                if is_green:
+                    up_score += weight
+                    reasons.append(f"{label}: Volume surge on green candle")
+                else:
+                    dn_score += weight
+                    reasons.append(f"{label}: Volume surge on red candle")
+
+    total = up_score + dn_score
+    if total == 0:
+        return {"direction": "FLAT", "confidence": 40, "reasons": ["Insufficient momentum data"]}
+
+    if up_score > dn_score:
+        confidence = min(int((up_score / total) * 100), 95)
+        arrow = "📈 UP"
+        direction = "UP"
+    elif dn_score > up_score:
+        confidence = min(int((dn_score / total) * 100), 95)
+        arrow = "📉 DOWN"
+        direction = "DOWN"
+    else:
+        arrow = "➡️ FLAT"
+        direction = "FLAT"
+        confidence = 50
+
+    return {
+        "direction": direction,
+        "arrow": arrow,
+        "confidence": confidence,
+        "reasons": reasons[:4],  # top 4 reasons only
+    }
+
+
 # ── Master Pipeline ────────────────────────────────────────
 
 
@@ -514,6 +612,9 @@ def run_advanced_analysis(
     # Step 5: Risk Management
     risk = risk_management(htf, reversal, scalp, confirm, option, now)
 
+    # Step 6: 10–20 Min Momentum Forecast
+    forecast = momentum_forecast(df_1m, df_3m, df_5m)
+
     # Trend direction narrative
     htf_core = htf["signal"].split(" ", 1)[-1] if " " in htf["signal"] else htf["signal"]
     if "Sideways" in htf["signal"]:
@@ -543,6 +644,9 @@ def run_advanced_analysis(
         "option_strike": option,
         "execute": risk["execute"],
         "execute_reason": risk["reason"],
+
+        # Step 6: Forward prediction
+        "forecast": forecast,
 
         "steps_detail": {
             "htf": htf,
