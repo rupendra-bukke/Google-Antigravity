@@ -13,7 +13,7 @@ interface CheckpointData {
     three_min_confirm: string;
     htf_trend: string;
     trend_direction: string;
-    execute: boolean;
+    execute: string;       // "Strong" | "Weak" | "NO TRADE"
     execute_reason: string;
     option_strike?: {
         strike: number;
@@ -123,7 +123,16 @@ function CheckpointCard({ panel, index, isLatest }: { panel: Panel; index: numbe
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "0.6rem" }}>
                         <StatItem label="Price" value={`₹${panel.data!.spot_price.toLocaleString("en-IN")}`} color="#e2e8f0" />
                         <StatItem label="Trend" value={panel.data!.trend_direction} />
-                        <StatItem label="Execute" value={panel.data!.execute ? "YES" : "NO"} color={panel.data!.execute ? "#4ade80" : "#f87171"} />
+                        <StatItem
+                            label="Signal"
+                            value={panel.data!.execute === "Strong" ? "✅ STRONG" : panel.data!.execute === "Weak" ? "⚠️ WEAK" : "⛔ NO TRADE"}
+                            color={panel.data!.execute === "Strong" ? "#4ade80" : panel.data!.execute === "Weak" ? "#f59e0b" : "#64748b"}
+                        />
+                        {panel.data!.execute_reason && (
+                            <div style={{ fontSize: "0.6rem", color: "#475569", lineHeight: 1.4, marginTop: "2px" }}>
+                                {panel.data!.execute_reason}
+                            </div>
+                        )}
                     </div>
 
                     {panel.data!.option_strike && (
