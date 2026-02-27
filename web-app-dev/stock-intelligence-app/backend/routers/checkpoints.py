@@ -58,12 +58,15 @@ async def get_checkpoints(
     now_ist = datetime.now(IST)
     is_today = date_str == now_ist.strftime("%Y-%m-%d")
     is_weekday = now_ist.weekday() < 5
+    missing_ids = []  # IMPORTANT: must be defined before the if block
 
     if is_today and is_weekday:
-        missing_ids = [p["id"] for p in panels if p["data"] is None and now_ist.strftime("%H%M") >= p["id"]]
-        
+        current_hhmm = now_ist.strftime("%H%M")
+        missing_ids = [
+            p["id"] for p in panels
+            if p["data"] is None and current_hhmm >= p["id"]
+        ]
         if missing_ids:
-            # Trigger a single sequential catch-up task
             background_tasks.add_task(run_catchup_sequential, missing_ids)
 
     return {
@@ -71,7 +74,8 @@ async def get_checkpoints(
         "symbol": symbol,
         "panels": panels,
         "checkpoints_meta": CHECKPOINTS,
-        "catchup_triggered": is_today and is_weekday and len(missing_ids) > 0
+        "catchup_triggered": bool(missing_ids),
+        "version": "2.1"  # bump so we can verify deployment
     }
 
 
