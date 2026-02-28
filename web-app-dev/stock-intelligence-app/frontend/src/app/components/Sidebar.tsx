@@ -77,17 +77,11 @@ export default function Sidebar() {
                 {/* Logo */}
                 <div className="p-6 border-b border-gray-800/30">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gray-800/50 flex items-center justify-center overflow-hidden border border-gray-700/50">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-amber-500/30 shadow-lg shadow-amber-500/10">
                             <img
-                                src="/rb-logo.png"
-                                alt="Logo"
+                                src="/assets/trade-craft-logo.png"
+                                alt="Trade-Craft Logo"
                                 className="w-full h-full object-cover"
-                                onError={(e) => {
-                                    // Fallback to initial if image fails
-                                    (e.target as HTMLImageElement).style.display = 'none';
-                                    (e.target as HTMLImageElement).parentElement!.innerHTML = `<span class="text-white font-black text-lg">${meta.initial}</span>`;
-                                    (e.target as HTMLImageElement).parentElement!.classList.add('bg-gradient-to-br', 'from-brand-500', 'to-brand-700');
-                                }}
                             />
                         </div>
                         <div>

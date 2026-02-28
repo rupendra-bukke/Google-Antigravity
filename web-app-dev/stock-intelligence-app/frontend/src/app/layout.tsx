@@ -49,9 +49,9 @@ export default function RootLayout({
                     {/* -- Background Watermark (Global) -- */}
                     <div className="fixed inset-0 md:ml-64 pointer-events-none flex items-center justify-center -z-10 overflow-hidden">
                         <img
-                            src="/rb-logo.png"
+                            src="/assets/trade-craft-logo.png"
                             alt="Watermark"
-                            className="w-[400px] h-[400px] md:w-[700px] md:h-[700px] object-contain opacity-[0.06] grayscale brightness-200"
+                            className="w-[400px] h-[400px] md:w-[700px] md:h-[700px] object-contain opacity-[0.04] grayscale brightness-200"
                         />
                     </div>
 
