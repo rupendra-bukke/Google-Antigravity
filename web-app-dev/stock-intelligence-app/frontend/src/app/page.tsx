@@ -61,6 +61,31 @@ interface AnalyzeData {
 // Use relative path — proxied to backend via next.config.mjs rewrites
 const API_BASE = "/api";
 
+/* ── Frontend NSE Market Status (does NOT need backend) ── */
+function getNseMarketStatus(): { isOpen: boolean; message: string } {
+    // IST = UTC+5:30
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const ist = new Date(now.getTime() + istOffset);
+    const day = ist.getUTCDay(); // 0=Sun, 6=Sat
+    const hh = ist.getUTCHours();
+    const mm = ist.getUTCMinutes();
+    const timeVal = hh * 100 + mm; // e.g. 0915
+
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+    if (day === 0 || day === 6) {
+        return { isOpen: false, message: `Market is CLOSED — ${dayNames[day]}` };
+    }
+    if (timeVal < 915) {
+        return { isOpen: false, message: `Market Opens at 09:15 AM IST (Current: ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")})` };
+    }
+    if (timeVal >= 1530) {
+        return { isOpen: false, message: `Market Closed at 03:30 PM IST (Current: ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")})` };
+    }
+    return { isOpen: true, message: "Market is OPEN" };
+}
+
 /* ── Dashboard ── */
 
 export default function Dashboard() {
@@ -234,11 +259,14 @@ export default function Dashboard() {
                 )
             }
 
-            {/* ── Market Status Banner ── */}
-            <MarketStatusBanner
-                isOpen={advancedData?.is_market_open ?? true}
-                message={advancedData?.market_message ?? ""}
-            />
+            {/* ── Market Status Banner — uses frontend clock so it works even when backend is down ── */}
+            {(() => {
+                const { isOpen, message } = getNseMarketStatus();
+                // Prefer backend's message when available (it may include holiday names)
+                const finalMsg = advancedData?.market_message || message;
+                const finalOpen = advancedData ? advancedData.is_market_open : isOpen;
+                return <MarketStatusBanner isOpen={finalOpen} message={finalMsg} />;
+            })()}
 
             {/* ── Stock Header ── */}
             <StockHeader
