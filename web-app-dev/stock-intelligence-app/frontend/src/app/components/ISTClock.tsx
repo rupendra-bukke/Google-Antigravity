@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from "react";
 
-export default function ISTClock() {
+interface ISTClockProps {
+    compact?: boolean; // true = smaller size for mobile inline placement
+}
+
+export default function ISTClock({ compact = false }: ISTClockProps) {
     const [time, setTime] = useState({ hh: "00", mm: "00", ss: "00", period: "AM", date: "" });
 
     useEffect(() => {
@@ -38,15 +42,15 @@ export default function ISTClock() {
             alignItems: "center",
             justifyContent: "center",
             fontFamily: "'Courier New', 'Lucida Console', monospace",
-            fontSize: "1.6rem",
+            fontSize: compact ? "1.05rem" : "1.6rem",
             fontWeight: 900,
             letterSpacing: "0.05em",
             color: dim ? "rgba(212,175,55,0.3)" : "#d4af37",
             background: dim ? "transparent" : "rgba(212,175,55,0.06)",
             border: dim ? "none" : "1px solid rgba(212,175,55,0.18)",
             borderRadius: "6px",
-            padding: dim ? "0" : "2px 6px",
-            minWidth: dim ? "auto" : "2rem",
+            padding: dim ? "0" : compact ? "1px 4px" : "2px 6px",
+            minWidth: dim ? "auto" : compact ? "1.35rem" : "2rem",
             lineHeight: 1,
             textShadow: dim ? "none" : "0 0 12px rgba(212,175,55,0.5)",
             transition: "color 0.2s ease",
@@ -60,8 +64,8 @@ export default function ISTClock() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: "6px",
-            padding: "12px 16px",
+            gap: compact ? "4px" : "6px",
+            padding: compact ? "8px 12px" : "12px 16px",
             borderRadius: "16px",
             background: "rgba(212,175,55,0.04)",
             border: "1px solid rgba(212,175,55,0.12)",

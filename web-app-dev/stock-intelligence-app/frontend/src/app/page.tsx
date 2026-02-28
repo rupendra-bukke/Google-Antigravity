@@ -199,8 +199,13 @@ export default function Dashboard() {
                     <div className="h-px w-16 bg-gradient-to-l from-transparent to-gray-700/60" />
                 </div>
 
-                {/* ── IST Live Clock — top right ── */}
-                <div style={{ position: "absolute", top: "1rem", right: "5rem" }}>
+                {/* ── IST Clock: mobile inline version (below divider) ── */}
+                <div className="mt-4 flex justify-center md:hidden">
+                    <ISTClock compact />
+                </div>
+
+                {/* ── IST Clock: desktop absolute top-right ── */}
+                <div className="hidden md:block" style={{ position: "absolute", top: "1rem", right: "5rem" }}>
                     <ISTClock />
                 </div>
 
