@@ -58,7 +58,8 @@ interface AnalyzeData {
     candles: OhlcBar[];
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Use relative path — proxied to backend via next.config.mjs rewrites
+const API_BASE = "/api";
 
 /* ── Dashboard ── */
 
@@ -77,8 +78,8 @@ export default function Dashboard() {
 
             // Fetch both endpoints in parallel
             const [basicRes, advRes] = await Promise.all([
-                fetch(`${API_URL}/api/v1/analyze?symbol=${encodeURIComponent(symbol)}`),
-                fetch(`${API_URL}/api/v1/advanced-analyze?symbol=${encodeURIComponent(symbol)}`),
+                fetch(`${API_BASE}/v1/analyze?symbol=${encodeURIComponent(symbol)}`),
+                fetch(`${API_BASE}/v1/advanced-analyze?symbol=${encodeURIComponent(symbol)}`),
             ]);
 
             if (!basicRes.ok) {
