@@ -1,0 +1,37 @@
+{
+    "name": "Trade-Craft",
+    "short_name": "TradeCraft",
+    "description": "Nifty 50 Intraday Intelligence Dashboard — real-time market signals, checkpoints, and 10–20 min forecasts.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#d4af37",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "lang": "en",
+    "categories": [
+        "finance",
+        "business"
+    ],
+    "icons": [
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Dashboard",
+            "url": "/",
+            "description": "View today's market timeline"
+        }
+    ]
+}

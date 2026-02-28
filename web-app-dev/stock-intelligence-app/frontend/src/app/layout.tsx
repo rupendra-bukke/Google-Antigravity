@@ -7,8 +7,31 @@ import { SymbolProvider } from "./context/SymbolContext";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-    title: "Stock Intelligence Dashboard",
-    description: "Real-time intraday analysis for NIFTY 50, Bank NIFTY, SENSEX",
+    title: "Trade-Craft",
+    description: "Nifty 50 Intraday Intelligence Dashboard — real-time market signals, 7-checkpoint timeline & 10–20 min forecasts.",
+    manifest: "/manifest.json",
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: "black-translucent",
+        title: "Trade-Craft",
+    },
+    other: {
+        "mobile-web-app-capable": "yes",
+        "apple-mobile-web-app-capable": "yes",
+        "apple-mobile-web-app-status-bar-style": "black-translucent",
+        "theme-color": "#d4af37",
+        "msapplication-TileColor": "#0f172a",
+    },
+    icons: {
+        icon: "/icons/icon-192.png",
+        apple: "/icons/icon-192.png",
+        shortcut: "/icons/icon-192.png",
+    },
+    viewport: {
+        width: "device-width",
+        initialScale: 1,
+        minimumScale: 1,
+    },
 };
 
 export default function RootLayout({
