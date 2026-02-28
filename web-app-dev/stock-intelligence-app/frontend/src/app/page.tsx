@@ -10,6 +10,7 @@ import DecisionBadge from "./components/DecisionBadge";
 import AdvancedDecision from "./components/AdvancedDecision";
 import MarketStatusBanner from "./components/MarketStatusBanner";
 import CheckpointBoard from "./components/CheckpointBoard";
+import ISTClock from "./components/ISTClock";
 
 /* ── Types ── */
 
@@ -198,7 +199,12 @@ export default function Dashboard() {
                     <div className="h-px w-16 bg-gradient-to-l from-transparent to-gray-700/60" />
                 </div>
 
-                {/* ── NEW Floating Refresh Button ── */}
+                {/* ── IST Live Clock — top right ── */}
+                <div style={{ position: "absolute", top: "1rem", right: "5rem" }}>
+                    <ISTClock />
+                </div>
+
+                {/* ── Floating Refresh Button ── */}
                 <div className="absolute top-6 right-0 md:right-4">
                     <button
                         onClick={() => fetchData(selectedSymbol)}
