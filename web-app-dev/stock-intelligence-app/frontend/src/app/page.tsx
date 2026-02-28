@@ -73,15 +73,22 @@ function getNseMarketStatus(): { isOpen: boolean; message: string } {
     const timeVal = hh * 100 + mm; // e.g. 0915
 
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    // Format: DD-MM-YYYY  HH:MM AM/PM  (IST)
+    const dd = String(ist.getUTCDate()).padStart(2, "0");
+    const mo = String(ist.getUTCMonth() + 1).padStart(2, "0");
+    const yyyy = ist.getUTCFullYear();
+    const period = hh >= 12 ? "PM" : "AM";
+    const h12 = hh % 12 || 12;
+    const stamp = `${dd}-${mo}-${yyyy} ${String(h12).padStart(2, "0")}:${String(mm).padStart(2, "0")} ${period}`;
 
     if (day === 0 || day === 6) {
-        return { isOpen: false, message: `Market is CLOSED — ${dayNames[day]}` };
+        return { isOpen: false, message: `Market is CLOSED — ${dayNames[day]}, ${stamp}` };
     }
     if (timeVal < 915) {
-        return { isOpen: false, message: `Market Opens at 09:15 AM IST (Current: ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")})` };
+        return { isOpen: false, message: `Market Opens at 09:15 AM IST — ${stamp}` };
     }
     if (timeVal >= 1530) {
-        return { isOpen: false, message: `Market Closed at 03:30 PM IST (Current: ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")})` };
+        return { isOpen: false, message: `Market Closed at 03:30 PM IST — ${stamp}` };
     }
     return { isOpen: true, message: "Market is OPEN" };
 }
