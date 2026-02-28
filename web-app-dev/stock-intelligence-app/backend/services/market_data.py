@@ -227,27 +227,51 @@ def get_latest_price(df: pd.DataFrame) -> float:
 
 def is_indian_market_open(dt: datetime) -> tuple[bool, str]:
     """
-    Check if the Indian stock market is currently open.
-    Hours: 09:15 to 15:30 IST, Mon-Fri.
+    Check if the Indian stock market (NSE) is currently open.
+    Uses the official XNSE trading calendar via exchange_calendars,
+    which knows about weekends AND all NSE public holidays.
+    Market hours: 09:15 to 15:30 IST.
     """
-    ist = pytz.timezone("Asia/Kolkata")
-    now_ist = dt.astimezone(ist)
-    
-    # Weekday check (Mon=0, Sun=6)
-    if now_ist.weekday() >= 5:
-        return False, "Market is CLOSED (Weekend)"
-    
-    # Time check
-    market_start = time(9, 15)
-    market_end = time(15, 30)
-    current_time = now_ist.time()
-    
-    if current_time < market_start:
-        return False, f"Market Opens at 09:15 AM IST (Current: {current_time.strftime('%H:%M')})"
-    if current_time >= market_end:
-        return False, f"Market Closed at 03:30 PM IST (Current: {current_time.strftime('%H:%M')})"
-    
-    return True, "Market is OPEN"
+    try:
+        import exchange_calendars as xcals
+        import pandas as pd
+
+        ist = pytz.timezone("Asia/Kolkata")
+        now_ist = dt.astimezone(ist)
+        today = pd.Timestamp(now_ist.date())
+
+        # Check if today is a trading session on NSE
+        cal = xcals.get_calendar("XNSE")
+        if not cal.is_session(today):
+            weekday_name = now_ist.strftime("%A")
+            return False, f"Market is CLOSED — {weekday_name} / NSE Holiday"
+
+        # It's a trading day — now check the time window
+        market_start = time(9, 15)
+        market_end = time(15, 30)
+        current_time = now_ist.time()
+
+        if current_time < market_start:
+            return False, f"Market Opens at 09:15 AM IST (Current: {current_time.strftime('%H:%M')})"
+        if current_time >= market_end:
+            return False, f"Market Closed at 03:30 PM IST (Current: {current_time.strftime('%H:%M')})"
+
+        return True, "Market is OPEN"
+
+    except ImportError:
+        # Fallback if exchange_calendars not installed yet
+        ist = pytz.timezone("Asia/Kolkata")
+        now_ist = dt.astimezone(ist)
+        if now_ist.weekday() >= 5:
+            return False, f"Market is CLOSED ({now_ist.strftime('%A')})"
+        market_start = time(9, 15)
+        market_end = time(15, 30)
+        current_time = now_ist.time()
+        if current_time < market_start:
+            return False, f"Market Opens at 09:15 AM IST (Current: {current_time.strftime('%H:%M')})"
+        if current_time >= market_end:
+            return False, f"Market Closed at 03:30 PM IST (Current: {current_time.strftime('%H:%M')})"
+        return True, "Market is OPEN"
 
 
 # ── Swing / Structure Detection ────────────────────────────
