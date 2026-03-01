@@ -111,37 +111,98 @@ The votes are tallied → direction is **UP / DOWN / FLAT** with a **confidence 
 
 ---
 
-## 📱 What You See on the Dashboard
+## 🗺️ Dashboard Sections Reference (8 Sections)
 
-### 1. Live IST Clock (top-right on desktop, below title on mobile)
-- Shows **current Indian time** — hours, minutes, seconds — ticking every second
-- Each digit is in its own amber/gold box with a glow effect (digital terminal style)
-- Shows the date below (Sat, 28-02-2026) with an `IST` badge
-- **How it works:** Pure browser JavaScript — reads your computer's clock, converts to IST (UTC+5:30), updates every 1 second. No backend needed.
-- **Responsive:** On mobile it sits below the title so it doesn't overlap
-
-### 2. Market Status Banner
-- Shows a 🌙 **"Indian Market is Closed"** amber banner when the market is not open
-- Shows the **day name** + **date** + **time** dynamically  
-  → e.g., *"Market is CLOSED — Saturday, 28-02-2026 01:20 PM"*
-- **How it knows:** The browser computes IST time directly (no backend call). Checks:
-  - Is it Saturday or Sunday? → Closed
-  - Is it before 9:15 AM? → Closed
-  - Is it after 3:30 PM? → Closed
-  - Otherwise → Open
-- On weekdays, if the backend is running, it additionally checks the **official NSE trading calendar** (via `exchange_calendars` library) which knows about Holi, Diwali, Republic Day, etc.
-- **Why the frontend computes it:** The backend fails on weekends (no market data in yfinance), so we can't rely on it for status. The frontend is always reliable.
-
-### 3. The 7 Checkpoint Cards (Market Timeline)
-Each card shows:
-- **Signal** — BUY / SELL / NO TRADE (with colour)
-- **Price** — frozen at the time of capture
-- **Trend** — Bullish / Bearish / Sideways
-- **Execute** — ✅ STRONG / ⚠️ WEAK / ⛔ NO TRADE
-- **Reason** — plain-text explanation of why
-- **Next 15–20 Min** — direction arrow (📈/📉/➡️), label, confidence bar
+> Use these numbers when asking for changes. Example: *"Change Section 3 to show Bank Nifty by default"* or *"Add a note to Section 5 cards"*
 
 ---
+
+### Section 1 — Hero Header
+**What you see:** The dark top banner with the app name **"Trade-Craft"**, the green `● LIVE INTELLIGENCE` chip, the glowing amber IST digital clock, and the 🔄 Refresh button on the right.  
+**What it does:**
+- Shows you the app is live and running
+- The IST clock ticks every second using your browser's clock (no internet needed for this)
+- The Refresh button manually re-fetches all data on the page
+- On mobile, the clock drops below the title so it doesn't overlap
+
+---
+
+### Section 2 — Index Selector
+**What you see:** Three toggle buttons — **NIFTY 50**, **Bank NIFTY**, **SENSEX** — in the top-right area.  
+**What it does:**
+- Lets you switch which index the whole dashboard analyses
+- Clicking a button changes every section below it — price, AI analysis, timeline, indicators — all for that selected index
+- The selected index glows brighter than the others
+
+---
+
+### Section 3 — Live Price Header
+**What you see:** A card showing the selected index name (e.g., *NIFTY 50*), the exchange label (*NSE India · Index*), and the **big live price** (e.g., ₹25,181.80) with a last-updated timestamp.  
+**What it does:**
+- Pulls the latest available price from Yahoo Finance via the backend
+- Updates every time you refresh
+- On weekends or after 3:30 PM, shows the last available closing price
+
+---
+
+### Section 4 — AI Price Action Analysis *(New — Powered by Google Gemini)*
+**What you see:** A dark card labelled **🤖 AI PRICE ACTION ANALYSIS** with a `Gemini · Google Search` badge, a countdown timer, and a Refresh button.  
+**Inside the card:**
+- **Decision Badge** — Big coloured badge: 📈 BULLISH (green) / 📉 BEARISH (red) / ⏳ WAIT (amber), with a confidence level (HIGH / MEDIUM / LOW)
+- **Market Structure** — Is the market trending or ranging? Are key levels holding?
+- **Stop-Loss Hunt** — Has price grabbed retail traders' stops and reversed?
+- **Breakout Type** — Real breakout (sustained move) or Fake breakout (trap)?
+- **Entry Zone / Stop Loss / Target** — Three price boxes showing where to enter, where your stop loss should be, and the target
+- **Live News & Impact** — Market news from Google (RBI decisions, FII/DII data, global cues) and how they affect today's bias
+- **Full Reasoning** (expandable) — Gemini's complete price action explanation in plain English
+- **Trade Quality bar** — Colour-coded bar: HIGH (green) / MEDIUM (amber) / RISKY (red)
+
+**How it works:**
+1. The frontend calls the backend endpoint `/api/v1/ai-decision`
+2. The backend fetches real Nifty OHLC data (open/high/low/close) from Yahoo Finance
+3. It builds a price action prompt with that data and sends it to **Google Gemini 1.5 Flash** via the Gemini REST API
+4. Gemini analyses the data using smart money concepts (support/resistance, liquidity grabs, fake breakouts) and also searches for **today's market news**
+5. Gemini replies with a structured JSON — the frontend renders it as this rich card
+6. The result is **cached for 5 minutes** in Upstash Redis — so if 10 people refresh at the same time, Gemini is only called once
+
+**Refresh logic:** The card auto-refreshes every 5 minutes. You can also click ↻ Refresh manually.  
+**On weekends:** Shows `WAIT — Market data unavailable` (no live data from yfinance on Saturday/Sunday — fully functional on trading days)
+
+---
+
+### Section 5 — Market Timeline (7 Checkpoint Cards)
+**What you see:** A grid labelled **NIFTY 50 MARKET TIMELINE** with 7 cards — one for each strategic time of the trading day.  
+**Cards:** Market Open (9:15), Opening Range (9:30), Morning Trend (10:00), Mid-Morning (11:30), Lunch Lull (13:00), Afternoon Setup (14:00), Power Hour (15:00)  
+**Each card shows:**
+- BUY / SELL / NO TRADE signal with colour
+- Price frozen at that exact time
+- Trend direction (Bullish / Bearish / Sideways)
+- Execute strength (Strong / Weak / No Trade)
+- Reason in plain English
+- 10–20 min forecast (direction + confidence bar)
+
+**Data auto-deletes** at 9:00 AM the next trading day so the board starts fresh each morning.
+
+---
+
+### Section 6 — Indicators Strip
+**What you see:** A compact row of indicator pills below the timeline — EMA 20, RSI, VWAP, Bollinger Bands, MACD — each showing its current value and whether it's Bullish / Bearish / Neutral.  
+**What it does:** Live snapshot of the 5 most-used technical indicators for the selected index, updated on every refresh. This is for traders who want a quick technical gauge alongside the AI analysis.
+
+---
+
+### Section 7 — Decision Badge (Quick Signal)
+**What you see:** A simple BUY / SELL / HOLD badge with a short reason line — the original rule-based decision based on the 5 indicators above.  
+**What it does:** This is the older, rule-based signal (EMA, RSI, VWAP, MACD combined). It complements the AI analysis in Section 4 — if both agree (e.g., both say BEARISH), it's a stronger signal. If they disagree, treat it as a reason to wait.
+
+---
+
+### Section 8 — Sidebar Navigation (Left Side Buttons)
+**What you see:** The left side panel with icon-buttons that let you navigate between different views or settings.  
+**What it does:** Quick access controls for the app — switching views, settings, or any future pages added to the app.
+
+---
+
 
 ## 🗑️ Daily Reset Logic
 
@@ -189,6 +250,7 @@ stock-intelligence-app/
 |----------|-----------|
 | `UPSTASH_REDIS_REST_URL` | The address of your Upstash Redis database |
 | `UPSTASH_REDIS_REST_TOKEN` | The password to access your Upstash Redis database |
+| `GEMINI_API_KEY` | Your Google AI Studio API key — powers the AI Price Action Analysis (Section 4). Free key from [aistudio.google.com](https://aistudio.google.com/app/apikey) |
 
 ### On Vercel (Frontend):
 | Variable | What it is |
