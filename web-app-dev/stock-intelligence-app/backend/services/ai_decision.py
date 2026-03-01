@@ -19,11 +19,12 @@ logger = logging.getLogger(__name__)
 
 IST = pytz.timezone("Asia/Kolkata")
 
-# Try gemini-2.0-flash first; falls back to gemini-1.5-flash-latest if 404
+# gemini-2.5-flash is the only model with free-tier quota on this project (20 RPD, 5 RPM)
+# gemini-2.0-flash shows 0/0 quota in AI Studio -> instant 429
 GEMINI_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-flash",
+    "gemini-2.5-flash",          # primary: free tier, 20 RPD
+    "gemini-2.5-flash-preview-04-17",  # fallback preview name
+    "gemini-1.5-flash-latest",   # last resort
 ]
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 

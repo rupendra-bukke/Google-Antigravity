@@ -188,7 +188,7 @@ async def advanced_analyze(symbol: str = Query(default=None)):
 # -- AI Price Action Decision Endpoint --
 
 CACHE_KEY_PREFIX = "ai_decision:"
-CACHE_TTL_SECONDS = 300  # 5 minutes (intraday)
+CACHE_TTL_SECONDS = 1200  # 20 minutes (budget: 20 RPD free tier = ~9 intraday + 3 EOD/day)
 
 IST_TZ = timezone(timedelta(hours=5, minutes=30))
 
