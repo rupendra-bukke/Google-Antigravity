@@ -1,4 +1,4 @@
-"""Router for the /api/v1/ endpoints."""
+﻿"""Router for the /api/v1/ endpoints."""
 
 from fastapi import APIRouter, HTTPException, Query
 from datetime import datetime, timezone
@@ -33,7 +33,7 @@ from config import settings
 router = APIRouter(prefix="/api/v1", tags=["analyze"])
 
 
-# ── Basic Analyze Endpoint (preserved) ─────────────────────
+# â”€â”€ Basic Analyze Endpoint (preserved) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def calculate_indicator_signals(price, indicators):
@@ -141,14 +141,14 @@ async def analyze(symbol: str = Query(default=None)):
     )
 
 
-# ── Advanced Analysis Endpoint (v2) ───────────────────────
+# â”€â”€ Advanced Analysis Endpoint (v2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @router.get("/advanced-analyze", response_model=AdvancedAnalysis)
 async def advanced_analyze(symbol: str = Query(default=None)):
     """
     Multi-timeframe advanced analysis with 6-step pipeline:
-    HTF Filter → Reversal Check → Market Structure → Scalp → 3-min Confirm → Strike Selection → Risk.
+    HTF Filter â†’ Reversal Check â†’ Market Structure â†’ Scalp â†’ 3-min Confirm â†’ Strike Selection â†’ Risk.
     """
     sym = symbol or settings.default_symbol
 
@@ -185,50 +185,43 @@ async def advanced_analyze(symbol: str = Query(default=None)):
     )
 
 
-# ── AI Price Action Decision Endpoint ────────────────────────────────────────
+# -- AI Price Action Decision Endpoint --
 
 CACHE_KEY_PREFIX = "ai_decision:"
 CACHE_TTL_SECONDS = 300  # 5 minutes
 
 
 @router.get("/ai-decision")
-async def ai_decision(symbol: str = Query(default=None)):
+async def ai_decision_endpoint(symbol: str = Query(default=None)):
     """
-    Gemini-powered price action analysis with live news grounding.
+    Gemini-powered price action analysis.
     Cached for 5 minutes per symbol to stay within free API limits.
     """
     import hashlib
-    from services.checkpoint_store import get_redis
+    from services.ai_decision import cache_get, cache_set, _fallback
 
     sym = symbol or settings.default_symbol
     cache_key = f"{CACHE_KEY_PREFIX}{hashlib.md5(sym.encode()).hexdigest()}"
 
-    # Try Redis cache first
-    try:
-        redis = get_redis()
-        cached = redis.get(cache_key)
-        if cached:
+    # Try Upstash cache first
+    cached = cache_get(cache_key)
+    if cached:
+        try:
             return json.loads(cached)
-    except Exception:
-        pass  # Redis unavailable — proceed without cache
+        except Exception:
+            pass
 
-    # Fetch market data
+    # Fetch market data (may fail on weekends)
     try:
         frames = await fetch_multi_timeframe(sym)
     except Exception as exc:
-        # Market may be closed (weekend) — return fallback with no data
-        from services.ai_decision import _fallback
-        return _fallback(f"Market data unavailable: {exc}")
+        return _fallback(f"Market data unavailable (market may be closed): {exc}")
 
     now = datetime.now(timezone.utc)
     result = await get_ai_decision(frames, sym, now)
 
-    # Store in Redis with 5-min TTL
-    try:
-        redis = get_redis()
-        redis.setex(cache_key, CACHE_TTL_SECONDS, json.dumps(result))
-    except Exception:
-        pass
+    # Cache for 5 minutes
+    cache_set(cache_key, json.dumps(result), CACHE_TTL_SECONDS)
 
     return result
 

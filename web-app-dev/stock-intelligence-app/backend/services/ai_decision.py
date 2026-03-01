@@ -1,29 +1,31 @@
 """
-AI-powered intraday decision service using Google Gemini.
-- Builds a price-action prompt with real Nifty OHLC market data
-- Calls Gemini 1.5 Flash with Google Search grounding for live news
-- Caches result in Redis for 5 minutes to avoid duplicate API calls
+AI-powered intraday decision service using Google Gemini REST API.
+- Uses httpx (already installed) to call Gemini directly — no SDK needed
+- Builds a price-action + smart money prompt with real Nifty OHLC data
+- Gemini's training includes recent market knowledge for news context
+- Results cached via Upstash Redis REST API for 5 minutes
 """
 
 from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
+import httpx
 import pytz
 
 logger = logging.getLogger(__name__)
 
 IST = pytz.timezone("Asia/Kolkata")
 
-# ── Prompt template ─────────────────────────────────────────────────────────
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 
-PRICE_ACTION_PROMPT = """
-You are an expert intraday trader specializing in smart money concepts and price action analysis.
+# ── Prompt template ──────────────────────────────────────────────────────────
 
-Analyze the following Nifty 50 intraday data and answer the 7-point framework below.
-ALSO search and include the latest news (today's date) that could impact the Indian stock market (Nifty 50).
+PRICE_ACTION_PROMPT = """You are an expert intraday trader specializing in smart money concepts and price action analysis for Indian markets (NSE Nifty 50).
+
+Analyze the following intraday data and answer the 7-point framework. Also include any relevant news or macro events that could impact Nifty 50 today.
 
 --- MARKET DATA ---
 {market_data_block}
@@ -31,67 +33,41 @@ ALSO search and include the latest news (today's date) that could impact the Ind
 
 FRAMEWORK:
 
-1. Identify key levels:
-   - Support and resistance
-   - Previous day high/low
-   - Intraday high/low
-   - Psychological levels (round numbers)
-
-2. Determine market structure:
-   - Is the market trending or ranging?
-   - Are highs/lows being respected or broken?
-
-3. Check for stop-loss hunting / liquidity grab:
-   - Has price recently broken a level and reversed?
-   - Where are retail traders likely trapped (buyers or sellers)?
-
-4. Identify fake breakout or real breakout:
-   - Is the breakout sustained or rejected?
-   - Any strong reversal candles after breakout?
-
-5. Trade bias (IMPORTANT):
-   - Based on above, what is the HIGH PROBABILITY direction now?
-   - Bullish / Bearish / Wait (no trade)
-
-6. Entry logic:
-   - Should I enter now or wait?
-   - Ideal entry zone
-   - Stop loss level (based on structure, not random points)
-
-7. Risk clarity:
-   - Is this a high-quality setup or risky trade?
-   - What confirmation is still missing?
+1. Key levels: Support/resistance, previous day high/low, intraday high/low, psychological levels (round numbers)
+2. Market structure: Trending or ranging? Are highs/lows respected or broken?
+3. Stop-loss hunting / liquidity grab: Has price broken a level and reversed? Where are retail traders trapped?
+4. Fake or real breakout: Is the breakout sustained or rejected? Any strong reversal candles?
+5. Trade bias: What is the HIGH PROBABILITY direction? Bullish / Bearish / Wait
+6. Entry logic: Entry zone, stop loss level (structure-based, not arbitrary)
+7. Risk clarity: High-quality setup or risky? What confirmation is missing?
 
 RULES:
-- Focus only on price action (no indicator-based reasoning)
-- Prioritize stop-loss hunting and traps
-- Avoid prediction; respond based on current structure only
+- Focus ONLY on price action (smart money, structure, liquidity)
+- Prioritize stop-loss hunting and traps over indicator signals
+- Also mention any known news events (RBI, FII/DII flows, global cues, budget, elections) that affect today's bias
 
-IMPORTANT: Also check and include today's relevant market news (RBI, FII/DII data, global cues, major corporate events) and explain how it impacts the bias.
-
-Respond ONLY with a valid JSON object in this exact format (no markdown, no explanation outside JSON):
+Respond ONLY with a valid JSON object — no markdown, no explanation outside JSON:
 {{
-  "decision": "BULLISH" | "BEARISH" | "WAIT",
-  "bias_strength": "HIGH" | "MEDIUM" | "LOW",
-  "market_structure": "<brief description>",
-  "sl_hunt_detected": true | false,
-  "sl_hunt_detail": "<description or null>",
-  "breakout_type": "REAL" | "FAKE" | "NONE",
-  "breakout_detail": "<description or null>",
-  "entry_zone": "<e.g. 25150 - 25200 or null>",
-  "stop_loss": "<e.g. 25325 (above liquidity wick) or null>",
-  "target": "<e.g. 24980 (PDL retest) or null>",
-  "trade_quality": "HIGH" | "MEDIUM" | "RISKY",
-  "missing_confirmation": "<what to wait for before entry>",
-  "news_items": ["<headline 1>", "<headline 2>"],
-  "news_impact": "<how news affects today's bias, 1-2 sentences>",
-  "reasoning": "<full price action reasoning, 3-5 sentences>"
-}}
-"""
+  "decision": "BULLISH or BEARISH or WAIT",
+  "bias_strength": "HIGH or MEDIUM or LOW",
+  "market_structure": "brief description",
+  "sl_hunt_detected": true or false,
+  "sl_hunt_detail": "description or null",
+  "breakout_type": "REAL or FAKE or NONE",
+  "breakout_detail": "description or null",
+  "entry_zone": "e.g. 25150 - 25200 or null",
+  "stop_loss": "e.g. 25325 or null",
+  "target": "e.g. 24980 or null",
+  "trade_quality": "HIGH or MEDIUM or RISKY",
+  "missing_confirmation": "what to wait for before entry",
+  "news_items": ["headline 1", "headline 2"],
+  "news_impact": "how news affects today's bias, 1-2 sentences",
+  "reasoning": "full price action reasoning, 3-5 sentences"
+}}"""
 
 
 def _build_market_data_block(frames: dict, symbol: str, now: datetime) -> str:
-    """Format OHLC data from multi-timeframe frames into a text block for the prompt."""
+    """Format OHLC data into a concise text block for the prompt."""
     import pandas as pd
 
     ist_now = now.astimezone(IST)
@@ -100,94 +76,137 @@ def _build_market_data_block(frames: dict, symbol: str, now: datetime) -> str:
         f"Timestamp   : {ist_now.strftime('%d-%b-%Y %I:%M %p IST')}",
     ]
 
-    # Use 3m frame for recent candles
     df3 = frames.get("3m")
     if df3 is not None and not df3.empty:
         last_price = float(df3["Close"].iloc[-1])
-        lines.append(f"Current Price: ₹{last_price:,.2f}")
-
-        # Intraday high/low
-        lines.append(f"Intraday High: ₹{float(df3['High'].max()):,.2f}")
-        lines.append(f"Intraday Low : ₹{float(df3['Low'].min()):,.2f}")
-
-        # Last 5 candles table
-        last5 = df3.tail(5)[["Open", "High", "Low", "Close"]].copy()
-        lines.append("\nRecent 5 candles (3m):")
-        lines.append("Time       |  Open  |  High  |  Low   |  Close")
-        lines.append("-" * 52)
+        lines.append(f"Current Price: Rs.{last_price:,.2f}")
+        lines.append(f"Intraday High: Rs.{float(df3['High'].max()):,.2f}")
+        lines.append(f"Intraday Low : Rs.{float(df3['Low'].min()):,.2f}")
+        last5 = df3.tail(5)[["Open", "High", "Low", "Close"]]
+        lines.append("\nRecent 5 candles (3m): Open | High | Low | Close")
         for idx, row in last5.iterrows():
             ts = idx.strftime("%H:%M") if hasattr(idx, "strftime") else str(idx)
-            lines.append(
-                f"{ts}     | {row['Open']:6.0f} | {row['High']:6.0f} | {row['Low']:6.0f} | {row['Close']:6.0f}"
-            )
+            lines.append(f"  {ts} | {row['Open']:.0f} | {row['High']:.0f} | {row['Low']:.0f} | {row['Close']:.0f}")
 
-    # Use 15m for prev day levels
     df15 = frames.get("15m")
     if df15 is not None and not df15.empty:
         today_ist = ist_now.date()
+        df15 = df15.copy()
         df15.index = pd.to_datetime(df15.index)
         if df15.index.tz is None:
             df15.index = df15.index.tz_localize("UTC").tz_convert(IST)
         else:
             df15.index = df15.index.tz_convert(IST)
-
+        prev_data = df15[df15.index.date < today_ist]
         today_data = df15[df15.index.date == today_ist]
-        prev_data  = df15[df15.index.date < today_ist]
-
         if not prev_data.empty:
-            lines.append(f"\nPrev Day High: ₹{float(prev_data['High'].max()):,.2f}")
-            lines.append(f"Prev Day Low : ₹{float(prev_data['Low'].min()):,.2f}")
+            lines.append(f"Prev Day High: Rs.{float(prev_data['High'].max()):,.2f}")
+            lines.append(f"Prev Day Low : Rs.{float(prev_data['Low'].min()):,.2f}")
         if not today_data.empty:
-            lines.append(f"Today Open   : ₹{float(today_data['Open'].iloc[0]):,.2f}")
+            lines.append(f"Today Open   : Rs.{float(today_data['Open'].iloc[0]):,.2f}")
 
     return "\n".join(lines)
 
 
+async def _call_gemini(prompt: str, api_key: str) -> str:
+    """Call Gemini 1.5 Flash via REST API using httpx."""
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.3,
+            "maxOutputTokens": 1500,
+        },
+    }
+    async with httpx.AsyncClient(timeout=45) as client:
+        resp = await client.post(
+            f"{GEMINI_URL}?key={api_key}",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+
+
 async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
     """
-    Call Gemini with Google Search grounding and return structured price action decision.
+    Call Gemini with price action prompt and return structured decision dict.
     Falls back gracefully if API key is missing or call fails.
     """
     from config import settings
 
     if not settings.gemini_api_key:
-        return _fallback("GEMINI_API_KEY not configured on Render.")
+        return _fallback("GEMINI_API_KEY not configured. Add it to Render environment variables.")
 
     try:
-        import google.generativeai as genai
-
-        genai.configure(api_key=settings.gemini_api_key)
-
         market_block = _build_market_data_block(frames, symbol, now)
         prompt = PRICE_ACTION_PROMPT.format(market_data_block=market_block)
 
-        # Use Gemini 1.5 Flash with Google Search grounding
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-            tools="google_search_retrieval",  # enables live web search for news
-        )
-
-        response = model.generate_content(prompt)
-        raw_text = response.text.strip()
+        raw_text = await _call_gemini(prompt, settings.gemini_api_key)
 
         # Strip markdown code fences if Gemini wraps JSON in them
-        if raw_text.startswith("```"):
-            raw_text = raw_text.split("```")[1]
-            if raw_text.startswith("json"):
-                raw_text = raw_text[4:]
-        raw_text = raw_text.strip()
+        text = raw_text.strip()
+        if text.startswith("```"):
+            parts = text.split("```")
+            text = parts[1] if len(parts) > 1 else text
+            if text.startswith("json"):
+                text = text[4:]
+        text = text.strip()
 
-        result = json.loads(raw_text)
+        result = json.loads(text)
         result["captured_at"] = now.astimezone(IST).isoformat()
         result["symbol"] = symbol
         return result
 
     except json.JSONDecodeError as e:
-        logger.error("Gemini response was not valid JSON: %s", e)
-        return _fallback("Gemini returned unexpected response format.")
+        logger.error("Gemini returned non-JSON response: %s", e)
+        return _fallback("Gemini returned an unexpected response format. Will retry on next refresh.")
+    except httpx.HTTPStatusError as e:
+        logger.error("Gemini HTTP error %s: %s", e.response.status_code, e.response.text)
+        return _fallback(f"Gemini API error {e.response.status_code}. Check your API key on Render.")
     except Exception as e:
-        logger.error("Gemini API error: %s", e)
+        logger.error("AI decision error: %s", e)
         return _fallback(str(e))
+
+
+# ── Upstash Redis cache helpers ──────────────────────────────────────────────
+
+UPSTASH_URL  = ""  # loaded lazily from env
+UPSTASH_TOKEN = ""
+
+def _upstash_headers() -> dict:
+    import os
+    return {"Authorization": f"Bearer {os.getenv('UPSTASH_REDIS_REST_TOKEN', '')}"}
+
+def _upstash_base() -> str:
+    import os
+    return os.getenv("UPSTASH_REDIS_REST_URL", "")
+
+
+def cache_get(key: str) -> str | None:
+    try:
+        base = _upstash_base()
+        if not base:
+            return None
+        resp = httpx.get(f"{base}/get/{key}", headers=_upstash_headers(), timeout=5)
+        data = resp.json()
+        return data.get("result")
+    except Exception:
+        return None
+
+
+def cache_set(key: str, value: str, ttl_seconds: int = 300) -> None:
+    try:
+        base = _upstash_base()
+        if not base:
+            return
+        httpx.get(
+            f"{base}/set/{key}/{value}/ex/{ttl_seconds}",
+            headers=_upstash_headers(),
+            timeout=5,
+        )
+    except Exception:
+        pass
 
 
 def _fallback(reason: str) -> dict:
