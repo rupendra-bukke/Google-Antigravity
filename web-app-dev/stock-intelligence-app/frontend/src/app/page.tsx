@@ -7,7 +7,7 @@ import IndexSelector from "./components/IndexSelector";
 import CandlestickChart from "./components/CandlestickChart";
 
 import DecisionBadge from "./components/DecisionBadge";
-import AdvancedDecision from "./components/AdvancedDecision";
+import AIDecision from "./components/AIDecision";
 import MarketStatusBanner from "./components/MarketStatusBanner";
 import CheckpointBoard from "./components/CheckpointBoard";
 import ISTClock from "./components/ISTClock";
@@ -294,11 +294,8 @@ export default function Dashboard() {
                 isLoading={loading}
             />
 
-            {/* ── Advanced Analysis ── */}
-            <AdvancedDecision
-                data={advancedData}
-                isLoading={loading}
-            />
+            {/* ── AI Price Action Decision ── */}
+            <AIDecision symbol={selectedSymbol} />
 
             {/* ── Checkpoint Board — PRIME POSITION ── */}
             <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1rem" }}>

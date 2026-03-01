@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Query
 from datetime import datetime, timezone
+import json
 
 from models.schemas import (
     AnalyzeResponse,
@@ -26,6 +27,7 @@ from services.market_data import (
 )
 from services.decision import make_decision
 from services.decision_v2 import run_advanced_analysis
+from services.ai_decision import get_ai_decision
 from config import settings
 
 router = APIRouter(prefix="/api/v1", tags=["analyze"])
@@ -182,4 +184,51 @@ async def advanced_analyze(symbol: str = Query(default=None)):
         steps_detail=result["steps_detail"],
     )
 
+
+# ── AI Price Action Decision Endpoint ────────────────────────────────────────
+
+CACHE_KEY_PREFIX = "ai_decision:"
+CACHE_TTL_SECONDS = 300  # 5 minutes
+
+
+@router.get("/ai-decision")
+async def ai_decision(symbol: str = Query(default=None)):
+    """
+    Gemini-powered price action analysis with live news grounding.
+    Cached for 5 minutes per symbol to stay within free API limits.
+    """
+    import hashlib
+    from services.checkpoint_store import get_redis
+
+    sym = symbol or settings.default_symbol
+    cache_key = f"{CACHE_KEY_PREFIX}{hashlib.md5(sym.encode()).hexdigest()}"
+
+    # Try Redis cache first
+    try:
+        redis = get_redis()
+        cached = redis.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass  # Redis unavailable — proceed without cache
+
+    # Fetch market data
+    try:
+        frames = await fetch_multi_timeframe(sym)
+    except Exception as exc:
+        # Market may be closed (weekend) — return fallback with no data
+        from services.ai_decision import _fallback
+        return _fallback(f"Market data unavailable: {exc}")
+
+    now = datetime.now(timezone.utc)
+    result = await get_ai_decision(frames, sym, now)
+
+    # Store in Redis with 5-min TTL
+    try:
+        redis = get_redis()
+        redis.setex(cache_key, CACHE_TTL_SECONDS, json.dumps(result))
+    except Exception:
+        pass
+
+    return result
 
