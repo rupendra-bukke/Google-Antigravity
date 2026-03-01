@@ -1,7 +1,7 @@
 ﻿"""Router for the /api/v1/ endpoints."""
 
 from fastapi import APIRouter, HTTPException, Query
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import json
 
 from models.schemas import (
@@ -188,40 +188,72 @@ async def advanced_analyze(symbol: str = Query(default=None)):
 # -- AI Price Action Decision Endpoint --
 
 CACHE_KEY_PREFIX = "ai_decision:"
-CACHE_TTL_SECONDS = 300  # 5 minutes
+CACHE_TTL_SECONDS = 300  # 5 minutes (intraday)
+
+IST_TZ = timezone(timedelta(hours=5, minutes=30))
+
+
+def _is_market_open_now() -> bool:
+    """Check if NSE market is currently open (9:15 AM – 3:30 PM IST, Mon–Fri)."""
+    now_ist = datetime.now(IST_TZ)
+    if now_ist.weekday() >= 5:  # Saturday=5, Sunday=6
+        return False
+    t = now_ist.hour * 100 + now_ist.minute
+    return 915 <= t < 1530
 
 
 @router.get("/ai-decision")
 async def ai_decision_endpoint(symbol: str = Query(default=None)):
     """
     Gemini-powered price action analysis.
-    Cached for 5 minutes per symbol to stay within free API limits.
+    - Market OPEN  → Intraday price action analysis (5-min cache)
+    - Market CLOSED → EOD next-day outlook (20-hour cache, auto-run if missing)
     """
     import hashlib
-    from services.ai_decision import cache_get, cache_set, _fallback
+    from services.ai_decision import (
+        cache_get, cache_set, _fallback,
+        get_eod_analysis, EOD_CACHE_KEY_PREFIX, EOD_CACHE_TTL,
+    )
 
     sym = symbol or settings.default_symbol
-    cache_key = f"{CACHE_KEY_PREFIX}{hashlib.md5(sym.encode()).hexdigest()}"
-
-    # Try Upstash cache first
-    cached = cache_get(cache_key)
-    if cached:
-        try:
-            return json.loads(cached)
-        except Exception:
-            pass
-
-    # Fetch market data (may fail on weekends)
-    try:
-        frames = await fetch_multi_timeframe(sym)
-    except Exception as exc:
-        return _fallback(f"Market data unavailable (market may be closed): {exc}")
-
     now = datetime.now(timezone.utc)
-    result = await get_ai_decision(frames, sym, now)
 
-    # Cache for 5 minutes
-    cache_set(cache_key, json.dumps(result), CACHE_TTL_SECONDS)
+    if _is_market_open_now():
+        # ── Intraday mode ──────────────────────────────────────────────────
+        cache_key = f"{CACHE_KEY_PREFIX}{hashlib.md5(sym.encode()).hexdigest()}"
+        cached = cache_get(cache_key)
+        if cached:
+            try:
+                return json.loads(cached)
+            except Exception:
+                pass
 
-    return result
+        try:
+            frames = await fetch_multi_timeframe(sym)
+        except Exception as exc:
+            return _fallback(f"Market data unavailable: {exc}")
+
+        result = await get_ai_decision(frames, sym, now)
+        cache_set(cache_key, json.dumps(result), CACHE_TTL_SECONDS)
+        return result
+
+    else:
+        # ── EOD / Market-closed mode ───────────────────────────────────────
+        ist_now = datetime.now(IST_TZ)
+        date_str = ist_now.strftime("%Y-%m-%d")
+        eod_key = f"{EOD_CACHE_KEY_PREFIX}{date_str}:{hashlib.md5(sym.encode()).hexdigest()}"
+
+        cached = cache_get(eod_key)
+        if cached:
+            try:
+                data = json.loads(cached)
+                # Ensure analysis_type tag is present
+                data.setdefault("analysis_type", "EOD")
+                return data
+            except Exception:
+                pass
+
+        # No cached EOD — run it now using last trading day data
+        result = await get_eod_analysis(sym, now)
+        return result
 

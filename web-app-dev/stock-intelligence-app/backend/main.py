@@ -39,6 +39,28 @@ for cp_id, hour, minute in CHECKPOINT_SCHEDULE:
     )
 
 
+# ── EOD Analysis trigger at 3:30 PM IST ──────────────────────────────────────
+
+async def _trigger_eod_analysis():
+    """Run end-of-day next-day outlook analysis at market close."""
+    from services.ai_decision import get_eod_analysis
+    now = datetime.now(timezone.utc)
+    symbols = ["^NSEI", "^NSEBANK", "^BSESN"]
+    for sym in symbols:
+        try:
+            result = await get_eod_analysis(sym, now)
+            print(f"[EOD] ✅ EOD analysis for {sym}: {result.get('next_day_bias')}")
+        except Exception as e:
+            print(f"[EOD] ❌ Failed for {sym}: {e}")
+
+scheduler.add_job(
+    _trigger_eod_analysis,
+    CronTrigger(day_of_week="mon-fri", hour=15, minute=30),
+    id="eod_analysis",
+    replace_existing=True,
+)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     scheduler.start()
