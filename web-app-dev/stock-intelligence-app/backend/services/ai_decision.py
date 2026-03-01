@@ -21,10 +21,13 @@ IST = pytz.timezone("Asia/Kolkata")
 
 # gemini-2.5-flash is the only model with free-tier quota on this project (20 RPD, 5 RPM)
 # gemini-2.0-flash shows 0/0 quota in AI Studio -> instant 429
+# Try multiple name variants because the exact preview ID changes over time
 GEMINI_MODELS = [
-    "gemini-2.5-flash",          # primary: free tier, 20 RPD
-    "gemini-2.5-flash-preview-04-17",  # fallback preview name
-    "gemini-1.5-flash-latest",   # last resort
+    "gemini-2.5-flash",                    # GA name (preferred)
+    "gemini-2.5-flash-latest",             # latest alias
+    "gemini-2.5-flash-preview-04-17",      # known preview name
+    "gemini-2.5-flash-preview-05-20",      # newer preview
+    "gemini-1.5-flash-latest",             # last resort older model
 ]
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 

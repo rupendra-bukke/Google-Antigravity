@@ -33,6 +33,33 @@ from config import settings
 router = APIRouter(prefix="/api/v1", tags=["analyze"])
 
 
+@router.get("/gemini-models")
+async def list_gemini_models():
+    """
+    Diagnostic: Lists all Gemini models available for the configured API key.
+    Visit /api/v1/gemini-models to see exact model IDs to use.
+    """
+    import httpx
+    from config import settings
+    api_key = settings.gemini_api_key
+    if not api_key:
+        return {"error": "GEMINI_API_KEY not set on Render"}
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get(
+            f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+        )
+        if resp.status_code != 200:
+            return {"error": f"HTTP {resp.status_code}", "body": resp.text[:500]}
+        data = resp.json()
+        models = [
+            {"name": m.get("name"), "displayName": m.get("displayName"),
+             "supportedMethods": m.get("supportedGenerationMethods", [])}
+            for m in data.get("models", [])
+            if "generateContent" in m.get("supportedGenerationMethods", [])
+        ]
+        return {"available_for_generateContent": models}
+
+
 # â”€â”€ Basic Analyze Endpoint (preserved) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
