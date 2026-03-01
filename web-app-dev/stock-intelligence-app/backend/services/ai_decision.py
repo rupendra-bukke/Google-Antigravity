@@ -115,7 +115,10 @@ def _build_market_data_block(frames: dict, symbol: str, now: datetime) -> str:
 
 
 async def _call_gemini(prompt: str, api_key: str) -> str:
-    """Call Gemini via REST API, trying each model in GEMINI_MODELS until one succeeds."""
+    """Call Gemini via REST API, trying each model in GEMINI_MODELS until one succeeds.
+    - 404: try next model (model not available)
+    - 429: stop immediately (quota/rate-limit — retrying wastes quota)
+    """
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
@@ -129,6 +132,10 @@ async def _call_gemini(prompt: str, api_key: str) -> str:
             url = GEMINI_BASE.format(model=model) + f"?key={api_key}"
             try:
                 resp = await client.post(url, json=payload, headers={"Content-Type": "application/json"})
+                if resp.status_code == 429:
+                    # Rate limit — don't retry other models, raise directly
+                    logger.warning("Gemini rate limit (429) hit on model %s", model)
+                    resp.raise_for_status()
                 if resp.status_code == 404:
                     logger.warning("Model %s returned 404, trying next...", model)
                     last_error = httpx.HTTPStatusError(f"{model} 404", request=resp.request, response=resp)
@@ -141,8 +148,8 @@ async def _call_gemini(prompt: str, api_key: str) -> str:
                 if e.response.status_code == 404:
                     last_error = e
                     continue
-                raise
-    raise last_error or RuntimeError("All Gemini models failed")
+                raise  # 429 and other errors propagate immediately
+    raise last_error or RuntimeError("All Gemini models returned 404")
 
 
 async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
@@ -181,6 +188,11 @@ async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
     except httpx.HTTPStatusError as e:
         body = e.response.text[:300]
         logger.error("Gemini HTTP error %s: %s", e.response.status_code, body)
+        if e.response.status_code == 429:
+            return _fallback(
+                "⏳ Gemini rate limit reached (free tier: 15 req/min). "
+                "Please wait 1-2 minutes and click Refresh."
+            )
         return _fallback(f"Gemini API error {e.response.status_code}: {body}")
     except Exception as e:
         logger.error("AI decision error: %s", e)
