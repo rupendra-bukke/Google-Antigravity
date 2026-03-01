@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 
 IST = pytz.timezone("Asia/Kolkata")
 
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+# Use gemini-2.0-flash — current default for free AI Studio API keys
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 # ── Prompt template ──────────────────────────────────────────────────────────
 
@@ -162,8 +163,9 @@ async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
         logger.error("Gemini returned non-JSON response: %s", e)
         return _fallback("Gemini returned an unexpected response format. Will retry on next refresh.")
     except httpx.HTTPStatusError as e:
-        logger.error("Gemini HTTP error %s: %s", e.response.status_code, e.response.text)
-        return _fallback(f"Gemini API error {e.response.status_code}. Check your API key on Render.")
+        body = e.response.text[:300]
+        logger.error("Gemini HTTP error %s: %s", e.response.status_code, body)
+        return _fallback(f"Gemini API error {e.response.status_code}: {body}")
     except Exception as e:
         logger.error("AI decision error: %s", e)
         return _fallback(str(e))
@@ -196,13 +198,17 @@ def cache_get(key: str) -> str | None:
 
 
 def cache_set(key: str, value: str, ttl_seconds: int = 300) -> None:
+    """Store value in Upstash using pipeline POST — avoids URL encoding issues with JSON payloads."""
     try:
         base = _upstash_base()
         if not base:
             return
-        httpx.get(
-            f"{base}/set/{key}/{value}/ex/{ttl_seconds}",
-            headers=_upstash_headers(),
+        # Use Upstash pipeline endpoint so JSON doesn't need to be URL-encoded
+        payload = [["SET", key, value, "EX", ttl_seconds]]
+        httpx.post(
+            f"{base}/pipeline",
+            headers={**_upstash_headers(), "Content-Type": "application/json"},
+            content=json.dumps(payload),
             timeout=5,
         )
     except Exception:
