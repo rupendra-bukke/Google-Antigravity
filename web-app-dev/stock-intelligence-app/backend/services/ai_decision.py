@@ -128,7 +128,7 @@ async def _call_gemini(prompt: str, api_key: str) -> str:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.3,
-            "maxOutputTokens": 1500,
+            "maxOutputTokens": 3000,   # 1500 was too small for detailed EOD JSON
         },
     }
     last_error: Exception | None = None
@@ -204,18 +204,20 @@ async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
         prompt = PRICE_ACTION_PROMPT.format(market_data_block=market_block)
 
         raw_text = await _call_gemini(prompt, settings.gemini_api_key)
-        logger.debug("Gemini intraday raw response (first 300 chars): %s", raw_text[:300])
-
+        logger.debug("Gemini intraday raw (first 300): %s", raw_text[:300])
         text = _extract_json(raw_text)
-
+        logger.debug("Gemini intraday extracted JSON (first 300): %s", text[:300])
         result = json.loads(text)
         result["captured_at"] = now.astimezone(IST).isoformat()
         result["symbol"] = symbol
         return result
 
     except json.JSONDecodeError as e:
-        logger.error("Gemini intraday non-JSON (%.200s): %s", raw_text if 'raw_text' in dir() else '?', e)
-        return _fallback(f"Gemini returned non-JSON response. Check Render logs for raw text.")
+        raw_snippet = raw_text[:400] if 'raw_text' in dir() else '?'
+        extracted = _extract_json(raw_snippet) if raw_snippet != '?' else '?'
+        logger.error("Gemini intraday non-JSON | raw[:400]: %.400s | extracted[:300]: %.300s | error: %s",
+                     raw_snippet, extracted, e)
+        return _fallback(f"JSON parse failed. Extracted: {extracted[:200]}")
     except httpx.HTTPStatusError as e:
         body = e.response.text[:300]
         logger.error("Gemini HTTP error %s: %s", e.response.status_code, body)
@@ -357,10 +359,9 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
 
         prompt = EOD_NEXT_DAY_PROMPT.format(market_data_block=market_block)
         raw_text = await _call_gemini(prompt, settings.gemini_api_key)
-        logger.debug("Gemini EOD raw response (first 300 chars): %s", raw_text[:300])
-
+        logger.debug("Gemini EOD raw (first 300): %s", raw_text[:300])
         text = _extract_json(raw_text)
-
+        logger.debug("Gemini EOD extracted JSON (first 300): %s", text[:300])
         result = json.loads(text)
         result["captured_at"] = ist_now.isoformat()
         result["session_date"] = str(latest_date)
@@ -371,8 +372,11 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
         return result
 
     except json.JSONDecodeError as e:
-        logger.error("EOD Gemini non-JSON (%.200s): %s", raw_text if 'raw_text' in dir() else '?', e)
-        return _eod_fallback(symbol, "Gemini returned non-JSON for EOD — check Render logs.")
+        raw_snippet = raw_text[:400] if 'raw_text' in dir() else '?'
+        extracted = _extract_json(raw_snippet) if raw_snippet != '?' else '?'
+        logger.error("EOD non-JSON | raw[:400]: %.400s | extracted[:300]: %.300s | error: %s",
+                     raw_snippet, extracted, e)
+        return _eod_fallback(symbol, f"JSON parse failed. Extracted starts with: {extracted[:150]}")
     except httpx.HTTPStatusError as e:
         body = e.response.text[:300]
         logger.error("EOD Gemini HTTP error %s: %s", e.response.status_code, body)
