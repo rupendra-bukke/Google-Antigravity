@@ -60,6 +60,38 @@ async def list_gemini_models():
         return {"available_for_generateContent": models}
 
 
+@router.get("/gemini-test")
+async def gemini_test():
+    """
+    Diagnostic: Calls Gemini with a simple test prompt and returns the RAW response text.
+    Use this to see exactly what format Gemini returns (JSON, markdown-wrapped, plain text etc.)
+    """
+    import httpx
+    from config import settings
+    from services.ai_decision import GEMINI_MODELS, GEMINI_BASE
+    api_key = settings.gemini_api_key
+    if not api_key:
+        return {"error": "GEMINI_API_KEY not set on Render"}
+    payload = {
+        "contents": [{"parts": [{"text": "Reply ONLY with valid JSON: {\"status\": \"ok\", \"model\": \"working\"}"}]}],
+        "generationConfig": {"temperature": 0, "maxOutputTokens": 100},
+    }
+    results = {}
+    async with httpx.AsyncClient(timeout=20) as client:
+        for model in GEMINI_MODELS:
+            url = GEMINI_BASE.format(model=model) + f"?key={api_key}"
+            try:
+                resp = await client.post(url, json=payload, headers={"Content-Type": "application/json"})
+                raw = resp.json()
+                text = raw.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "N/A")
+                results[model] = {"status": resp.status_code, "raw_text": text}
+                if resp.status_code == 200:
+                    break  # Found working model — stop
+            except Exception as e:
+                results[model] = {"error": str(e)}
+    return {"results": results, "models_tried": GEMINI_MODELS}
+
+
 # â”€â”€ Basic Analyze Endpoint (preserved) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 

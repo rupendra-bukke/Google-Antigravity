@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime, timezone, timedelta
 
 import httpx
@@ -156,6 +157,38 @@ async def _call_gemini(prompt: str, api_key: str) -> str:
     raise last_error or RuntimeError("All Gemini models returned 404")
 
 
+
+def _extract_json(raw_text: str) -> str:
+    """
+    Robustly extract JSON from Gemini's response.
+    Handles: plain JSON, ```json...```, ``` ...```, whitespace variants, uppercase JSON.
+    """
+    text = raw_text.strip()
+
+    # Strategy 1: Strip markdown code fences using regex (handles all variants)
+    fence_match = re.search(
+        r'```(?:json|JSON)?\s*([\s\S]*?)```',
+        text, re.IGNORECASE | re.DOTALL
+    )
+    if fence_match:
+        candidate = fence_match.group(1).strip()
+        if candidate.startswith("{"):
+            return candidate
+
+    # Strategy 2: If text already starts with { take it as-is
+    if text.startswith("{"):
+        return text
+
+    # Strategy 3: Find the first JSON object block { ... } regardless of surrounding text
+    obj_match = re.search(r'\{[\s\S]*\}', text)
+    if obj_match:
+        return obj_match.group(0)
+
+    # Give up — return original so json.loads gives a clear error
+    return text
+
+
+
 async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
     """
     Call Gemini with price action prompt and return structured decision dict.
@@ -171,15 +204,9 @@ async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
         prompt = PRICE_ACTION_PROMPT.format(market_data_block=market_block)
 
         raw_text = await _call_gemini(prompt, settings.gemini_api_key)
+        logger.debug("Gemini intraday raw response (first 300 chars): %s", raw_text[:300])
 
-        # Strip markdown code fences if Gemini wraps JSON in them
-        text = raw_text.strip()
-        if text.startswith("```"):
-            parts = text.split("```")
-            text = parts[1] if len(parts) > 1 else text
-            if text.startswith("json"):
-                text = text[4:]
-        text = text.strip()
+        text = _extract_json(raw_text)
 
         result = json.loads(text)
         result["captured_at"] = now.astimezone(IST).isoformat()
@@ -187,8 +214,8 @@ async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
         return result
 
     except json.JSONDecodeError as e:
-        logger.error("Gemini returned non-JSON response: %s", e)
-        return _fallback("Gemini returned an unexpected response format. Will retry on next refresh.")
+        logger.error("Gemini intraday non-JSON (%.200s): %s", raw_text if 'raw_text' in dir() else '?', e)
+        return _fallback(f"Gemini returned non-JSON response. Check Render logs for raw text.")
     except httpx.HTTPStatusError as e:
         body = e.response.text[:300]
         logger.error("Gemini HTTP error %s: %s", e.response.status_code, body)
@@ -330,15 +357,9 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
 
         prompt = EOD_NEXT_DAY_PROMPT.format(market_data_block=market_block)
         raw_text = await _call_gemini(prompt, settings.gemini_api_key)
+        logger.debug("Gemini EOD raw response (first 300 chars): %s", raw_text[:300])
 
-        # Parse JSON
-        text = raw_text.strip()
-        if text.startswith("```"):
-            parts = text.split("```")
-            text = parts[1] if len(parts) > 1 else text
-            if text.startswith("json"):
-                text = text[4:]
-        text = text.strip()
+        text = _extract_json(raw_text)
 
         result = json.loads(text)
         result["captured_at"] = ist_now.isoformat()
@@ -350,8 +371,8 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
         return result
 
     except json.JSONDecodeError as e:
-        logger.error("EOD Gemini returned non-JSON: %s", e)
-        return _eod_fallback(symbol, "Gemini returned unexpected format for EOD analysis.")
+        logger.error("EOD Gemini non-JSON (%.200s): %s", raw_text if 'raw_text' in dir() else '?', e)
+        return _eod_fallback(symbol, "Gemini returned non-JSON for EOD — check Render logs.")
     except httpx.HTTPStatusError as e:
         body = e.response.text[:300]
         logger.error("EOD Gemini HTTP error %s: %s", e.response.status_code, body)
