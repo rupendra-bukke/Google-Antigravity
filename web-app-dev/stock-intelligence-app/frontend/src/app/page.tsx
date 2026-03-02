@@ -395,6 +395,80 @@ export default function Dashboard() {
                             {data?.indicators?.signals?.macd || "—"}
                         </span>
                     </div>
+
+                    {/* ── Combined Signal Decision Panel (Majority Vote) ── */}
+                    {data?.indicators?.signals && (() => {
+                        const sigs = [
+                            data.indicators.signals.ema20,
+                            data.indicators.signals.rsi14,
+                            data.indicators.signals.vwap,
+                            data.indicators.signals.bollinger,
+                            data.indicators.signals.macd,
+                        ];
+                        const buy = sigs.filter(s => s === "BUY").length;
+                        const sell = sigs.filter(s => s === "SELL").length;
+                        const neutral = sigs.filter(s => s === "NEUTRAL").length;
+
+                        let decision: string;
+                        let color: string;
+                        let bg: string;
+                        let border: string;
+
+                        if (buy >= 4) { decision = "STRONG BUY"; }
+                        else if (buy === 3) { decision = "BUY"; }
+                        else if (buy === 2 && buy > sell) { decision = "LEAN BUY"; }
+                        else if (sell >= 4) { decision = "STRONG SELL"; }
+                        else if (sell === 3) { decision = "SELL"; }
+                        else if (sell === 2 && sell > buy) { decision = "LEAN SELL"; }
+                        else { decision = "NEUTRAL"; }
+
+                        const isBullish = decision.includes("BUY");
+                        const isBearish = decision.includes("SELL");
+                        color = isBullish ? "#22c55e" : isBearish ? "#ef4444" : "#94a3b8";
+                        bg = isBullish ? "rgba(34,197,94,0.12)" : isBearish ? "rgba(239,68,68,0.12)" : "rgba(148,163,184,0.06)";
+                        border = isBullish ? "1px solid rgba(34,197,94,0.35)" : isBearish ? "1px solid rgba(239,68,68,0.35)" : "1px solid rgba(148,163,184,0.2)";
+
+                        return (
+                            <>
+                                {/* Vertical separator */}
+                                <div style={{
+                                    width: "1px",
+                                    background: "rgba(255,255,255,0.07)",
+                                    alignSelf: "stretch",
+                                    margin: "0 0.25rem",
+                                    borderRadius: "1px",
+                                }} />
+                                {/* Decision card */}
+                                <div style={{
+                                    background: bg,
+                                    border,
+                                    borderRadius: "10px",
+                                    padding: "0.3rem 0.9rem",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    gap: "0.1rem",
+                                    minWidth: "110px",
+                                    boxShadow: isBullish
+                                        ? "0 0 10px rgba(34,197,94,0.1)"
+                                        : isBearish
+                                            ? "0 0 10px rgba(239,68,68,0.1)"
+                                            : "none",
+                                }}>
+                                    <span style={{ fontSize: "0.5rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                                        Combined Signal
+                                    </span>
+                                    <span style={{ fontSize: "0.82rem", color, fontWeight: 900, letterSpacing: "0.04em", lineHeight: 1.2 }}>
+                                        {decision}
+                                    </span>
+                                    <span style={{ fontSize: "0.5rem", color: "#475569", fontWeight: 600, letterSpacing: "0.05em" }}>
+                                        {buy}B &middot; {sell}S &middot; {neutral}N
+                                    </span>
+                                </div>
+                            </>
+                        );
+                    })()}
+
                 </div>
             </div>
 
@@ -413,7 +487,7 @@ export default function Dashboard() {
                             timeZone: "Asia/Kolkata",
                         })} IST`
                         : "Connecting…"}{" "}
-                    · Data via yfinance · Not financial advice
+                    · Data via TradingView · Not financial advice
                 </p>
             </div>
         </div>
