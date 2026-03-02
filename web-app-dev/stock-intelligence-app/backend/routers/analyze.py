@@ -247,7 +247,7 @@ async def advanced_analyze(symbol: str = Query(default=None)):
 # -- AI Price Action Decision Endpoint --
 
 CACHE_KEY_PREFIX = "ai_decision:"
-CACHE_TTL_SECONDS = 1200  # 20 minutes (budget: 20 RPD free tier = ~9 intraday + 3 EOD/day)
+CACHE_TTL_SECONDS = 2700  # 45 minutes (–8 calls/day per symbol, well within 20 RPD budget)
 
 IST_TZ = timezone(timedelta(hours=5, minutes=30))
 
@@ -265,8 +265,9 @@ def _is_market_open_now() -> bool:
 async def ai_decision_endpoint(symbol: str = Query(default=None)):
     """
     Gemini-powered price action analysis.
-    - Market OPEN  → Intraday price action analysis (5-min cache)
-    - Market CLOSED → EOD next-day outlook (20-hour cache, auto-run if missing)
+    - Market OPEN  → Intraday price action analysis (45-min cache, only caches real signals)
+    - Market CLOSED → EOD next-day outlook (20-hour cache)
+    - Intraday failure → falls back to last EOD analysis (never shows blank WAIT error)
     """
     import hashlib
     from services.ai_decision import (
@@ -276,6 +277,7 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
 
     sym = symbol or settings.default_symbol
     now = datetime.now(timezone.utc)
+    ist_now = datetime.now(IST_TZ)
 
     if _is_market_open_now():
         # ── Intraday mode ──────────────────────────────────────────────────
@@ -287,13 +289,38 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
             except Exception:
                 pass
 
+        eod_fallback_key = f"{EOD_CACHE_KEY_PREFIX}{ist_now.strftime('%Y-%m-%d')}:{hashlib.md5(sym.encode()).hexdigest()}"
+
         try:
             frames = await fetch_multi_timeframe(sym)
         except Exception as exc:
+            # yfinance failed — serve today's EOD as fallback
+            eod_cached = cache_get(eod_fallback_key)
+            if eod_cached:
+                try:
+                    return json.loads(eod_cached)
+                except Exception:
+                    pass
             return _fallback(f"Market data unavailable: {exc}")
 
         result = await get_ai_decision(frames, sym, now)
-        cache_set(cache_key, json.dumps(result), CACHE_TTL_SECONDS)
+
+        # ONLY cache real BULLISH/BEARISH results \u2014 NOT WAIT/error fallbacks.
+        # If we cached an error, the next 45 minutes would show the same error.
+        decision = result.get("decision", "WAIT")
+        bias = result.get("bias_strength", "LOW")
+        is_real_analysis = decision in ("BULLISH", "BEARISH") or (decision == "WAIT" and bias != "LOW")
+        if is_real_analysis:
+            cache_set(cache_key, json.dumps(result), CACHE_TTL_SECONDS)
+        else:
+            # Gemini returned error/low-confidence WAIT \u2014 show EOD instead
+            eod_cached = cache_get(eod_fallback_key)
+            if eod_cached:
+                try:
+                    return json.loads(eod_cached)
+                except Exception:
+                    pass
+
         return result
 
     else:

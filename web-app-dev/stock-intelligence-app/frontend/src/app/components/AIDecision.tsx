@@ -72,7 +72,7 @@ export default function AIDecision({ symbol }: { symbol: string }) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showReasoning, setShowReasoning] = useState(false);
-    const [countdown, setCountdown] = useState(1200);
+    const [countdown, setCountdown] = useState(2700);
 
     const fetchDecision = useCallback(async () => {
         try {
@@ -96,7 +96,7 @@ export default function AIDecision({ symbol }: { symbol: string }) {
     useEffect(() => {
         const tick = setInterval(() => {
             setCountdown(c => {
-                if (c <= 1) { fetchDecision(); return 1200; }
+                if (c <= 1) { fetchDecision(); return 2700; }
                 return c - 1;
             });
         }, 1000);
