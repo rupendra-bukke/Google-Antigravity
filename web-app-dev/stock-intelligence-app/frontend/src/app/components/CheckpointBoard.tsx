@@ -207,17 +207,17 @@ function CheckpointCard({ panel, index, isLatest }: { panel: Panel; index: numbe
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
-                    opacity: 0.5
+                    opacity: 0.6
                 }}>
                     <div style={{
                         fontSize: "1.5rem",
                         marginBottom: "0.5rem",
-                        animation: isPending ? "pulse 2s infinite" : "none"
+                        animation: (isPending || isMissed) ? "pulse 1.5s infinite" : "none"
                     }}>
-                        {isPending ? "⏳" : "📭"}
+                        {isPending ? "⏳" : isMissed ? "🔄" : "📭"}
                     </div>
                     <p style={{ color: "#64748b", fontSize: "0.65rem", textAlign: "center", margin: 0, textTransform: "uppercase", fontWeight: 700 }}>
-                        {isPending ? "Waiting..." : "No Data"}
+                        {isPending ? "Waiting..." : isMissed ? "Catching up..." : "No Data"}
                     </p>
                 </div>
             )}
@@ -228,6 +228,7 @@ function CheckpointCard({ panel, index, isLatest }: { panel: Panel; index: numbe
 export default function CheckpointBoard() {
     const [panels, setPanels] = useState<Panel[]>([]);
     const [loading, setLoading] = useState(true);
+    const [catchingUp, setCatchingUp] = useState(false);
 
     const fetchPanels = useCallback(async () => {
         try {
@@ -235,6 +236,8 @@ export default function CheckpointBoard() {
             if (!res.ok) return;
             const json = await res.json();
             setPanels(json.panels || []);
+            // If backend triggered a historical catch-up, show feedback and refresh faster
+            setCatchingUp(json.catchup_triggered === true);
         } catch (err) {
             console.error("Failed to fetch checkpoints:", err);
         } finally {
@@ -244,9 +247,10 @@ export default function CheckpointBoard() {
 
     useEffect(() => {
         fetchPanels();
-        const interval = setInterval(fetchPanels, 30000); // 30s refresh
+        // Fast refresh (10s) while catching up; slow (30s) once stable
+        const interval = setInterval(fetchPanels, catchingUp ? 10000 : 30000);
         return () => clearInterval(interval);
-    }, [fetchPanels]);
+    }, [fetchPanels, catchingUp]);
 
     // Find the index of the most recent populated panel
     const latestIndex = panels.length - 1 - [...panels].reverse().findIndex(p => p.data);
@@ -268,7 +272,13 @@ export default function CheckpointBoard() {
                     Nifty 50 Market Timeline
                 </h2>
                 <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, rgba(148,163,184,0.1), transparent)" }} />
-                <span style={{ fontSize: "0.6rem", color: "#475569", fontWeight: 700 }}>CAPTURING 7 STRATEGIC POINTS</span>
+                {catchingUp ? (
+                    <span style={{ fontSize: "0.6rem", color: "#f59e0b", fontWeight: 700, animation: "pulse 1.5s infinite" }}>
+                        🔄 CATCHING UP HISTORICAL DATA...
+                    </span>
+                ) : (
+                    <span style={{ fontSize: "0.6rem", color: "#475569", fontWeight: 700 }}>CAPTURING 7 STRATEGIC POINTS</span>
+                )}
             </div>
 
             {/* Grid Container */}
