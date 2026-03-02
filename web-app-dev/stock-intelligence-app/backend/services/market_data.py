@@ -1,4 +1,12 @@
-"""Market data service — multi-timeframe fetching + technical indicator calculations."""
+"""Market data service — multi-timeframe fetching + technical indicator calculations.
+
+Data source priority:
+  1. TradingView via tvDatafeed (primary — more reliable for NSE/BSE live indices)
+  2. yfinance (automatic fallback per interval if tvDatafeed fails)
+"""
+
+import asyncio
+import logging
 
 import yfinance as yf
 import pandas as pd
@@ -6,62 +14,141 @@ import numpy as np
 import pytz
 from datetime import datetime, timezone, time
 
+logger = logging.getLogger(__name__)
+
+# ── TradingView configuration ─────────────────────────────────────────────────
+
+# yfinance ticker → (tvDatafeed symbol, exchange)
+TV_SYMBOL_MAP: dict[str, tuple[str, str]] = {
+    "^NSEI":     ("NIFTY",     "NSE"),
+    "^NSEBANK":  ("BANKNIFTY", "NSE"),
+    "^BSESN":    ("SENSEX",    "BSE"),
+    "NIFTY":     ("NIFTY",     "NSE"),
+    "BANKNIFTY": ("BANKNIFTY", "NSE"),
+    "SENSEX":    ("SENSEX",    "BSE"),
+}
+
+# interval string → tvDatafeed Interval attribute name (lazy import)
+TV_INTERVAL_ATTR: dict[str, str] = {
+    "1m":  "in_1_minute",
+    "5m":  "in_5_minute",
+    "15m": "in_15_minute",
+    "1h":  "in_1_hour",
+}
+
+# how many bars to fetch per interval (covers ~2-3 trading days)
+TV_N_BARS: dict[str, int] = {
+    "1m": 500, "5m": 200, "15m": 100, "1h": 50,
+}
+
+_tv_client = None
+
+
+def _get_tv() -> object:
+    """Lazy-init TvDatafeed singleton (no login required for NSE/BSE free data)."""
+    global _tv_client
+    if _tv_client is None:
+        try:
+            from tvDatafeed import TvDatafeed
+            _tv_client = TvDatafeed()
+            logger.info("TvDatafeed client initialised successfully")
+        except Exception as exc:
+            logger.warning("TvDatafeed init failed (%s) — will use yfinance only", exc)
+    return _tv_client
+
+
+def _tv_fetch_sync(symbol: str, exchange: str, interval: str, n_bars: int) -> pd.DataFrame:
+    """
+    Blocking TradingView fetch — always run via asyncio.run_in_executor.
+    Returns DataFrame with columns: Open, High, Low, Close, Volume.
+    """
+    tv = _get_tv()
+    if tv is None:
+        return pd.DataFrame()
+    try:
+        from tvDatafeed import Interval as TvInterval
+        tv_interval = getattr(TvInterval, TV_INTERVAL_ATTR.get(interval, "in_5_minute"))
+        df = tv.get_hist(symbol=symbol, exchange=exchange, interval=tv_interval, n_bars=n_bars)
+        if df is None or df.empty:
+            return pd.DataFrame()
+        df = df.rename(columns={"open": "Open", "high": "High",
+                                 "low": "Low",  "close": "Close", "volume": "Volume"})
+        available = [c for c in ["Open", "High", "Low", "Close", "Volume"] if c in df.columns]
+        return df[available].dropna()
+    except Exception as exc:
+        logger.warning("_tv_fetch_sync (%s %s %s): %s", symbol, exchange, interval, exc)
+        return pd.DataFrame()
+
 
 # ── Data Fetching ──────────────────────────────────────────
 
 
-async def fetch_intraday(symbol: str = "^NSEI", interval: str = "15m", period: str = "5d") -> pd.DataFrame:
-    """Download intraday data at the given interval."""
+async def fetch_intraday(
+    symbol: str = "^NSEI", interval: str = "15m", period: str = "5d"
+) -> pd.DataFrame:
+    """
+    Download intraday data. Tries TradingView first (more reliable for NSE/BSE),
+    falls back to yfinance if tvDatafeed is unavailable or returns no data.
+    """
+    # ── 1. Try TradingView ────────────────────────────────────────
+    if (tv_info := TV_SYMBOL_MAP.get(symbol)) and interval in TV_INTERVAL_ATTR:
+        tv_symbol, tv_exchange = tv_info
+        n_bars = TV_N_BARS.get(interval, 100)
+        loop = asyncio.get_event_loop()
+        df_tv = await loop.run_in_executor(
+            None, _tv_fetch_sync, tv_symbol, tv_exchange, interval, n_bars
+        )
+        if not df_tv.empty:
+            logger.info("TradingView data OK: %s %s (%d bars)", symbol, interval, len(df_tv))
+            return df_tv
+        logger.warning("TradingView empty for %s %s, trying yfinance fallback", symbol, interval)
+
+    # ── 2. Fallback: yfinance ───────────────────────────────────
     ticker = yf.Ticker(symbol)
     df = ticker.history(period=period, interval=interval)
-
     if df.empty:
-        raise ValueError(f"No data returned for '{symbol}' at {interval}.")
-
+        raise ValueError(f"No data for '{symbol}' at {interval} from TV or yfinance.")
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
-
     required = ["Open", "High", "Low", "Close", "Volume"]
     for col in required:
         if col not in df.columns:
             raise ValueError(f"Missing column '{col}' in yfinance data.")
-
     return df[required].dropna()
 
 
 async def fetch_multi_timeframe(symbol: str = "^NSEI") -> dict[str, pd.DataFrame]:
     """
-    Fetch 1m, 5m, 15m, 1h data and resample 1m → 3m.
-    Returns dict keyed by interval string.
+    Fetch 5m, 15m, 1h data for price action analysis.
+    Also attempts 1m and derives 3m from it (used for very short-term candles).
+    TradingView is primary; yfinance is fallback per interval.
     """
     frames: dict[str, pd.DataFrame] = {}
 
-    # Fetch available intervals
+    # Intervals to fetch: (interval_str, yfinance_period)
     configs = [
-        ("1m", "7d"),
-        ("5m", "5d"),
+        ("5m",  "5d"),
         ("15m", "5d"),
-        ("1h", "5d"),
+        ("1h",  "5d"),
+        ("1m",  "7d"),  # 1m last — least reliable, used only for 3m resample
     ]
 
     for interval, period in configs:
         try:
             df = await fetch_intraday(symbol, interval=interval, period=period)
             frames[interval] = df
-        except Exception:
+            logger.debug("Frame %s: %d bars", interval, len(df))
+        except Exception as exc:
+            logger.warning("Frame %s failed: %s", interval, exc)
             frames[interval] = pd.DataFrame()
 
-    # Resample 1m → 3m
-    if not frames["1m"].empty:
+    # Derive 3m from 1m if available (optional — _build_market_data_block prefers 5m)
+    if not frames.get("1m", pd.DataFrame()).empty:
         df1 = frames["1m"].copy()
-        df3 = df1.resample("3min").agg({
-            "Open": "first",
-            "High": "max",
-            "Low": "min",
-            "Close": "last",
-            "Volume": "sum",
+        frames["3m"] = df1.resample("3min").agg({
+            "Open": "first", "High": "max", "Low": "min",
+            "Close": "last", "Volume": "sum",
         }).dropna()
-        frames["3m"] = df3
     else:
         frames["3m"] = pd.DataFrame()
 
