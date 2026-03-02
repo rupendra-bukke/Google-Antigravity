@@ -77,8 +77,13 @@ Respond ONLY with a valid JSON object — no markdown, no explanation outside JS
 }}"""
 
 
-def _build_market_data_block(frames: dict, symbol: str, now: datetime) -> str:
-    """Format OHLC data into a concise text block for the prompt."""
+def _build_market_data_block(frames: dict, symbol: str, now: datetime) -> tuple:
+    """
+    Format OHLC data into a text block for the Gemini prompt.
+    Returns (market_block_text, has_live_price).
+    Uses 5m as primary source — far more reliable for NSE via yfinance than 1m.
+    Falls back to 3m (from 1m) if 5m is also unavailable.
+    """
     import pandas as pd
 
     ist_now = now.astimezone(IST)
@@ -86,19 +91,27 @@ def _build_market_data_block(frames: dict, symbol: str, now: datetime) -> str:
         f"Symbol      : {symbol}",
         f"Timestamp   : {ist_now.strftime('%d-%b-%Y %I:%M %p IST')}",
     ]
+    has_live_price = False
 
-    df3 = frames.get("3m")
-    if df3 is not None and not df3.empty:
-        last_price = float(df3["Close"].iloc[-1])
-        lines.append(f"Current Price: Rs.{last_price:,.2f}")
-        lines.append(f"Intraday High: Rs.{float(df3['High'].max()):,.2f}")
-        lines.append(f"Intraday Low : Rs.{float(df3['Low'].min()):,.2f}")
-        last5 = df3.tail(5)[["Open", "High", "Low", "Close"]]
-        lines.append("\nRecent 5 candles (3m): Open | High | Low | Close")
-        for idx, row in last5.iterrows():
-            ts = idx.strftime("%H:%M") if hasattr(idx, "strftime") else str(idx)
-            lines.append(f"  {ts} | {row['Open']:.0f} | {row['High']:.0f} | {row['Low']:.0f} | {row['Close']:.0f}")
+    # ── Current price + recent candles: prefer 5m then 3m ───────────
+    for frame_key in ("5m", "3m"):
+        df = frames.get(frame_key)
+        if df is not None and not df.empty:
+            current_price = float(df["Close"].iloc[-1])
+            lines.append(f"Current Price: Rs.{current_price:,.2f}")
+            lines.append(f"Intraday High: Rs.{float(df['High'].max()):,.2f}")
+            lines.append(f"Intraday Low : Rs.{float(df['Low'].min()):,.2f}")
+            recent = df.tail(5)[["Open", "High", "Low", "Close"]]
+            lines.append(f"\nRecent 5 candles ({frame_key}): Open | High | Low | Close")
+            for idx, row in recent.iterrows():
+                ts = idx.strftime("%H:%M") if hasattr(idx, "strftime") else str(idx)
+                lines.append(
+                    f"  {ts} | {row['Open']:.0f} | {row['High']:.0f} | {row['Low']:.0f} | {row['Close']:.0f}"
+                )
+            has_live_price = True
+            break
 
+    # ── Prev day levels + today open: 15m is reliable ────────────────
     df15 = frames.get("15m")
     if df15 is not None and not df15.empty:
         today_ist = ist_now.date()
@@ -108,15 +121,32 @@ def _build_market_data_block(frames: dict, symbol: str, now: datetime) -> str:
             df15.index = df15.index.tz_localize("UTC").tz_convert(IST)
         else:
             df15.index = df15.index.tz_convert(IST)
-        prev_data = df15[df15.index.date < today_ist]
+        prev_data  = df15[df15.index.date < today_ist]
         today_data = df15[df15.index.date == today_ist]
         if not prev_data.empty:
             lines.append(f"Prev Day High: Rs.{float(prev_data['High'].max()):,.2f}")
             lines.append(f"Prev Day Low : Rs.{float(prev_data['Low'].min()):,.2f}")
         if not today_data.empty:
             lines.append(f"Today Open   : Rs.{float(today_data['Open'].iloc[0]):,.2f}")
+            if not has_live_price:
+                # 5m and 3m both empty: use 15m as last resort
+                lines.append(f"Today High (15m) : Rs.{float(today_data['High'].max()):,.2f}")
+                lines.append(f"Today Low  (15m) : Rs.{float(today_data['Low'].min()):,.2f}")
+                lines.append(f"Latest Close(15m): Rs.{float(today_data['Close'].iloc[-1]):,.2f}")
+                has_live_price = True
 
-    return "\n".join(lines)
+    # ── Hourly candles for HTF trend ─────────────────────────
+    df1h = frames.get("1h")
+    if df1h is not None and not df1h.empty:
+        last_3h = df1h.tail(3)[["Open", "High", "Low", "Close"]]
+        lines.append("\nLast 3 hourly candles (HTF trend): Open | High | Low | Close")
+        for idx, row in last_3h.iterrows():
+            ts = idx.strftime("%H:%M") if hasattr(idx, "strftime") else str(idx)
+            lines.append(
+                f"  {ts} | {row['Open']:.0f} | {row['High']:.0f} | {row['Low']:.0f} | {row['Close']:.0f}"
+            )
+
+    return "\n".join(lines), has_live_price
 
 
 async def _call_gemini(prompt: str, api_key: str) -> str:
@@ -200,7 +230,14 @@ async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
         return _fallback("GEMINI_API_KEY not configured. Add it to Render environment variables.")
 
     try:
-        market_block = _build_market_data_block(frames, symbol, now)
+        market_block, has_live_price = _build_market_data_block(frames, symbol, now)
+
+        # If yfinance returned no live price data, skip Gemini (saves quota) and
+        # let the caller fall back to EOD. A WAIT/LOW result would also trigger that.
+        if not has_live_price:
+            logger.warning("No live price data available for %s — skipping Gemini call", symbol)
+            return _fallback("No live market data (yfinance returned empty 5m/15m data for this symbol).")
+
         prompt = PRICE_ACTION_PROMPT.format(market_data_block=market_block)
 
         raw_text = await _call_gemini(prompt, settings.gemini_api_key)
