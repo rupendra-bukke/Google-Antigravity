@@ -82,6 +82,25 @@ function getNseMarketStatus(): { isOpen: boolean; message: string } {
     const h12 = hh % 12 || 12;
     const stamp = `${dd}-${mo}-${yyyy} ${String(h12).padStart(2, "0")}:${String(mm).padStart(2, "0")} ${period}`;
 
+    // ── NSE Public Holidays 2026 (holiday-aware frontend check) ──────────────
+    const NSE_HOLIDAYS_2026 = new Set([
+        "2026-01-26", // Republic Day
+        "2026-03-03", // Holi (Dhuleti)
+        "2026-03-04", // Holi 2nd day
+        "2026-04-02", // Good Friday / Ram Navami
+        "2026-04-14", // Dr Ambedkar Jayanti
+        "2026-05-01", // Maharashtra Day
+        "2026-08-15", // Independence Day
+        "2026-10-02", // Gandhi Jayanti
+        "2026-10-20", // Diwali Laxmi Pujan (approx)
+        "2026-10-21", // Diwali Balipratipada (approx)
+        "2026-11-18", // Guru Nanak Jayanti (approx)
+    ]);
+    const todayISO = `${yyyy}-${mo}-${dd}`;
+    if (NSE_HOLIDAYS_2026.has(todayISO)) {
+        return { isOpen: false, message: `Market is CLOSED — 🎉 NSE Holiday (${stamp})` };
+    }
+
     if (day === 0 || day === 6) {
         return { isOpen: false, message: `Market is CLOSED — ${dayNames[day]}, ${stamp}` };
     }
