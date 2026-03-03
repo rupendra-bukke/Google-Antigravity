@@ -249,17 +249,7 @@ async def advanced_analyze(symbol: str = Query(default=None)):
 CACHE_KEY_PREFIX = "ai_decision:"
 CACHE_TTL_SECONDS = 2700  # 45 minutes (–8 calls/day per symbol, well within 20 RPD budget)
 
-IST_TZ = timezone(timedelta(hours=5, minutes=30))
-
-
-def _is_market_open_now() -> bool:
-    """Check if NSE market is currently open (9:15 AM – 3:30 PM IST, Mon–Fri)."""
-    now_ist = datetime.now(IST_TZ)
-    if now_ist.weekday() >= 5:  # Saturday=5, Sunday=6
-        return False
-    t = now_ist.hour * 100 + now_ist.minute
-    return 915 <= t < 1530
-
+# IST_TZ kept for date-string construction below
 
 @router.get("/ai-decision")
 async def ai_decision_endpoint(symbol: str = Query(default=None)):
@@ -277,9 +267,11 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
 
     sym = symbol or settings.default_symbol
     now = datetime.now(timezone.utc)
-    ist_now = datetime.now(IST_TZ)
+    ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
 
-    if _is_market_open_now():
+    # Use exchange_calendars to check holiday-aware NSE market status (Mon-Fri + all public holidays)
+    is_open, _ = is_indian_market_open(now)
+    if is_open:
         # ── Intraday mode ──────────────────────────────────────────────────
         cache_key = f"{CACHE_KEY_PREFIX}{hashlib.md5(sym.encode()).hexdigest()}"
         cached = cache_get(cache_key)
