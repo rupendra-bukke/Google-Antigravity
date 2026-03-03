@@ -90,12 +90,17 @@ LAST_ERROR = "None yet"
 async def checkpoint_diag():
     """Diagnostic endpoint to check backend status on live server."""
     now_ist = datetime.now(IST)
+    now_utc = datetime.now(timezone.utc)
+    is_market_open, market_msg = is_indian_market_open(now_utc)
     debug_val = await load_checkpoint("debug", "last", "run")
     return {
         "status": "ok",
+        "version": "2.2-holiday-fix",   # bump → forces Render redeploy
         "server_time_ist": now_ist.isoformat(),
         "weekday": now_ist.weekday(),
         "is_weekday": now_ist.weekday() < 5,
+        "is_market_open": is_market_open,   # NEW: holiday-aware check
+        "market_message": market_msg,
         "redis_configured": bool(UPSTASH_URL and UPSTASH_TOKEN),
         "redis_url_normalized": UPSTASH_URL[:15] + "..." if UPSTASH_URL else None,
         "checkpoints_count": len(CHECKPOINTS),
