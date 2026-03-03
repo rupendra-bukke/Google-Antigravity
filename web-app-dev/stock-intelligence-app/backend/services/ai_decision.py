@@ -34,46 +34,32 @@ GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:g
 
 # ── Prompt template ──────────────────────────────────────────────────────────
 
-PRICE_ACTION_PROMPT = """You are an expert intraday trader specializing in smart money concepts and price action analysis for Indian markets (NSE Nifty 50).
+PRICE_ACTION_PROMPT = """You are an expert intraday trader for NSE Nifty 50 (Indian market) using smart money & price action.
 
-Analyze the following intraday data and answer the 7-point framework. Also include any relevant news or macro events that could impact Nifty 50 today.
-
---- MARKET DATA ---
+Market snapshot:
 {market_data_block}
--------------------
 
-FRAMEWORK:
+Analyze using smart money concepts: key levels, structure, SL-hunt, bias, entry.
 
-1. Key levels: Support/resistance, previous day high/low, intraday high/low, psychological levels (round numbers)
-2. Market structure: Trending or ranging? Are highs/lows respected or broken?
-3. Stop-loss hunting / liquidity grab: Has price broken a level and reversed? Where are retail traders trapped?
-4. Fake or real breakout: Is the breakout sustained or rejected? Any strong reversal candles?
-5. Trade bias: What is the HIGH PROBABILITY direction? Bullish / Bearish / Wait
-6. Entry logic: Entry zone, stop loss level (structure-based, not arbitrary)
-7. Risk clarity: High-quality setup or risky? What confirmation is missing?
+IMPORTANT — Reply ONLY with valid JSON, no markdown fences, no text outside JSON.
+Keep ALL string values SHORT (under 20 words each) to avoid truncation.
 
-RULES:
-- Focus ONLY on price action (smart money, structure, liquidity)
-- Prioritize stop-loss hunting and traps over indicator signals
-- Also mention any known news events (RBI, FII/DII flows, global cues, budget, elections) that affect today's bias
-
-Respond ONLY with a valid JSON object — no markdown, no explanation outside JSON:
 {{
   "decision": "BULLISH or BEARISH or WAIT",
   "bias_strength": "HIGH or MEDIUM or LOW",
-  "market_structure": "brief description",
+  "market_structure": "one short sentence max 15 words",
   "sl_hunt_detected": true or false,
-  "sl_hunt_detail": "description or null",
+  "sl_hunt_detail": "one short sentence or null",
   "breakout_type": "REAL or FAKE or NONE",
-  "breakout_detail": "description or null",
-  "entry_zone": "e.g. 25150 - 25200 or null",
-  "stop_loss": "e.g. 25325 or null",
-  "target": "e.g. 24980 or null",
+  "breakout_detail": "one short sentence or null",
+  "entry_zone": "price range e.g. 25150-25200 or null",
+  "stop_loss": "price e.g. 25325 or null",
+  "target": "price e.g. 24980 or null",
   "trade_quality": "HIGH or MEDIUM or RISKY",
-  "missing_confirmation": "what to wait for before entry",
-  "news_items": ["headline 1", "headline 2"],
-  "news_impact": "how news affects today's bias, 1-2 sentences",
-  "reasoning": "full price action reasoning, 3-5 sentences"
+  "missing_confirmation": "what to wait for, max 10 words",
+  "news_items": ["headline max 8 words", "headline max 8 words"],
+  "news_impact": "one sentence max 20 words",
+  "reasoning": "two sentences max 40 words total"
 }}"""
 
 
@@ -158,7 +144,7 @@ async def _call_gemini(prompt: str, api_key: str) -> str:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.3,
-            "maxOutputTokens": 3000,   # 1500 was too small for detailed EOD JSON
+            "maxOutputTokens": 8000,   # Raised from 3000 — intraday JSON was being truncated mid-field
         },
     }
     last_error: Exception | None = None
