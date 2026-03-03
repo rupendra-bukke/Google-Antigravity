@@ -319,12 +319,32 @@ def is_indian_market_open(dt: datetime) -> tuple[bool, str]:
     which knows about weekends AND all NSE public holidays.
     Market hours: 09:15 to 15:30 IST.
     """
+    # ── Manual 2026 NSE holiday list (safety net for exchange_calendars lag) ──
+    NSE_HOLIDAYS_2026 = {
+        "2026-01-26",  # Republic Day
+        "2026-03-03",  # Holi (Dhuleti)
+        "2026-03-04",  # Holi (2nd day — varies)
+        "2026-04-02",  # Good Friday / Ram Navami
+        "2026-04-14",  # Dr Ambedkar Jayanti
+        "2026-05-01",  # Maharashtra Day
+        "2026-08-15",  # Independence Day
+        "2026-10-02",  # Gandhi Jayanti
+        "2026-10-20",  # Diwali Laxmi Pujan (approx)
+        "2026-10-21",  # Diwali Balipratipada (approx)
+        "2026-11-18",  # Guru Nanak Jayanti (approx)
+    }
     try:
         import exchange_calendars as xcals
         import pandas as pd
 
         ist = pytz.timezone("Asia/Kolkata")
         now_ist = dt.astimezone(ist)
+        today_str = now_ist.strftime("%Y-%m-%d")
+
+        # Manual holiday pre-check (catches holidays exchange_calendars may not know yet)
+        if today_str in NSE_HOLIDAYS_2026:
+            return False, f"Market is CLOSED — NSE Holiday ({today_str})"
+
         today = pd.Timestamp(now_ist.date())
 
         # Check if today is a trading session on NSE
@@ -349,6 +369,9 @@ def is_indian_market_open(dt: datetime) -> tuple[bool, str]:
         # Fallback if exchange_calendars not installed yet
         ist = pytz.timezone("Asia/Kolkata")
         now_ist = dt.astimezone(ist)
+        today_str = now_ist.strftime("%Y-%m-%d")
+        if today_str in NSE_HOLIDAYS_2026:
+            return False, f"Market is CLOSED — NSE Holiday ({today_str})"
         if now_ist.weekday() >= 5:
             return False, f"Market is CLOSED ({now_ist.strftime('%A')})"
         market_start = time(9, 15)

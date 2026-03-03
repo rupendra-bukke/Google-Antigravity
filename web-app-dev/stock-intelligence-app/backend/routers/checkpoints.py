@@ -58,13 +58,14 @@ async def get_checkpoints(
     panels = await load_all_checkpoints(date_str, symbol)
 
     # ── Catch-up Logic ──
-    # Only run catch-up for Today during market days (Mon-Fri)
+    # Only run catch-up on actual NSE trading days (holiday-aware via exchange_calendars)
+    now_utc = datetime.now(timezone.utc)
     now_ist = datetime.now(IST)
     is_today = date_str == now_ist.strftime("%Y-%m-%d")
-    is_weekday = now_ist.weekday() < 5
+    is_market_day, _ = is_indian_market_open(now_utc)  # checks weekdays + NSE holidays
     missing_ids = []  # IMPORTANT: must be defined before the if block
 
-    if is_today and is_weekday:
+    if is_today and is_market_day:
         current_hhmm = now_ist.strftime("%H%M")
         missing_ids = [
             p["id"] for p in panels

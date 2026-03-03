@@ -178,10 +178,11 @@ def _extract_json(raw_text: str) -> str:
     """
     Robustly extract JSON from Gemini's response.
     Handles: plain JSON, ```json...```, ``` ...```, whitespace variants, uppercase JSON.
+    Also handles TRUNCATED responses where Gemini started a code fence but got cut off.
     """
     text = raw_text.strip()
 
-    # Strategy 1: Strip markdown code fences using regex (handles all variants)
+    # Strategy 1: Complete fenced JSON block (```json...```)
     fence_match = re.search(
         r'```(?:json|JSON)?\s*([\s\S]*?)```',
         text, re.IGNORECASE | re.DOTALL
@@ -190,6 +191,12 @@ def _extract_json(raw_text: str) -> str:
         candidate = fence_match.group(1).strip()
         if candidate.startswith("{"):
             return candidate
+
+    # Strategy 1b: Opening fence but NO closing fence (truncated response)
+    # Extract everything after the ```json marker to end of string
+    partial_fence = re.search(r'```(?:json|JSON)?\s*(\{[\s\S]+)$', text, re.IGNORECASE | re.DOTALL)
+    if partial_fence:
+        return partial_fence.group(1).strip()
 
     # Strategy 2: If text already starts with { take it as-is
     if text.startswith("{"):
@@ -202,6 +209,30 @@ def _extract_json(raw_text: str) -> str:
 
     # Give up — return original so json.loads gives a clear error
     return text
+
+
+def _repair_json(text: str) -> dict | None:
+    """
+    Try to repair truncated JSON by adding missing closing characters.
+    Returns parsed dict if successful, None otherwise.
+    """
+    text = text.strip()
+    if not text.startswith('{'):
+        return None
+    # Try closing with 0, 1, or 2 braces; also handle unclosed string + brace
+    for suffix in ['', '}', '}}', '"}}', '"}']: 
+        try:
+            return json.loads(text + suffix)
+        except (json.JSONDecodeError, ValueError):
+            continue
+    # Last resort: trim to last complete field (before last comma) and close
+    last_comma = text.rfind(',"')
+    if last_comma > 10:
+        try:
+            return json.loads(text[:last_comma] + '}')
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return None
 
 
 
@@ -236,8 +267,17 @@ async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
         return result
 
     except json.JSONDecodeError as e:
-        raw_snippet = raw_text[:400] if 'raw_text' in dir() else '?'
+        raw_snippet = raw_text[:600] if 'raw_text' in dir() else '?'
         extracted = _extract_json(raw_snippet) if raw_snippet != '?' else '?'
+        # Try to repair truncated JSON before giving up
+        repaired = _repair_json(extracted)
+        if repaired:
+            logger.warning("Gemini intraday JSON repaired (was truncated). Using partial result.")
+            repaired.setdefault("captured_at", now.astimezone(IST).isoformat())
+            repaired.setdefault("symbol", symbol)
+            repaired.setdefault("decision", "WAIT")
+            repaired.setdefault("bias_strength", "LOW")
+            return repaired
         logger.error("Gemini intraday non-JSON | raw[:400]: %.400s | extracted[:300]: %.300s | error: %s",
                      raw_snippet, extracted, e)
         return _fallback(f"JSON parse failed. Extracted: {extracted[:200]}")
