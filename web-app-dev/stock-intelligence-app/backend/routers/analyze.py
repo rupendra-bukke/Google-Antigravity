@@ -317,7 +317,7 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
 
     else:
         # ── EOD / Market-closed mode ───────────────────────────────────────
-        ist_now = datetime.now(IST_TZ)
+        ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30)))  # IST
         date_str = ist_now.strftime("%Y-%m-%d")
         eod_key = f"{EOD_CACHE_KEY_PREFIX}{date_str}:{hashlib.md5(sym.encode()).hexdigest()}"
 
