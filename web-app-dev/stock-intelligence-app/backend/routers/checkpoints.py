@@ -93,19 +93,26 @@ async def checkpoint_diag():
     now_utc = datetime.now(timezone.utc)
     is_market_open, market_msg = is_indian_market_open(now_utc)
     debug_val = await load_checkpoint("debug", "last", "run")
+
+    # Test Redis read for today's 0915 checkpoint
+    today_str = now_ist.strftime("%Y-%m-%d")
+    test_0915 = await load_checkpoint(today_str, "0915", "^NSEI")
+
     return {
         "status": "ok",
-        "version": "2.2-holiday-fix",   # bump → forces Render redeploy
+        "version": "2.3-v2fix",
         "server_time_ist": now_ist.isoformat(),
         "weekday": now_ist.weekday(),
         "is_weekday": now_ist.weekday() < 5,
-        "is_market_open": is_market_open,   # NEW: holiday-aware check
+        "is_market_open": is_market_open,
         "market_message": market_msg,
         "redis_configured": bool(UPSTASH_URL and UPSTASH_TOKEN),
         "redis_url_normalized": UPSTASH_URL[:15] + "..." if UPSTASH_URL else None,
         "checkpoints_count": len(CHECKPOINTS),
         "last_error": LAST_ERROR,
-        "durable_debug": debug_val
+        "durable_debug": debug_val,
+        "test_0915_loaded": test_0915 is not None,
+        "test_0915_signal": test_0915.get("scalp_signal") if test_0915 else None,
     }
 
 
