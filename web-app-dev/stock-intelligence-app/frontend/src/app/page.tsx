@@ -86,7 +86,6 @@ function getNseMarketStatus(): { isOpen: boolean; message: string } {
     const NSE_HOLIDAYS_2026 = new Set([
         "2026-01-26", // Republic Day
         "2026-03-03", // Holi (Dhuleti)
-        "2026-03-04", // Holi 2nd day
         "2026-04-02", // Good Friday / Ram Navami
         "2026-04-14", // Dr Ambedkar Jayanti
         "2026-05-01", // Maharashtra Day
