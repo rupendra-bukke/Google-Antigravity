@@ -484,7 +484,7 @@ def momentum_forecast(
 
         # 2. RSI trajectory (last 3 readings)
         rsi_series = calc_rsi_series(df)
-        if len(rsi_series) >= 3:
+        if isinstance(rsi_series, pd.Series) and len(rsi_series) >= 3:
             rsi_now = rsi_series.iloc[-1]
             rsi_prev = rsi_series.iloc[-3]
             if rsi_now > rsi_prev + 3 and rsi_now < 75:
@@ -495,16 +495,22 @@ def momentum_forecast(
                 reasons.append(f"{label}: RSI falling {rsi_prev:.1f}→{rsi_now:.1f}")
 
         # 3. MACD histogram slope (expanding or contracting)
-        _, _, hist_series = calc_macd(df)
-        if len(hist_series) >= 3:
-            h_now = hist_series.iloc[-1]
-            h_prev = hist_series.iloc[-3]
-            if h_now > h_prev and h_now > 0:
-                up_score += weight
-                reasons.append(f"{label}: MACD hist expanding bullish")
-            elif h_now < h_prev and h_now < 0:
-                dn_score += weight
-                reasons.append(f"{label}: MACD hist expanding bearish")
+        # calc_macd returns scalar floats — compute histogram Series inline
+        try:
+            ema12 = close.ewm(span=12, adjust=False).mean()
+            ema26 = close.ewm(span=26, adjust=False).mean()
+            hist_series = (ema12 - ema26) - (ema12 - ema26).ewm(span=9, adjust=False).mean()
+            if isinstance(hist_series, pd.Series) and len(hist_series) >= 3:
+                h_now = hist_series.iloc[-1]
+                h_prev = hist_series.iloc[-3]
+                if h_now > h_prev and h_now > 0:
+                    up_score += weight
+                    reasons.append(f"{label}: MACD hist expanding bullish")
+                elif h_now < h_prev and h_now < 0:
+                    dn_score += weight
+                    reasons.append(f"{label}: MACD hist expanding bearish")
+        except Exception:
+            pass  # Skip MACD if insufficient data
 
         # 4. Volume surging on green candles (bullish) or red candles (bearish)
         if volume is not None and len(df) >= 3:
