@@ -136,6 +136,8 @@ async def trigger_checkpoint(
     Run V2 engine and save result to the specified checkpoint slot.
     Called by APScheduler at market times, or manually for testing.
     """
+    import traceback
+
     # Validate checkpoint id
     valid_ids = {cp["id"] for cp in CHECKPOINTS}
     if checkpoint_id not in valid_ids:
@@ -152,8 +154,16 @@ async def trigger_checkpoint(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Data fetch failed: {exc}")
 
-    # Run V2 decision engine
-    result = run_advanced_analysis(frames, symbol, now_utc)
+    # Run V2 decision engine — wrapped for detailed error reporting
+    try:
+        result = run_advanced_analysis(frames, symbol, now_utc)
+    except Exception as exc:
+        tb = traceback.format_exc()
+        global LAST_ERROR
+        LAST_ERROR = f"V2 crash in {checkpoint_id}: {tb[-500:]}"
+        await log_debug(f"V2 CRASH {checkpoint_id}: {tb}")
+        raise HTTPException(status_code=500, detail=f"V2 engine crashed: {exc}\n{tb[-300:]}")
+
     is_open, mkt_msg = is_indian_market_open(now_utc)
 
     # Build the snapshot payload
@@ -203,16 +213,17 @@ async def run_checkpoint_for_all_symbols(
     Internal function called by APScheduler (use_historical=False)
     or catch-up (use_historical=True).
     """
+    import traceback
+    global LAST_ERROR
+
     now_utc = datetime.now(timezone.utc)
     date_str = date_str or _today_ist()
 
     for sym in SYMBOLS:
         try:
             if use_historical:
-                # Catch-up: use data sliced at checkpoint time for accurate historical price
                 frames = await fetch_multi_timeframe_at_time(sym, checkpoint_id, date_str)
             else:
-                # Live: use current market data
                 frames = await fetch_multi_timeframe(sym)
 
             result = run_advanced_analysis(frames, sym, now_utc)
@@ -238,4 +249,7 @@ async def run_checkpoint_for_all_symbols(
             await save_checkpoint(date_str, checkpoint_id, sym, payload)
             print(f"[CHECKPOINT] ✅ {checkpoint_id} | {sym} | {payload['scalp_signal']}")
         except Exception as e:
+            tb = traceback.format_exc()
+            LAST_ERROR = f"{checkpoint_id}|{sym}: {tb[-300:]}"
+            await log_debug(f"CHECKPOINT CRASH {checkpoint_id}|{sym}: {tb}")
             print(f"[CHECKPOINT] ❌ {checkpoint_id} | {sym} | Error: {e}")
