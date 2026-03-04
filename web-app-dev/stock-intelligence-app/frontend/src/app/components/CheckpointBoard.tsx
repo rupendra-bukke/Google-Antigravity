@@ -38,22 +38,51 @@ interface Panel {
     data: CheckpointData | null;
 }
 
-function SignalValue({ signal }: { signal: string }) {
-    const isBuy = signal?.toLowerCase().includes("buy") || signal?.includes("🟢");
-    const isSell = signal?.toLowerCase().includes("sell") || signal?.includes("🔴");
-    const color = isBuy ? "#4ade80" : isSell ? "#f87171" : "#94a3b8";
+/** Compute ONE unified directional signal from all V2 inputs.
+ *  Priority:
+ *    1. Strong execute scalp  → trust scalp_signal (BUY/SELL)
+ *    2. Majority vote: trend + forecast + weak scalp
+ *    3. Conflict → WAIT with lean
+ */
+function getNextMove(data: CheckpointData) {
+    const scalp = data.scalp_signal || "";
+    const execute = data.execute || "";
+    const trend = data.trend_direction || "";
+    const fc = data.forecast;
 
-    return (
-        <div style={{
-            fontSize: "1.2rem",
-            fontWeight: 900,
-            color,
-            textShadow: isBuy ? "0 0 15px rgba(74,222,128,0.3)" : isSell ? "0 0 15px rgba(248,113,113,0.3)" : "none",
-            letterSpacing: "0.02em"
-        }}>
-            {signal || "WAITING"}
-        </div>
-    );
+    const isBuyS = scalp.toLowerCase().includes("buy");
+    const isSellS = scalp.toLowerCase().includes("sell");
+    const strong = execute === "Strong";
+    const fcUp = fc?.direction === "UP";
+    const fcDown = fc?.direction === "DOWN";
+    const fcConf = fc?.confidence ?? 50;
+    const tUp = trend.includes("Bullish") || trend.toLowerCase().includes("→ 🟢");
+    const tDown = trend.includes("Bearish") || trend.toLowerCase().includes("→ 🔴");
+
+    // Strong confirmed scalp → definitive
+    if (strong && isBuyS) return { arrow: "▲", label: "BUY / CE", sublabel: tUp ? "Trend BULLISH · Confirmed" : "Scalp BUY · Strong", color: "#4ade80", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.35)", conf: fcConf, confColor: "#4ade80" };
+    if (strong && isSellS) return { arrow: "▼", label: "SELL / PE", sublabel: tDown ? "Trend BEARISH · Confirmed" : "Scalp SELL · Strong", color: "#f87171", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.35)", conf: fcConf, confColor: "#f87171" };
+
+    // Majority vote
+    const bull = (tUp ? 1 : 0) + (fcUp ? 1 : 0) + (isBuyS ? 1 : 0);
+    const bear = (tDown ? 1 : 0) + (fcDown ? 1 : 0) + (isSellS ? 1 : 0);
+
+    if (bull > bear && bull >= 2) {
+        const why = tUp && fcUp ? "Trend + Forecast aligned UP"
+            : tUp ? `Trend BULLISH · Forecast ${fc?.direction ?? "?"}`
+                : `Forecast UP · ${fcConf}% conf`;
+        return { arrow: "▲", label: "BUY / CE", sublabel: why, color: "#4ade80", bg: "rgba(34,197,94,0.08)", border: "rgba(34,197,94,0.2)", conf: fcConf, confColor: "#4ade80" };
+    }
+    if (bear > bull && bear >= 2) {
+        const why = tDown && fcDown ? "Trend + Forecast aligned DOWN"
+            : tDown ? `Trend BEARISH · Forecast ${fc?.direction ?? "?"}`
+                : `Forecast DOWN · ${fcConf}% conf`;
+        return { arrow: "▼", label: "SELL / PE", sublabel: why, color: "#f87171", bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)", conf: fcConf, confColor: "#f87171" };
+    }
+
+    // Conflicting
+    const lean = fcUp ? "Lean UP" : fcDown ? "Lean DOWN" : "No clear direction";
+    return { arrow: "◆", label: "WAIT", sublabel: `Mixed signals — ${lean}`, color: "#94a3b8", bg: "rgba(148,163,184,0.06)", border: "rgba(148,163,184,0.15)", conf: fcConf, confColor: "#94a3b8" };
 }
 
 function StatItem({ label, value, color = "#94a3b8" }: { label: string, value: string | number, color?: string }) {
@@ -66,154 +95,73 @@ function StatItem({ label, value, color = "#94a3b8" }: { label: string, value: s
 }
 
 function CheckpointCard({ panel, index, isLatest }: { panel: Panel; index: number; isLatest: boolean }) {
-    const dateObj = new Date();
     const [h, m] = panel.time.split(":").map(Number);
-    const targetTime = new Date();
-    targetTime.setHours(h, m, 0, 0);
+    const targetTime = new Date(); targetTime.setHours(h, m, 0, 0);
     const isPending = !panel.data && new Date() < targetTime;
     const isMissed = !panel.data && new Date() >= targetTime;
     const isPopulated = !!panel.data;
+    const move = isPopulated ? getNextMove(panel.data!) : null;
 
     return (
-        <div
-            style={{
-                background: !isPopulated
-                    ? "rgba(15, 23, 42, 0.2)"
-                    : panel.data!.scalp_signal.includes("BUY")
-                        ? "rgba(34, 197, 94, 0.12)"
-                        : panel.data!.scalp_signal.includes("SELL")
-                            ? "rgba(239, 68, 68, 0.12)"
-                            : "rgba(148, 163, 184, 0.12)",
-                backdropFilter: "blur(16px)",
-                WebkitBackdropFilter: "blur(16px)",
-                border: isLatest
-                    ? "1px solid rgba(212, 175, 55, 0.4)"
-                    : !isPopulated
-                        ? "1px dashed rgba(255, 255, 255, 0.05)"
-                        : panel.data!.scalp_signal.includes("BUY")
-                            ? "1px solid rgba(34, 197, 94, 0.3)"
-                            : panel.data!.scalp_signal.includes("SELL")
-                                ? "1px solid rgba(239, 68, 68, 0.3)"
-                                : "1px solid rgba(148, 163, 184, 0.3)",
-                borderRadius: "16px",
-                padding: "1.2rem",
-                minWidth: "220px",
-                position: "relative",
-                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                boxShadow: isLatest ? "0 10px 30px -10px rgba(212, 175, 55, 0.15)" : "none",
-                transform: isLatest ? "scale(1.02)" : "scale(1)",
-                zIndex: isLatest ? 2 : 1
-            }}
-        >
-            {/* Time Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+        <div style={{
+            background: !isPopulated ? "rgba(15,23,42,0.2)" : move?.bg ?? "rgba(148,163,184,0.06)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            border: isLatest ? "1px solid rgba(212,175,55,0.4)"
+                : !isPopulated ? "1px dashed rgba(255,255,255,0.05)"
+                    : `1px solid ${move?.border ?? "rgba(148,163,184,0.15)"}`,
+            borderRadius: "16px",
+            padding: "1.2rem",
+            minWidth: "200px",
+            position: "relative",
+            transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)",
+            boxShadow: isLatest ? "0 10px 30px -10px rgba(212,175,55,0.15)" : "none",
+            transform: isLatest ? "scale(1.02)" : "scale(1)",
+            zIndex: isLatest ? 2 : 1
+        }}>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.9rem" }}>
                 <div>
-                    <h4 style={{ color: isPopulated ? "#f8fafc" : "#475569", margin: 0, fontSize: "0.85rem", fontWeight: 700 }}>
-                        {panel.label}
-                    </h4>
-                    <span style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>
-                        {panel.time} IST
-                    </span>
+                    <h4 style={{ color: isPopulated ? "#f8fafc" : "#475569", margin: 0, fontSize: "0.82rem", fontWeight: 700 }}>{panel.label}</h4>
+                    <span style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>{panel.time} IST</span>
                 </div>
                 {isLatest && (
-                    <div style={{ background: "#d4af37", color: "#000", fontSize: "0.55rem", fontWeight: 900, padding: "2px 6px", borderRadius: "4px", textTransform: "uppercase" }}>
-                        Latest
-                    </div>
+                    <div style={{ background: "#d4af37", color: "#000", fontSize: "0.55rem", fontWeight: 900, padding: "2px 6px", borderRadius: "4px", textTransform: "uppercase" }}>Latest</div>
                 )}
             </div>
 
-            {isPopulated ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-                    <SignalValue signal={panel.data!.scalp_signal} />
+            {isPopulated && move ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "0.6rem" }}>
+                    {/* ── HERO: ONE UNIFIED NEXT MOVE ── */}
+                    <div style={{ background: move.bg, border: `1px solid ${move.border}`, borderRadius: "12px", padding: "10px 12px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <span style={{ fontSize: "0.5rem", color: "#64748b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em" }}>Next Move →</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "1.5rem", fontWeight: 900, color: move.color, textShadow: `0 0 18px ${move.color}55`, lineHeight: 1 }}>{move.arrow}</span>
+                            <span style={{ fontSize: "1.05rem", fontWeight: 900, color: move.color, letterSpacing: "0.04em", lineHeight: 1 }}>{move.label}</span>
+                        </div>
+                        <span style={{ fontSize: "0.6rem", color: "#94a3b8", fontWeight: 500, lineHeight: 1.3 }}>{move.sublabel}</span>
+                        <div style={{ height: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "2px", marginTop: "4px" }}>
+                            <div style={{ height: "100%", width: `${move.conf}%`, borderRadius: "2px", background: move.confColor, transition: "width 0.6s ease" }} />
+                        </div>
+                        <span style={{ fontSize: "0.55rem", color: "#475569", fontWeight: 600 }}>{move.conf}% confidence</span>
+                    </div>
+
+                    {/* Price + Option */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "0.55rem" }}>
                         <StatItem label="Price" value={`₹${panel.data!.spot_price.toLocaleString("en-IN")}`} color="#e2e8f0" />
-                        <StatItem label="Trend" value={panel.data!.trend_direction} />
-                        <StatItem
-                            label="Signal"
-                            value={panel.data!.execute === "Strong" ? "✅ STRONG" : panel.data!.execute === "Weak" ? "⚠️ WEAK" : "⛔ NO TRADE"}
-                            color={panel.data!.execute === "Strong" ? "#4ade80" : panel.data!.execute === "Weak" ? "#f59e0b" : "#64748b"}
-                        />
-                        {panel.data!.execute_reason && (
-                            <div style={{ fontSize: "0.6rem", color: "#475569", lineHeight: 1.4, marginTop: "2px" }}>
-                                {panel.data!.execute_reason}
+                        {panel.data!.option_strike?.strike && (
+                            <div style={{ background: "rgba(212,175,55,0.05)", padding: "4px 8px", borderRadius: "6px", fontSize: "0.65rem", color: "#d4af37", fontWeight: 700, border: "1px solid rgba(212,175,55,0.12)", display: "flex", justifyContent: "space-between" }}>
+                                <span>🎯 Option</span>
+                                <span>{panel.data!.option_strike!.option_type} {panel.data!.option_strike!.strike}</span>
                             </div>
                         )}
                     </div>
 
-                    {panel.data!.option_strike && (
-                        <div style={{
-                            marginTop: "0.2rem",
-                            background: "rgba(212, 175, 55, 0.05)",
-                            padding: "6px 10px",
-                            borderRadius: "8px",
-                            fontSize: "0.68rem",
-                            color: "#d4af37",
-                            fontWeight: 600,
-                            border: "1px solid rgba(212, 175, 55, 0.1)"
-                        }}>
-                            🎯 {panel.data!.option_strike.option_type} {panel.data!.option_strike.strike}
-                        </div>
-                    )}
-
-                    {/* ── Forward Prediction: Next 15–20 Min ── */}
-                    {panel.data!.forecast && (
-                        <div style={{
-                            padding: "8px 10px",
-                            borderRadius: "10px",
-                            background: panel.data!.forecast.direction === "UP"
-                                ? "rgba(74,222,128,0.08)"
-                                : panel.data!.forecast.direction === "DOWN"
-                                    ? "rgba(248,113,113,0.08)"
-                                    : "rgba(148,163,184,0.08)",
-                            border: panel.data!.forecast.direction === "UP"
-                                ? "1px solid rgba(74,222,128,0.2)"
-                                : panel.data!.forecast.direction === "DOWN"
-                                    ? "1px solid rgba(248,113,113,0.2)"
-                                    : "1px solid rgba(148,163,184,0.15)",
-                        }}>
-                            <div style={{ fontSize: "0.55rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", marginBottom: "4px" }}>
-                                Next 15–20 Min
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                <span style={{ fontSize: "1.2rem" }}>{panel.data!.forecast.arrow}</span>
-                                <span style={{
-                                    fontSize: "0.75rem",
-                                    fontWeight: 800,
-                                    color: panel.data!.forecast.direction === "UP" ? "#4ade80" : panel.data!.forecast.direction === "DOWN" ? "#f87171" : "#94a3b8"
-                                }}>
-                                    {panel.data!.forecast.direction}
-                                </span>
-                                <span style={{ marginLeft: "auto", fontSize: "0.65rem", color: "#64748b", fontWeight: 600 }}>
-                                    {panel.data!.forecast.confidence}% conf
-                                </span>
-                            </div>
-                            <div style={{ height: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "2px", marginTop: "5px" }}>
-                                <div style={{
-                                    height: "100%",
-                                    width: `${panel.data!.forecast.confidence}%`,
-                                    borderRadius: "2px",
-                                    background: panel.data!.forecast.direction === "UP" ? "#4ade80" : panel.data!.forecast.direction === "DOWN" ? "#f87171" : "#94a3b8",
-                                    transition: "width 0.6s ease"
-                                }} />
-                            </div>
-                        </div>
-                    )}
                 </div>
             ) : (
-                <div style={{
-                    height: "120px",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    opacity: 0.6
-                }}>
-                    <div style={{
-                        fontSize: "1.5rem",
-                        marginBottom: "0.5rem",
-                        animation: (isPending || isMissed) ? "pulse 1.5s infinite" : "none"
-                    }}>
+                <div style={{ height: "120px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", opacity: 0.6 }}>
+                    <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem", animation: (isPending || isMissed) ? "pulse 1.5s infinite" : "none" }}>
                         {isPending ? "⏳" : isMissed ? "🔄" : "📭"}
                     </div>
                     <p style={{ color: "#64748b", fontSize: "0.65rem", textAlign: "center", margin: 0, textTransform: "uppercase", fontWeight: 700 }}>
