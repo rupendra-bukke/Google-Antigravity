@@ -34,32 +34,31 @@ GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:g
 
 # ── Prompt template ──────────────────────────────────────────────────────────
 
-PRICE_ACTION_PROMPT = """You are an expert intraday trader for NSE Nifty 50 (Indian market) using smart money & price action.
+PRICE_ACTION_PROMPT = """Expert NSE Nifty 50 intraday trader. Analyze using smart money concepts.
 
-Market snapshot:
 {market_data_block}
 
-Analyze using smart money concepts: key levels, structure, SL-hunt, bias, entry.
-
-IMPORTANT — Reply ONLY with valid JSON, no markdown fences, no text outside JSON.
-Keep ALL string values SHORT (under 20 words each) to avoid truncation.
+CRITICAL RULES:
+1. Reply ONLY with valid JSON object — NO markdown, NO ```json, NO text outside.
+2. Every string field MUST be under 8 words. Truncation causes errors.
+3. "reasoning" max 20 words total.
 
 {{
-  "decision": "BULLISH or BEARISH or WAIT",
-  "bias_strength": "HIGH or MEDIUM or LOW",
-  "market_structure": "one short sentence max 15 words",
-  "sl_hunt_detected": true or false,
-  "sl_hunt_detail": "one short sentence or null",
-  "breakout_type": "REAL or FAKE or NONE",
-  "breakout_detail": "one short sentence or null",
-  "entry_zone": "price range e.g. 25150-25200 or null",
-  "stop_loss": "price e.g. 25325 or null",
-  "target": "price e.g. 24980 or null",
-  "trade_quality": "HIGH or MEDIUM or RISKY",
-  "missing_confirmation": "what to wait for, max 10 words",
-  "news_items": ["headline max 8 words", "headline max 8 words"],
-  "news_impact": "one sentence max 20 words",
-  "reasoning": "two sentences max 40 words total"
+  "decision": "BULLISH|BEARISH|WAIT",
+  "bias_strength": "HIGH|MEDIUM|LOW",
+  "market_structure": "max 8 words",
+  "sl_hunt_detected": false,
+  "sl_hunt_detail": null,
+  "breakout_type": "REAL|FAKE|NONE",
+  "breakout_detail": null,
+  "entry_zone": "e.g. 25150-25200",
+  "stop_loss": "e.g. 25325",
+  "target": "e.g. 24980",
+  "trade_quality": "HIGH|MEDIUM|RISKY",
+  "missing_confirmation": "max 6 words",
+  "news_items": [],
+  "news_impact": "max 8 words",
+  "reasoning": "max 20 words"
 }}"""
 
 
@@ -144,7 +143,8 @@ async def _call_gemini(prompt: str, api_key: str) -> str:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.3,
-            "maxOutputTokens": 8000,   # Raised from 3000 — intraday JSON was being truncated mid-field
+            "maxOutputTokens": 8000,
+            "response_mime_type": "application/json",  # Forces pure JSON output, no markdown fences
         },
     }
     last_error: Exception | None = None
