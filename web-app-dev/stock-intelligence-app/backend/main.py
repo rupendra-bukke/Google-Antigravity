@@ -61,11 +61,16 @@ scheduler.add_job(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    env_label = "🛠️  DEV" if settings.is_dev else "🚀  PROD"
+    print(f"\n{'='*55}")
+    print(f"  Trade-Craft API  |  {env_label}  |  {settings.app_env.upper()}")
+    print(f"{'='*55}\n")
     scheduler.start()
     print(f"[SCHEDULER] ✅ Started — {len(CHECKPOINT_SCHEDULE)} checkpoints scheduled (IST, Mon–Fri)")
     yield
     scheduler.shutdown()
     print("[SCHEDULER] 🛑 Stopped")
+
 
 
 # ── App ────────────────────────────────────────────────────────────────────
