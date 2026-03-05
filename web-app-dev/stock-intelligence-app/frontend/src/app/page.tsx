@@ -12,6 +12,8 @@ import AIDecision from "./components/AIDecision";
 import MarketStatusBanner from "./components/MarketStatusBanner";
 import CheckpointBoard from "./components/CheckpointBoard";
 import ISTClock from "./components/ISTClock";
+import ExpiryBanner from "./components/ExpiryBanner";
+
 
 /* ── Types ── */
 
@@ -304,6 +306,10 @@ export default function Dashboard() {
                 const finalOpen = advancedData ? advancedData.is_market_open : isOpen;
                 return <MarketStatusBanner isOpen={finalOpen} message={finalMsg} />;
             })()}
+
+            {/* ── Option Expiry Banner ── */}
+            <ExpiryBanner />
+
 
             {/* ── Stock Header ── */}
             <StockHeader
