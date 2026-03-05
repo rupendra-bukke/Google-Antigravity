@@ -6,7 +6,8 @@ import StockHeader from "./components/StockHeader";
 import IndexSelector from "./components/IndexSelector";
 import CandlestickChart from "./components/CandlestickChart";
 
-import DecisionBadge from "./components/DecisionBadge";
+import DecisionBadge from "./components/DecisionBadge"; // kept for now — unused after removal below
+
 import AIDecision from "./components/AIDecision";
 import MarketStatusBanner from "./components/MarketStatusBanner";
 import CheckpointBoard from "./components/CheckpointBoard";
@@ -490,12 +491,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* ── Decision Badge ── */}
-            <DecisionBadge
-                decision={data?.decision ?? null}
-                reasoning={data?.reasoning ?? []}
-                isLoading={loading}
-            />
+
 
             {/* ── Footer ── */}
             <div className="text-center pt-2">
