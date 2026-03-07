@@ -1,135 +1,130 @@
-# 📊 NIFTY 50 Stock Intelligence
+# Trade-Craft Stock Intelligence App
 
-Full-stack intraday analyzer for NIFTY 50 — calculates **EMA20**, **RSI(14)**, **VWAP** and provides a **BUY / SELL / HOLD** decision using free yfinance data.
+Trade-Craft is a full-stack intraday market intelligence dashboard for Indian indices.
 
-![stack](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
-![stack](https://img.shields.io/badge/Next.js_14-000?style=flat&logo=next.js&logoColor=white)
-![stack](https://img.shields.io/badge/Tailwind_CSS-38BDF8?style=flat&logo=tailwindcss&logoColor=white)
-![stack](https://img.shields.io/badge/yfinance-FFD700?style=flat&logoColor=black)
+- Frontend: Next.js (Vercel)
+- Backend: FastAPI (Render)
+- Cache/Store: Upstash Redis
+- AI: Gemini (intraday + EOD outlook)
+- Market data: `tvDatafeed` primary, `yfinance` fallback
 
----
+## Current Product Scope
+
+- Index support: `^NSEI`, `^NSEBANK`, `^BSESN` (Nifty 50, Bank Nifty, Sensex)
+- Live/near-live technical analysis (EMA, RSI, VWAP, BB, MACD)
+- Advanced multi-timeframe analysis (`/advanced-analyze`)
+- AI decision panel (`/ai-decision`) with:
+  - market-open intraday mode
+  - market-closed EOD next-day mode
+- Checkpoint timeline with 7 strategic market-time snapshots
+- Holiday-aware market status handling
+- Expiry banner (Nifty, Bank Nifty, FinNifty, Sensex weekly/monthly logic)
+
+## UI Sections (Current Order in `page.tsx`)
+
+1. Header (branding, IST clock, refresh)
+2. Index selector
+3. Error panel (if API fails)
+4. Market status banner
+5. Expiry banner
+6. Stock header (symbol + price)
+7. AI decision panel
+8. Indicators strip + combined signal
+9. Nifty 50 market timeline (checkpoint board)
+10. Footer
 
 ## Folder Structure
 
-```
+```text
 stock-intelligence-app/
-├── backend/           # FastAPI (Python)
-│   ├── main.py
-│   ├── config.py
-│   ├── requirements.txt
-│   ├── routers/
-│   │   └── analyze.py
-│   ├── services/
-│   │   ├── market_data.py
-│   │   └── decision.py
-│   └── models/
-│       └── schemas.py
-├── frontend/          # Next.js 14 (App Router)
-│   ├── src/app/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   ├── globals.css
-│   │   └── components/
-│   └── package.json
-└── README.md
+|-- backend/
+|   |-- main.py
+|   |-- config.py
+|   |-- routers/
+|   |   |-- analyze.py
+|   |   `-- checkpoints.py
+|   |-- services/
+|   |   |-- market_data.py
+|   |   |-- ai_decision.py
+|   |   |-- decision.py
+|   |   `-- decision_v2.py
+|   `-- models/
+|       `-- schemas.py
+|-- frontend/
+|   |-- next.config.mjs
+|   |-- src/app/
+|   |   |-- layout.tsx
+|   |   |-- page.tsx
+|   |   |-- context/
+|   |   `-- components/
+|   `-- package.json
+`-- docs (*.md)
 ```
-
----
 
 ## Quick Start
 
-### 1. Backend
+### Backend
 
-```bash
+```powershell
 cd backend
-
-# Create virtual env (recommended)
 python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # macOS / Linux
-
-# Install dependencies
+venv\Scripts\activate
 pip install -r requirements.txt
-
-# Copy env file
 copy .env.example .env
-
-# Run server
 uvicorn main:app --reload --port 8000
 ```
 
-Verify: open [http://localhost:8000/api/v1/analyze](http://localhost:8000/api/v1/analyze)
+### Frontend
 
-### 2. Frontend
-
-```bash
+```powershell
 cd frontend
-
-# Install dependencies
 npm install
-
-# Copy env file
-copy .env.local.example .env.local
-
-# Run dev server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open `http://localhost:3000`.
 
----
+## API Endpoints (Key)
 
-## API
+- `GET /health`
+- `GET /api/v1/analyze?symbol=^NSEI`
+- `GET /api/v1/advanced-analyze?symbol=^NSEI`
+- `GET /api/v1/ai-decision?symbol=^NSEI`
+- `GET /api/v1/checkpoints?symbol=^NSEI`
+- `POST /api/v1/checkpoints/trigger?checkpoint_id=0915&symbol=^NSEI`
+- `GET /api/v1/checkpoints/diag`
+- `GET /api/v1/gemini-test`
+- `GET /api/v1/gemini-models`
 
-### `GET /api/v1/analyze`
+## Environment Variables
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `symbol` | `string` | `^NSEI` | Yahoo Finance ticker |
+### Backend (Render/local)
 
-**Response:**
-```json
-{
-  "symbol": "^NSEI",
-  "price": 22345.50,
-  "indicators": {
-    "ema20": 22310.45,
-    "rsi14": 55.32,
-    "vwap": 22298.10
-  },
-  "decision": "BUY",
-  "reasoning": [
-    "Price above EMA20 (22310.45)",
-    "RSI (55.32) indicates room to move up",
-    "Price above VWAP (22298.10)"
-  ],
-  "timestamp": "2026-02-20T06:37:52Z"
-}
-```
+- `APP_ENV` (`development` or `production`)
+- `GEMINI_API_KEY`
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+- `DEFAULT_SYMBOL` (optional)
 
-### Decision Rules
+### Frontend (Vercel/local)
 
-| Decision | Conditions |
-|----------|-----------|
-| **BUY** | Price > EMA20 **and** RSI < 60 **and** Price > VWAP |
-| **SELL** | Price < EMA20 **and** RSI > 70 **and** Price < VWAP |
-| **HOLD** | All other cases |
+- `BACKEND_URL` (used by `next.config.mjs` rewrite for `/api/*`)
 
----
+## Branch and Deploy Flow
 
-## Tech Stack
+- Build/test on `dev`
+- Push `origin/dev`
+- Validate on Vercel Preview
+- Merge `dev` -> `main`
+- Push `origin/main` to deploy production
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 14 (App Router), Tailwind CSS, TypeScript |
-| Backend | FastAPI, Pydantic, uvicorn |
-| Data | yfinance (free — no API key needed) |
-| Indicators | EMA20, RSI(14), VWAP — pandas-based |
+Detailed docs:
 
----
+- `FLOW_QUICK_REF.md`
+- `BRANCH_DEPLOY_FLOW.md`
+- `RELEASE_RUNBOOK.md`
 
-## Notes
+## Documentation Map
 
-- **Market hours**: During market-closed hours, data reflects the last available trading session.
-- **Free data**: No paid APIs used — 100% yfinance.
-- **Auto-refresh**: Dashboard refreshes every 60 seconds automatically.
+Use `DOCS_INDEX.md` to know which files are active vs archived.
+

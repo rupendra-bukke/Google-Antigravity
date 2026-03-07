@@ -1,3 +1,7 @@
+> Status: ARCHIVED (historical document, may contain outdated technical/process details)
+> Do not use as implementation source-of-truth.
+> Use `README.md`, `ARCHITECTURE.md`, `BRANCH_DEPLOY_FLOW.md`, and `RELEASE_RUNBOOK.md` instead.
+
 # 📊 Trade-Craft — Complete Project Outline
 
 > Your personal Nifty 50 trading intelligence dashboard.  
