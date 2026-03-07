@@ -171,6 +171,31 @@ git log --oneline main..dev
 Memory trick:
 - "When confused: Branch, Status, Log"
 
+## 6.1) How to confirm "Switched back to dev"
+
+Run:
+
+```powershell
+git branch --show-current
+```
+
+Expected output:
+
+```text
+dev
+```
+
+Alternative checks:
+
+```powershell
+git status -sb   # first line should start with: ## dev
+git branch       # current branch has * in front, e.g. * dev
+```
+
+Memory trick:
+- "Show-Current = Single Truth"
+- "Star means where you are now"
+
 ## 7) Your exact real-world mini example
 
 Goal: Add one small text change in expiry banner.

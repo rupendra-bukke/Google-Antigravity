@@ -53,6 +53,16 @@ git log --oneline main..dev # what is pending for release?
 
 Memory trick: `Branch, Status, Log`.
 
+## Confirm you are back on dev
+
+```powershell
+git branch --show-current   # expected output: dev
+git status -sb              # first line should show: ## dev
+git branch                  # * dev means current branch
+```
+
+Memory trick: `Show current, then trust`.
+
 ## Golden Rules
 
 - Do feature work in `dev`.
