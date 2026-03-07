@@ -13,6 +13,26 @@ Version format:
 
 - _Add upcoming release notes here before merging `dev` into `main`._
 
+## [v2026.03.07-02] - 2026-03-07
+
+### Changed
+- AI decision panel redesigned for clarity in both live and EOD modes:
+  - cleaner section hierarchy
+  - clearer labels and readability
+  - improved reasoning visibility
+- AI prompt strengthened to explicitly consider global macro/geopolitical context.
+- Option-action guidance added in AI panel:
+  - `BUY CE` for bullish setups
+  - `BUY PE` for bearish setups
+  - `NO TRADE` for wait setups
+
+### Added
+- Suggested option-side guidance tile in trade-plan area (applies to both live and EOD modes).
+- Expiry section redesign with stronger dynamic highlighting:
+  - explicit `Expiry Today` highlighting
+  - urgency-sorted cards
+  - clearer status, hint text, and progress visuals
+
 ## [v2026.03.07-01] - 2026-03-07
 
 ### Added
