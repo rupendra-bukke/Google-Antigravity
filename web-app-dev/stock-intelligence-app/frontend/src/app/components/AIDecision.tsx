@@ -63,6 +63,39 @@ const STRENGTH_COLORS: Record<string, string> = {
     LOW: "#94a3b8",
 };
 
+type MarketBias = "BULLISH" | "BEARISH" | "WAIT";
+
+function getOptionPlan(bias: MarketBias) {
+    if (bias === "BULLISH") {
+        return {
+            action: "BUY CE",
+            setup: "Buy-side setup",
+            cue: "Prefer CE on dips",
+            color: "#22c55e",
+            bg: "rgba(34,197,94,0.10)",
+            border: "rgba(34,197,94,0.35)",
+        };
+    }
+    if (bias === "BEARISH") {
+        return {
+            action: "BUY PE",
+            setup: "Sell-side setup",
+            cue: "Prefer PE on rises",
+            color: "#ef4444",
+            bg: "rgba(239,68,68,0.10)",
+            border: "rgba(239,68,68,0.35)",
+        };
+    }
+    return {
+        action: "NO TRADE",
+        setup: "Wait for confirmation",
+        cue: "Avoid forced entries",
+        color: "#f59e0b",
+        bg: "rgba(245,158,11,0.10)",
+        border: "rgba(245,158,11,0.35)",
+    };
+}
+
 export default function AIDecision({ symbol }: { symbol: string }) {
     const [data, setData] = useState<AIData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -186,13 +219,22 @@ export default function AIDecision({ symbol }: { symbol: string }) {
 function IntradayView({ data, showReasoning, onToggleReasoning }: { data: IntradayData; showReasoning: boolean; onToggleReasoning: () => void }) {
     const bias = BIAS_CONFIG[data.decision] ?? BIAS_CONFIG.WAIT;
     const quality = QUALITY_CONFIG[data.trade_quality] ?? QUALITY_CONFIG.RISKY;
+    const plan = getOptionPlan(data.decision);
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
             <SectionTitle step="1" title="Decision Summary" />
             <SectionCard>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.8rem", alignItems: "stretch" }}>
-                    <BiasBadge label={bias.label} color={bias.color} bg={bias.bg} border={bias.border} strength={data.bias_strength} />
+                    <BiasBadge
+                        label={bias.label}
+                        color={bias.color}
+                        bg={bias.bg}
+                        border={bias.border}
+                        strength={data.bias_strength}
+                        optionAction={plan.action}
+                        optionCue={plan.cue}
+                    />
                     <div style={{ flex: 1, minWidth: "220px", display: "grid", gap: "0.5rem" }}>
                         <KV label="Market structure" value={data.market_structure} />
                         <KV label="Stop-loss hunt" value={data.sl_hunt_detected ? `Detected: ${data.sl_hunt_detail || "Yes"}` : "Not detected"} valueColor={data.sl_hunt_detected ? "#f59e0b" : "#94a3b8"} />
@@ -209,6 +251,7 @@ function IntradayView({ data, showReasoning, onToggleReasoning }: { data: Intrad
                             <PriceTile label="Entry zone" value={data.entry_zone} color="#22c55e" />
                             <PriceTile label="Stop loss" value={data.stop_loss} color="#ef4444" />
                             <PriceTile label="Target" value={data.target} color="#6366f1" />
+                            <ActionTile label="Suggested option side" action={plan.action} setup={plan.setup} cue={plan.cue} color={plan.color} bg={plan.bg} border={plan.border} />
                         </div>
                     </SectionCard>
                 </>
@@ -239,13 +282,22 @@ function IntradayView({ data, showReasoning, onToggleReasoning }: { data: Intrad
 
 function EODView({ data, showReasoning, onToggleReasoning }: { data: EODData; showReasoning: boolean; onToggleReasoning: () => void }) {
     const bias = BIAS_CONFIG[data.next_day_bias] ?? BIAS_CONFIG.WAIT;
+    const plan = getOptionPlan(data.next_day_bias);
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
             <SectionTitle step="1" title="Session Summary and Bias" />
             <SectionCard>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.8rem" }}>
-                    <BiasBadge label={`${bias.label} TOMORROW`} color={bias.color} bg={bias.bg} border={bias.border} strength={data.bias_strength} />
+                    <BiasBadge
+                        label={`${bias.label} TOMORROW`}
+                        color={bias.color}
+                        bg={bias.bg}
+                        border={bias.border}
+                        strength={data.bias_strength}
+                        optionAction={plan.action}
+                        optionCue={plan.cue}
+                    />
                     <div style={{ flex: 1, minWidth: "220px", display: "grid", gap: "0.5rem" }}>
                         <KV label="Today's session" value={data.session_type} />
                         <KV label="Close position" value={data.close_position} valueColor={data.close_position.includes("Top") ? "#22c55e" : data.close_position.includes("Bottom") ? "#ef4444" : "#f59e0b"} />
@@ -274,6 +326,7 @@ function EODView({ data, showReasoning, onToggleReasoning }: { data: EODData; sh
                             <PriceTile label="Entry zone" value={data.next_day_entry_zone} color="#22c55e" />
                             <PriceTile label="Stop loss" value={data.next_day_stop_loss} color="#ef4444" />
                             <PriceTile label="Target" value={data.next_day_target} color="#6366f1" />
+                            <ActionTile label="Suggested option side" action={plan.action} setup={plan.setup} cue={plan.cue} color={plan.color} bg={plan.bg} border={plan.border} />
                         </div>
                     </SectionCard>
                 </>
@@ -309,11 +362,32 @@ function SectionCard({ children }: { children: React.ReactNode }) {
     return <div style={{ padding: "0.82rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)" }}>{children}</div>;
 }
 
-function BiasBadge({ label, color, bg, border, strength }: { label: string; color: string; bg: string; border: string; strength: string }) {
+function BiasBadge({
+    label,
+    color,
+    bg,
+    border,
+    strength,
+    optionAction,
+    optionCue,
+}: {
+    label: string;
+    color: string;
+    bg: string;
+    border: string;
+    strength: string;
+    optionAction: string;
+    optionCue: string;
+}) {
     return (
         <div style={{ minWidth: "150px", borderRadius: "12px", border: `1px solid ${border}`, background: bg, padding: "0.8rem", textAlign: "center" }}>
             <div style={{ fontSize: "1.02rem", fontWeight: 900, color }}>{label}</div>
             <div style={{ marginTop: "0.25rem", fontSize: "0.62rem", fontWeight: 700, color: STRENGTH_COLORS[strength], letterSpacing: "0.08em" }}>{strength} CONFIDENCE</div>
+            <div style={{ marginTop: "0.5rem", fontSize: "0.56rem", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>
+                Suggested Action
+            </div>
+            <div style={{ marginTop: "0.12rem", fontSize: "0.82rem", fontWeight: 900, color }}>{optionAction}</div>
+            <div style={{ marginTop: "0.16rem", fontSize: "0.64rem", color: "#cbd5e1", lineHeight: 1.4 }}>{optionCue}</div>
         </div>
     );
 }
@@ -333,6 +407,33 @@ function PriceTile({ label, value, color }: { label: string; value: string | nul
         <div style={{ flex: 1, minWidth: "140px", padding: "0.7rem", borderRadius: "10px", background: `${color}0d`, border: `1px solid ${color}33`, textAlign: "center" }}>
             <div style={{ fontSize: "0.56rem", fontWeight: 800, color: `${color}cc`, textTransform: "uppercase", letterSpacing: "0.12em" }}>{label}</div>
             <div style={{ marginTop: "0.2rem", fontSize: "0.95rem", fontWeight: 900, color, fontFamily: "monospace" }}>Rs {value}</div>
+        </div>
+    );
+}
+
+function ActionTile({
+    label,
+    action,
+    setup,
+    cue,
+    color,
+    bg,
+    border,
+}: {
+    label: string;
+    action: string;
+    setup: string;
+    cue: string;
+    color: string;
+    bg: string;
+    border: string;
+}) {
+    return (
+        <div style={{ flex: 1, minWidth: "170px", padding: "0.7rem", borderRadius: "10px", background: bg, border: `1px solid ${border}`, textAlign: "center" }}>
+            <div style={{ fontSize: "0.56rem", fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.12em" }}>{label}</div>
+            <div style={{ marginTop: "0.2rem", fontSize: "0.95rem", fontWeight: 900, color }}>{action}</div>
+            <div style={{ marginTop: "0.2rem", fontSize: "0.68rem", fontWeight: 700, color: "#cbd5e1" }}>{setup}</div>
+            <div style={{ marginTop: "0.2rem", fontSize: "0.66rem", color: "#94a3b8", lineHeight: 1.4 }}>{cue}</div>
         </div>
     );
 }
