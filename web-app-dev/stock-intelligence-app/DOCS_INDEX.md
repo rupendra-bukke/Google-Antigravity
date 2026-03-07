@@ -24,6 +24,14 @@ This file defines which docs are active source-of-truth and which are archive/hi
 - Purpose: pre-prod and prod release checklist.
 - Use when: preparing and executing releases.
 
+6. `CHANGELOG.md`
+- Purpose: versioned production release history.
+- Use when: documenting each prod push.
+
+7. `releases/RELEASE_NOTE_TEMPLATE.md` + `releases/*.md`
+- Purpose: detailed per-release notes for each production deployment.
+- Use when: every release cycle.
+
 ## Archived Docs (Read for Context Only)
 
 1. `PROJECT_OUTLINE.md`
@@ -40,8 +48,9 @@ This file defines which docs are active source-of-truth and which are archive/hi
 1. `FLOW_QUICK_REF.md`
 2. `BRANCH_DEPLOY_FLOW.md`
 3. `RELEASE_RUNBOOK.md`
-4. `ARCHITECTURE.md`
-5. `README.md`
+4. `CHANGELOG.md`
+5. `ARCHITECTURE.md`
+6. `README.md`
 
 ## Rule
 

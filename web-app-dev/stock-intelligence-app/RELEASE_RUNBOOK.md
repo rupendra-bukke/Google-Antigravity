@@ -4,6 +4,14 @@ This document captures the DEV -> PROD release flow for `stock-intelligence-app`
 
 ## 1. Pre-Prod Checklist
 
+0. Documentation/version update (mandatory before prod push)
+- Update `CHANGELOG.md`:
+  - Add current release notes under `## Unreleased` during dev testing.
+  - At prod release, move to a version section (format: `vYYYY.MM.DD-NN`).
+- Create a release note file from template:
+  - `releases/RELEASE_NOTE_TEMPLATE.md`
+  - Save as `releases/vYYYY.MM.DD-NN.md`
+
 1. Clean `dev` branch
 - `git checkout dev`
 - `git pull origin dev`
