@@ -33,6 +33,10 @@ Memory trick: `Preview before Public`.
 ```powershell
 cd /d d:\GitHub\Google-Antigravity\web-app-dev\stock-intelligence-app
 
+# 0) Mandatory docs update before release
+# - Update CHANGELOG.md
+# - Create releases/vYYYY.MM.DD-NN.md from releases/RELEASE_NOTE_TEMPLATE.md
+
 git checkout main           # switch to production branch
 git pull origin main        # sync main
 git merge dev               # bring tested dev changes
