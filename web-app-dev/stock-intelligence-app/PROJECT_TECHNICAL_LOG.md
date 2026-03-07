@@ -1,3 +1,7 @@
+> Status: ARCHIVED (historical document, may contain outdated technical/process details)
+> Do not use as implementation source-of-truth.
+> Use `README.md`, `ARCHITECTURE.md`, `BRANCH_DEPLOY_FLOW.md`, and `RELEASE_RUNBOOK.md` instead.
+
 # 🛠️ Trade-Craft: Technical Implementation Blueprint
 
 This document provides a detailed step-by-step technical log of the **Trade-Craft (Stock Intelligence App)** development. It explains the "What," "Why," and the "Value added" for every major component.

@@ -1,3 +1,7 @@
+> Status: ARCHIVED (historical document, may contain outdated technical/process details)
+> Do not use as implementation source-of-truth.
+> Use `README.md`, `ARCHITECTURE.md`, `BRANCH_DEPLOY_FLOW.md`, and `RELEASE_RUNBOOK.md` instead.
+
 # 📖 The Stock App Journey: A Simple Guide to How We Built It
 
 This document is a "Story of the Project." It explains **Why** we did things and **What** happened at each stage, using simple terms for anyone to understand.
