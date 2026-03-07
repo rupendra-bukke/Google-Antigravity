@@ -322,11 +322,6 @@ export default function Dashboard() {
             {/* ── AI Price Action Decision ── */}
             <AIDecision symbol={selectedSymbol} />
 
-            {/* ── Checkpoint Board — PRIME POSITION ── */}
-            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1rem" }}>
-                <CheckpointBoard />
-            </div>
-
             {/* ── Compact Indicators Strip ── */}
             <div>
                 <p className="section-label mb-2 ml-1" style={{ fontSize: "0.65rem" }}>Indicators</p>
@@ -497,6 +492,10 @@ export default function Dashboard() {
                 </div>
             </div>
 
+            {/* ── Checkpoint Board — PRIME POSITION ── */}
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1rem" }}>
+                <CheckpointBoard />
+            </div>
 
 
             {/* ── Footer ── */}
