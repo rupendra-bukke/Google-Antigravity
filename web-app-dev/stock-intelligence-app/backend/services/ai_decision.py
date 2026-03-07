@@ -38,6 +38,11 @@ PRICE_ACTION_PROMPT = """Expert NSE Nifty 50 intraday trader. Analyze using smar
 
 {market_data_block}
 
+ANALYSIS CONTEXT:
+- Consider major global macro/geopolitical cues relevant to current IST date/time.
+- Examples: war escalation, sanctions, crude oil spike, US/Asia risk-off, central bank surprises.
+- If no strong global trigger is available, keep "news_items" empty and set "news_impact" to "No major trigger".
+
 CRITICAL RULES:
 1. Reply ONLY with valid JSON object — NO markdown, NO ```json, NO text outside.
 2. Every string field MUST be under 8 words. Truncation causes errors.
