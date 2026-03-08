@@ -65,6 +65,10 @@ In Vercel:
 Set env vars:
 - Production env: `BACKEND_URL = <prod-backend-url>`
 - Preview env: `BACKEND_URL = <dev-backend-url>`
+- Production env: `NEXT_PUBLIC_APP_CHANNEL = prod`
+- Preview env: `NEXT_PUBLIC_APP_CHANNEL = dev`
+- Both envs: `NEXT_PUBLIC_APP_VERSION = vYYYY.MM.DD-NN` (bump every release)
+- Optional (for short git id on UI): `NEXT_PUBLIC_GIT_SHA = <short-sha>`
 
 Current app URLs:
 - Dev (Vercel Preview): `https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/`
@@ -72,6 +76,7 @@ Current app URLs:
 
 Meaning:
 - Preview tests stay safe (do not hit prod backend)
+- Header now shows `Build DEV|PROD | version` so you can validate correct deployment quickly.
 
 Memory trick:
 - "Preview points to Practice"
@@ -91,6 +96,10 @@ git pull origin dev
 
 # Check branch and file status
 git status -sb
+
+# (Recommended) bump release version for the dev validation cycle
+# Example:
+# setx NEXT_PUBLIC_APP_VERSION v2026.03.08-03
 
 # Stage only the files you changed
 git add frontend/src/app/components/ExpiryBanner.tsx

@@ -13,6 +13,7 @@ checkpoint time (IST) on weekdays.
 
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from datetime import datetime, timezone, timedelta, time, date as date_cls
+from config import settings
 
 from services.market_data import (
     fetch_multi_timeframe,
@@ -171,7 +172,9 @@ async def get_checkpoints(
         "eod_close": eod_close,
         "checkpoints_meta": CHECKPOINTS,
         "catchup_triggered": bool(missing_ids),
-        "version": "2.2",
+        "version": settings.app_version,
+        "channel": settings.release_channel,
+        "build_label": settings.build_label,
     }
 
 
@@ -192,7 +195,9 @@ async def checkpoint_diag():
 
     return {
         "status": "ok",
-        "version": "2.4-weekend-fallback",
+        "version": settings.app_version,
+        "channel": settings.release_channel,
+        "build_label": settings.build_label,
         "server_time_ist": now_ist.isoformat(),
         "weekday": now_ist.weekday(),
         "is_weekday": now_ist.weekday() < 5,

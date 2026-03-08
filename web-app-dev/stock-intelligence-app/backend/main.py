@@ -111,7 +111,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    version="2.0.0",
+    version=settings.app_version,
     description="Intraday NIFTY 50 analyzer with checkpoint snapshot board",
     lifespan=lifespan,
 )
@@ -134,6 +134,11 @@ async def health_check():
     return {
         "status": "ok",
         "app": settings.app_name,
+        "app_version": settings.app_version,
+        "channel": settings.release_channel,
+        "build_label": settings.build_label,
+        "git_branch": settings.git_branch or None,
+        "git_commit": settings.short_commit,
         "scheduler": "running" if scheduler.running else "stopped",
         "next_jobs": [
             {"id": job.id, "next_run": str(job.next_run_time)}

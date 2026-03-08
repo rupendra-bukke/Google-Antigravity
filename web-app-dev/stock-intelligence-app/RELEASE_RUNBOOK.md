@@ -11,6 +11,13 @@ This document captures the DEV -> PROD release flow for `stock-intelligence-app`
 - Create a release note file from template:
   - `releases/RELEASE_NOTE_TEMPLATE.md`
   - Save as `releases/vYYYY.MM.DD-NN.md`
+- Update version envs:
+  - Frontend (Vercel Preview + Production): `NEXT_PUBLIC_APP_VERSION=vYYYY.MM.DD-NN`
+  - Frontend channel env:
+    - Preview: `NEXT_PUBLIC_APP_CHANNEL=dev`
+    - Production: `NEXT_PUBLIC_APP_CHANNEL=prod`
+  - Backend (Render dev + prod): `APP_VERSION=vYYYY.MM.DD-NN`
+  - Optional backend channel override: `APP_CHANNEL=dev|prod`
 
 1. Clean `dev` branch
 - `git checkout dev`
@@ -52,8 +59,12 @@ This document captures the DEV -> PROD release flow for `stock-intelligence-app`
   - `GEMINI_API_KEY`
   - `UPSTASH_REDIS_REST_URL`
   - `UPSTASH_REDIS_REST_TOKEN`
+  - `APP_VERSION`
+  - `APP_CHANNEL` (optional)
 - Frontend env:
   - `BACKEND_URL`
+  - `NEXT_PUBLIC_APP_VERSION`
+  - `NEXT_PUBLIC_APP_CHANNEL`
 
 6. Known issue to verify/fix before prod
 - `frontend/src/app/components/CheckpointBoard.tsx` is hardcoded to `^NSEI`.
