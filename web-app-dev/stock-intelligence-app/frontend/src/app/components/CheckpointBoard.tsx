@@ -436,7 +436,7 @@ function EvalResultPanel({ rows, boardDate }: { rows: EvalRow[]; boardDate: stri
                                 <div>
                                     <div style={{ fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 800 }}>{r.label}</div>
                                     <div style={{ fontSize: "0.63rem", color: "#64748b", fontWeight: 700 }}>
-                                        {r.time} -> {r.nextTime}
+                                        {r.time} {"->"} {r.nextTime}
                                     </div>
                                 </div>
                                 <span style={{ fontSize: "0.58rem", fontWeight: 900, color: tag.fg, background: tag.bg, border: `1px solid ${tag.border}`, padding: "3px 7px", borderRadius: "999px" }}>
@@ -448,7 +448,7 @@ function EvalResultPanel({ rows, boardDate }: { rows: EvalRow[]; boardDate: stri
                                 Decision {r.intent} · Next {r.nextLabel}
                             </div>
                             <div style={{ marginTop: "0.28rem", fontSize: "0.7rem", color: "#cbd5e1", fontWeight: 700 }}>
-                                {formatPrice(r.entry)} -> {formatPrice(r.exit)}
+                                {formatPrice(r.entry)} {"->"} {formatPrice(r.exit)}
                             </div>
                             <div style={{ marginTop: "0.22rem", fontSize: "0.66rem", color: r.points === null ? "#64748b" : r.points >= 0 ? "#22c55e" : "#ef4444", fontWeight: 800 }}>
                                 Move {r.points === null ? "--" : `${r.points > 0 ? "+" : ""}${r.points.toFixed(2)} pts`}
