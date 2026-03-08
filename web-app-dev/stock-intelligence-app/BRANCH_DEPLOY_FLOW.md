@@ -66,6 +66,10 @@ Set env vars:
 - Production env: `BACKEND_URL = <prod-backend-url>`
 - Preview env: `BACKEND_URL = <dev-backend-url>`
 
+Current app URLs:
+- Dev (Vercel Preview): `https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/`
+- Prod (Vercel Production): `https://trade-craft-rb.vercel.app/`
+
 Meaning:
 - Preview tests stay safe (do not hit prod backend)
 

@@ -3,6 +3,11 @@
 Project path:
 `d:\GitHub\Google-Antigravity\web-app-dev\stock-intelligence-app`
 
+## Environment URLs
+
+- Dev (Vercel Preview): `https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/`
+- Prod (Vercel Production): `https://trade-craft-rb.vercel.app/`
+
 ## Daily Dev (build + preview)
 
 ```powershell
