@@ -64,14 +64,18 @@ interface AnalyzeData {
 
 // Use relative path — proxied to backend via next.config.mjs rewrites
 const API_BASE = "/api";
-const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "v-not-set";
-const APP_CHANNEL = (process.env.NEXT_PUBLIC_APP_CHANNEL || "unknown").toUpperCase();
+const APP_BRANCH =
+    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF ||
+    process.env.NEXT_PUBLIC_GIT_BRANCH ||
+    "";
+const APP_CHANNEL_RAW = process.env.NEXT_PUBLIC_APP_CHANNEL || APP_BRANCH;
+const APP_CHANNEL = /^(main|master|prod|production)$/i.test(APP_CHANNEL_RAW) ? "Prod" : "Dev";
 const APP_GIT_SHA =
     process.env.NEXT_PUBLIC_GIT_SHA ||
     process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ||
     "";
 const BUILD_COMMIT = APP_GIT_SHA ? APP_GIT_SHA.slice(0, 7).toUpperCase() : "LOCAL";
-const BUILD_LABEL = `ENV ${APP_CHANNEL} | VER ${APP_VERSION} | COMMIT ${BUILD_COMMIT}`;
+const BUILD_LABEL = `${APP_CHANNEL} | ${BUILD_COMMIT}`;
 
 /* ── Frontend NSE Market Status (does NOT need backend) ── */
 function getNseMarketStatus(): { isOpen: boolean; message: string } {
@@ -277,7 +281,7 @@ export default function Dashboard() {
             {/* ── Controls Row ── */}
             <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="px-2.5 py-1 rounded-md border border-brand-500/20 bg-brand-500/5 text-[10px] font-bold tracking-[0.08em] uppercase text-brand-300">
-                    Build Info: {BUILD_LABEL}
+                    Build: {BUILD_LABEL}
                 </div>
                 <IndexSelector
                     selected={selectedSymbol}

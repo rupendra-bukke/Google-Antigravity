@@ -134,7 +134,7 @@ function getNextMove(data: CheckpointData): MoveView {
 
     if (strong && isBuyS) {
         return {
-            arrow: "^",
+            arrow: "\u25B2",
             label: "BUY / CE",
             sublabel: tUp ? "Trend bullish and confirmed" : "Scalp BUY strong",
             color: "#4ade80",
@@ -146,7 +146,7 @@ function getNextMove(data: CheckpointData): MoveView {
     }
     if (strong && isSellS) {
         return {
-            arrow: "v",
+            arrow: "\u25BC",
             label: "SELL / PE",
             sublabel: tDown ? "Trend bearish and confirmed" : "Scalp SELL strong",
             color: "#f87171",
@@ -162,7 +162,7 @@ function getNextMove(data: CheckpointData): MoveView {
 
     if (bull > bear && bull >= 2) {
         return {
-            arrow: "^",
+            arrow: "\u25B2",
             label: "BUY / CE",
             sublabel: "Bias up based on alignment",
             color: "#4ade80",
@@ -174,7 +174,7 @@ function getNextMove(data: CheckpointData): MoveView {
     }
     if (bear > bull && bear >= 2) {
         return {
-            arrow: "v",
+            arrow: "\u25BC",
             label: "SELL / PE",
             sublabel: "Bias down based on alignment",
             color: "#f87171",
@@ -186,7 +186,7 @@ function getNextMove(data: CheckpointData): MoveView {
     }
 
     return {
-        arrow: "-",
+        arrow: "\u25C6",
         label: "WAIT",
         sublabel: "Mixed signals",
         color: "#94a3b8",
