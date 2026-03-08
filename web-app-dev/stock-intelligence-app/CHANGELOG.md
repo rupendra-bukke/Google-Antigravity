@@ -13,6 +13,28 @@ Version format:
 
 - _Add upcoming release notes here before merging `dev` into `main`._
 
+## [v2026.03.08-01] - 2026-03-08
+
+### Added
+- End-of-day checkpoint reconcile automation to prevent empty timeline slots:
+  - scheduled backfill runs at `15:31 IST` and `15:36 IST` on market days
+  - manual reconcile endpoint: `POST /api/v1/checkpoints/reconcile?date=YYYY-MM-DD`
+- Timeline UI context labels:
+  - data date banner in timeline header
+  - per-card board date + captured timestamp
+- Environment URL references added in workflow docs:
+  - `FLOW_QUICK_REF.md`
+  - `BRANCH_DEPLOY_FLOW.md`
+
+### Changed
+- Checkpoint default-date selection now falls back to the latest NSE trading day on market-closed days.
+- Checkpoint TTL now expires at `09:00 IST` on the next actual NSE trading day (holiday-aware).
+- Timeline empty-card message for older board dates now shows `Not captured` instead of misleading catch-up text.
+
+### Fixed
+- Weekend/holiday timeline now correctly serves last trading-day snapshots instead of empty current-day slots.
+- Reduced missed-slot persistence by adding automatic EOD reconciliation and retry.
+
 ## [v2026.03.07-02] - 2026-03-07
 
 ### Changed
