@@ -1,18 +1,18 @@
 """
-Checkpoint Router — Two endpoints:
+Checkpoint Router - Two endpoints:
 
   GET /api/v1/checkpoints?symbol=^NSEI&date=2026-02-20
-      → Returns all 7 checkpoint panels for the day.
+      -> Returns all 7 checkpoint panels for the day.
 
   POST /api/v1/checkpoints/trigger?checkpoint_id=0915&symbol=^NSEI
-      → Manually triggers V2 engine and saves to that checkpoint slot.
+      -> Manually triggers V2 engine and saves to that checkpoint slot.
 
 The APScheduler inside main.py calls the trigger automatically at each
 checkpoint time (IST) on weekdays.
 """
 
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
-from datetime import datetime, timezone, timedelta, time
+from datetime import datetime, timezone, timedelta, time, date as date_cls
 
 from services.market_data import (
     fetch_multi_timeframe,
@@ -41,8 +41,52 @@ def _today_ist() -> str:
     return datetime.now(IST).strftime("%Y-%m-%d")
 
 
-# ── Read all 7 panels ──────────────────────────────────────────────────────
+def _is_nse_trading_day(day: date_cls) -> bool:
+    """
+    Holiday-aware NSE session check for a specific IST date.
+    Falls back to Mon-Fri if exchange_calendars is unavailable.
+    """
+    try:
+        import exchange_calendars as xcals
+        import pandas as pd
 
+        cal = xcals.get_calendar("XNSE")
+        return bool(cal.is_session(pd.Timestamp(day)))
+    except Exception:
+        return day.weekday() < 5
+
+
+def _last_nse_trading_day(on_or_before: date_cls) -> date_cls:
+    """Walk backward to find the most recent NSE trading session date."""
+    probe = on_or_before
+    for _ in range(14):
+        if _is_nse_trading_day(probe):
+            return probe
+        probe -= timedelta(days=1)
+    return on_or_before
+
+
+def _resolve_default_date_ist(now_ist: datetime) -> tuple[str, str]:
+    """
+    Resolve default date when client does not pass ?date=.
+
+    Rule:
+    - Trading day and time >= 09:00 IST: use today.
+    - Otherwise: use last NSE trading day (e.g. Friday on weekend).
+    """
+    today = now_ist.date()
+    market_reset_time = time(9, 0)
+    today_is_trading = _is_nse_trading_day(today)
+
+    if today_is_trading and now_ist.time() >= market_reset_time:
+        return today.strftime("%Y-%m-%d"), "today"
+
+    search_from = today - timedelta(days=1) if today_is_trading else today
+    last_trading_day = _last_nse_trading_day(search_from)
+    return last_trading_day.strftime("%Y-%m-%d"), "last_trading_day"
+
+
+# Read all 7 panels
 @router.get("")
 async def get_checkpoints(
     background_tasks: BackgroundTasks,
@@ -51,19 +95,23 @@ async def get_checkpoints(
 ):
     """
     Return all 7 checkpoint snapshots for a given day.
-    If today's checkpoints are missing but should have been captured, 
+    If today's checkpoints are missing but should have been captured,
     trigger a catch-up in the background.
     """
-    date_str = date or _today_ist()
+    now_ist = datetime.now(IST)
+
+    if date:
+        date_str = date
+        date_source = "explicit"
+    else:
+        date_str, date_source = _resolve_default_date_ist(now_ist)
+
     panels = await load_all_checkpoints(date_str, symbol)
 
-    # ── Catch-up Logic ──
-    # Only run catch-up on actual NSE trading days (holiday-aware via exchange_calendars)
-    now_utc = datetime.now(timezone.utc)
-    now_ist = datetime.now(IST)
+    # Catch-up logic
     is_today = date_str == now_ist.strftime("%Y-%m-%d")
-    is_market_day, _ = is_indian_market_open(now_utc)  # checks weekdays + NSE holidays
-    missing_ids = []  # IMPORTANT: must be defined before the if block
+    is_market_day = _is_nse_trading_day(now_ist.date())
+    missing_ids = []
 
     if is_today and is_market_day:
         current_hhmm = now_ist.strftime("%H%M")
@@ -76,15 +124,17 @@ async def get_checkpoints(
 
     return {
         "date": date_str,
+        "date_source": date_source,
         "symbol": symbol,
         "panels": panels,
         "checkpoints_meta": CHECKPOINTS,
         "catchup_triggered": bool(missing_ids),
-        "version": "2.1"  # bump so we can verify deployment
+        "version": "2.2",
     }
 
 
 LAST_ERROR = "None yet"
+
 
 @router.get("/diag")
 async def checkpoint_diag():
@@ -100,7 +150,7 @@ async def checkpoint_diag():
 
     return {
         "status": "ok",
-        "version": "2.3-v2fix",
+        "version": "2.4-weekend-fallback",
         "server_time_ist": now_ist.isoformat(),
         "weekday": now_ist.weekday(),
         "is_weekday": now_ist.weekday() < 5,
@@ -117,26 +167,28 @@ async def checkpoint_diag():
 
 
 async def run_catchup_sequential(checkpoint_ids: list[str]):
-    """Runs missing checkpoints using HISTORICAL data at each slot's time."""
+    """Runs missing checkpoints using historical data at each slot's time."""
     import asyncio
+
     global LAST_ERROR
     date_str = _today_ist()
     await log_debug(f"Starting historical catch-up for {checkpoint_ids} on {date_str}")
+
     for cp_id in checkpoint_ids:
         try:
             await run_checkpoint_for_all_symbols(cp_id, date_str=date_str, use_historical=True)
-            await asyncio.sleep(3)  # extra breathing room between historical fetches
+            await asyncio.sleep(3)
         except Exception as e:
             LAST_ERROR = str(e)
             await log_debug(f"Error in {cp_id}: {e}")
+
     await log_debug("Historical catch-up finished")
 
 
-# ── Manual / Scheduled Trigger ─────────────────────────────────────────────
-
+# Manual / scheduled trigger
 @router.post("/trigger")
 async def trigger_checkpoint(
-    checkpoint_id: str = Query(..., description="e.g. 0915, 0930, 1000 …"),
+    checkpoint_id: str = Query(..., description="e.g. 0915, 0930, 1000"),
     symbol: str = Query(default="^NSEI"),
 ):
     """
@@ -145,12 +197,11 @@ async def trigger_checkpoint(
     """
     import traceback
 
-    # Validate checkpoint id
     valid_ids = {cp["id"] for cp in CHECKPOINTS}
     if checkpoint_id not in valid_ids:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid checkpoint_id. Valid: {sorted(valid_ids)}"
+            detail=f"Invalid checkpoint_id. Valid: {sorted(valid_ids)}",
         )
 
     now_utc = datetime.now(timezone.utc)
@@ -161,7 +212,6 @@ async def trigger_checkpoint(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Data fetch failed: {exc}")
 
-    # Run V2 decision engine — wrapped for detailed error reporting
     try:
         result = run_advanced_analysis(frames, symbol, now_utc)
     except Exception as exc:
@@ -173,7 +223,6 @@ async def trigger_checkpoint(
 
     is_open, mkt_msg = is_indian_market_open(now_utc)
 
-    # Build the snapshot payload
     payload = {
         "captured_at": datetime.now(IST).isoformat(),
         "is_market_open": is_open,
@@ -196,7 +245,7 @@ async def trigger_checkpoint(
     if not saved:
         raise HTTPException(
             status_code=503,
-            detail="Redis save failed — check UPSTASH_REDIS_REST_URL / TOKEN env vars."
+            detail="Redis save failed - check UPSTASH_REDIS_REST_URL / TOKEN env vars.",
         )
 
     return {
@@ -209,8 +258,7 @@ async def trigger_checkpoint(
     }
 
 
-# ── Trigger ALL symbols for a checkpoint ──────────────────────────────────
-
+# Trigger all symbols for a checkpoint
 async def run_checkpoint_for_all_symbols(
     checkpoint_id: str,
     date_str: str = None,
@@ -221,6 +269,7 @@ async def run_checkpoint_for_all_symbols(
     or catch-up (use_historical=True).
     """
     import traceback
+
     global LAST_ERROR
 
     now_utc = datetime.now(timezone.utc)
@@ -254,9 +303,9 @@ async def run_checkpoint_for_all_symbols(
                 "steps_detail": result.get("steps_detail"),
             }
             await save_checkpoint(date_str, checkpoint_id, sym, payload)
-            print(f"[CHECKPOINT] ✅ {checkpoint_id} | {sym} | {payload['scalp_signal']}")
+            print(f"[CHECKPOINT] ok {checkpoint_id} | {sym} | {payload['scalp_signal']}")
         except Exception as e:
             tb = traceback.format_exc()
             LAST_ERROR = f"{checkpoint_id}|{sym}: {tb[-300:]}"
             await log_debug(f"CHECKPOINT CRASH {checkpoint_id}|{sym}: {tb}")
-            print(f"[CHECKPOINT] ❌ {checkpoint_id} | {sym} | Error: {e}")
+            print(f"[CHECKPOINT] error {checkpoint_id} | {sym} | Error: {e}")

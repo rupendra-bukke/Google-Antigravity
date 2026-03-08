@@ -1,16 +1,16 @@
 """
-Checkpoint Store — Upstash Redis wrapper.
+Checkpoint Store - Upstash Redis wrapper.
 
 Each checkpoint snapshot is saved as a JSON string under the key:
     checkpoint:{YYYY-MM-DD}:{HHMM}:{symbol}
 
-TTL is set to expire at 21:00 IST (end of trading day + buffer),
-so all panels auto-reset the next day.
+TTL expires at 09:00 IST on the next NSE trading day so timeline data
+remains visible across weekends/holidays until the next live market morning.
 """
 
 import json
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, time, date as date_cls
 
 import httpx
 
@@ -21,13 +21,13 @@ UPSTASH_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN", "")
 
 # 7 Indian market checkpoints (HH:MM IST)
 CHECKPOINTS = [
-    {"id": "0915", "label": "Market Open",       "time": "09:15"},
-    {"id": "0930", "label": "Opening Range",      "time": "09:30"},
-    {"id": "1000", "label": "Morning Trend",      "time": "10:00"},
-    {"id": "1130", "label": "Mid-Morning",        "time": "11:30"},
-    {"id": "1300", "label": "Lunch Lull",         "time": "13:00"},
-    {"id": "1400", "label": "Afternoon Setup",    "time": "14:00"},
-    {"id": "1500", "label": "Power Hour",         "time": "15:00"},
+    {"id": "0915", "label": "Market Open", "time": "09:15"},
+    {"id": "0930", "label": "Opening Range", "time": "09:30"},
+    {"id": "1000", "label": "Morning Trend", "time": "10:00"},
+    {"id": "1130", "label": "Mid-Morning", "time": "11:30"},
+    {"id": "1300", "label": "Lunch Lull", "time": "13:00"},
+    {"id": "1400", "label": "Afternoon Setup", "time": "14:00"},
+    {"id": "1500", "label": "Power Hour", "time": "15:00"},
 ]
 
 
@@ -40,18 +40,42 @@ def _make_key(date_str: str, checkpoint_id: str, symbol: str) -> str:
     return f"checkpoint:{date_str}:{checkpoint_id}:{symbol}"
 
 
+def _is_nse_trading_day(day: date_cls) -> bool:
+    """
+    Holiday-aware NSE session check for a specific IST date.
+    Falls back to Mon-Fri if exchange_calendars is unavailable.
+    """
+    try:
+        import exchange_calendars as xcals
+        import pandas as pd
+
+        cal = xcals.get_calendar("XNSE")
+        return bool(cal.is_session(pd.Timestamp(day)))
+    except Exception:
+        return day.weekday() < 5
+
+
+def _next_nse_reset_9am_ist(now_ist: datetime) -> datetime:
+    """Return next 09:00 IST boundary on an actual NSE trading session day."""
+    today_reset = now_ist.replace(hour=9, minute=0, second=0, microsecond=0)
+    candidate = now_ist.date() if now_ist < today_reset else (now_ist.date() + timedelta(days=1))
+
+    for _ in range(14):
+        if _is_nse_trading_day(candidate):
+            return datetime.combine(candidate, time(9, 0), tzinfo=IST)
+        candidate += timedelta(days=1)
+
+    # Safety fallback (should never happen)
+    return datetime.combine(now_ist.date() + timedelta(days=1), time(9, 0), tzinfo=IST)
+
+
 def _ttl_seconds() -> int:
     """
-    Seconds until 09:00 AM IST the NEXT trading day.
-    Data persists overnight for review, then auto-clears before market open.
+    Seconds until 09:00 AM IST on the next NSE trading day.
     """
     now = datetime.now(IST)
-    # Next day at 9:00 AM IST
-    next_day = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
-    # If today is Friday (weekday=4), skip to Monday (add 3 days instead of 1)
-    if now.weekday() == 4:  # Friday
-        next_day = now.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=3)
-    ttl = int((next_day - now).total_seconds())
+    next_reset = _next_nse_reset_9am_ist(now)
+    ttl = int((next_reset - now).total_seconds())
     return max(ttl, 60)
 
 
@@ -60,7 +84,6 @@ def _get_base_url() -> str:
     url = UPSTASH_URL.strip()
     if url.endswith("/"):
         url = url[:-1]
-    # If user accidentally included '/set' or others, strip it
     for suffix in ["/set", "/get", "/keys", "/pipeline"]:
         if url.endswith(suffix):
             url = url[:-len(suffix)]
@@ -78,9 +101,9 @@ async def log_debug(msg: str):
                 url,
                 json=["SET", "debug:last_run", entry, "EX", "3600"],
                 headers=_headers(),
-                timeout=5
+                timeout=5,
             )
-    except:
+    except Exception:
         pass
 
 
@@ -88,7 +111,7 @@ async def save_checkpoint(date_str: str, checkpoint_id: str, symbol: str, payloa
     """Save checkpoint payload to Upstash Redis using command array for safety."""
     base_url = _get_base_url()
     if not base_url or not UPSTASH_TOKEN:
-        print("[REDIS] ❌ Missing credentials - cannot save.")
+        print("[REDIS] missing credentials - cannot save")
         return False
 
     key = _make_key(date_str, checkpoint_id, symbol)
@@ -97,7 +120,6 @@ async def save_checkpoint(date_str: str, checkpoint_id: str, symbol: str, payloa
 
     async with httpx.AsyncClient() as client:
         try:
-            # Use JSON array command for absolute safety with JSON strings
             command = ["SET", key, value, "EX", str(ttl)]
             resp = await client.post(
                 base_url,
@@ -106,11 +128,11 @@ async def save_checkpoint(date_str: str, checkpoint_id: str, symbol: str, payloa
                 timeout=15,
             )
             if resp.status_code != 200:
-                print(f"[REDIS] ❌ SET failed for {key} | Status: {resp.status_code} | Body: {resp.text}")
+                print(f"[REDIS] SET failed for {key} | Status: {resp.status_code} | Body: {resp.text}")
                 return False
             return True
         except Exception as e:
-            print(f"[REDIS] ❌ Connection error during SET {key}: {e}")
+            print(f"[REDIS] connection error during SET {key}: {e}")
             return False
 
 
@@ -131,31 +153,32 @@ async def load_checkpoint(date_str: str, checkpoint_id: str, symbol: str) -> dic
                 timeout=10,
             )
             if resp.status_code != 200:
-                print(f"[REDIS] ⚠️ GET failed for {key} | Status: {resp.status_code}")
+                print(f"[REDIS] GET failed for {key} | Status: {resp.status_code}")
                 return None
-            
-            # Upstash returns {"result": "..."} for command arrays
+
             result = resp.json().get("result")
             if not result:
                 return None
             return json.loads(result)
         except Exception as e:
-            print(f"[REDIS] ❌ Connection error during GET {key}: {e}")
+            print(f"[REDIS] connection error during GET {key}: {e}")
             return None
 
 
 async def load_all_checkpoints(date_str: str, symbol: str) -> list[dict]:
     """
     Load all 7 checkpoint slots for a given day + symbol.
-    Returns a list of 7 dicts — data=None for slots not yet captured.
+    Returns a list of 7 dicts; data=None for slots not yet captured.
     """
     out = []
     for cp in CHECKPOINTS:
         data = await load_checkpoint(date_str, cp["id"], symbol)
-        out.append({
-            "id":    cp["id"],
-            "label": cp["label"],
-            "time":  cp["time"],
-            "data":  data,          # None = not captured yet
-        })
+        out.append(
+            {
+                "id": cp["id"],
+                "label": cp["label"],
+                "time": cp["time"],
+                "data": data,
+            }
+        )
     return out
