@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-// Use relative path — Next.js rewrites /api/* to the backend via next.config.mjs
+// Use relative path; Next.js rewrites /api/* to the backend via next.config.mjs
 const API_BASE = "/api";
 const FIXED_SYMBOL = "^NSEI"; // Always track Nifty 50 only
 
@@ -13,7 +13,7 @@ interface CheckpointData {
     three_min_confirm: string;
     htf_trend: string;
     trend_direction: string;
-    execute: string;       // "Strong" | "Weak" | "NO TRADE"
+    execute: string; // "Strong" | "Weak" | "NO TRADE"
     execute_reason: string;
     option_strike?: {
         strike: number;
@@ -24,9 +24,9 @@ interface CheckpointData {
         target?: number;
     } | null;
     forecast?: {
-        direction: string;   // "UP" | "DOWN" | "FLAT"
-        arrow: string;       // emoji arrow
-        confidence: number;  // 0-100
+        direction: string; // "UP" | "DOWN" | "FLAT"
+        arrow: string;
+        confidence: number; // 0-100
         reasons: string[];
     } | null;
 }
@@ -38,11 +38,46 @@ interface Panel {
     data: CheckpointData | null;
 }
 
+function getIstDateStr(date: Date = new Date()): string {
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(date);
+}
+
+function formatBoardDate(dateStr: string | null | undefined): string {
+    if (!dateStr) return "--";
+    const dt = new Date(`${dateStr}T00:00:00Z`);
+    if (Number.isNaN(dt.getTime())) return dateStr;
+    return dt.toLocaleDateString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+}
+
+function formatCapturedAt(capturedAt: string | undefined): string {
+    if (!capturedAt) return "--";
+    const dt = new Date(capturedAt);
+    if (Number.isNaN(dt.getTime())) return capturedAt;
+    return `${dt.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    })} IST`;
+}
+
 /** Compute ONE unified directional signal from all V2 inputs.
- *  Priority:
- *    1. Strong execute scalp  → trust scalp_signal (BUY/SELL)
- *    2. Majority vote: trend + forecast + weak scalp
- *    3. Conflict → WAIT with lean
+ * Priority:
+ * 1. Strong execute scalp -> trust scalp_signal (BUY/SELL)
+ * 2. Majority vote: trend + forecast + weak scalp
+ * 3. Conflict -> WAIT with lean
  */
 function getNextMove(data: CheckpointData) {
     const scalp = data.scalp_signal || "";
@@ -56,36 +91,86 @@ function getNextMove(data: CheckpointData) {
     const fcUp = fc?.direction === "UP";
     const fcDown = fc?.direction === "DOWN";
     const fcConf = fc?.confidence ?? 50;
-    const tUp = trend.includes("Bullish") || trend.toLowerCase().includes("→ 🟢");
-    const tDown = trend.includes("Bearish") || trend.toLowerCase().includes("→ 🔴");
+    const tUp = trend.includes("Bullish") || trend.toLowerCase().includes("green");
+    const tDown = trend.includes("Bearish") || trend.toLowerCase().includes("red");
 
-    // Strong confirmed scalp → definitive
-    if (strong && isBuyS) return { arrow: "▲", label: "BUY / CE", sublabel: tUp ? "Trend BULLISH · Confirmed" : "Scalp BUY · Strong", color: "#4ade80", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.35)", conf: fcConf, confColor: "#4ade80" };
-    if (strong && isSellS) return { arrow: "▼", label: "SELL / PE", sublabel: tDown ? "Trend BEARISH · Confirmed" : "Scalp SELL · Strong", color: "#f87171", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.35)", conf: fcConf, confColor: "#f87171" };
+    if (strong && isBuyS) {
+        return {
+            arrow: "▲",
+            label: "BUY / CE",
+            sublabel: tUp ? "Trend BULLISH · Confirmed" : "Scalp BUY · Strong",
+            color: "#4ade80",
+            bg: "rgba(34,197,94,0.12)",
+            border: "rgba(34,197,94,0.35)",
+            conf: fcConf,
+            confColor: "#4ade80",
+        };
+    }
+    if (strong && isSellS) {
+        return {
+            arrow: "▼",
+            label: "SELL / PE",
+            sublabel: tDown ? "Trend BEARISH · Confirmed" : "Scalp SELL · Strong",
+            color: "#f87171",
+            bg: "rgba(239,68,68,0.12)",
+            border: "rgba(239,68,68,0.35)",
+            conf: fcConf,
+            confColor: "#f87171",
+        };
+    }
 
-    // Majority vote
     const bull = (tUp ? 1 : 0) + (fcUp ? 1 : 0) + (isBuyS ? 1 : 0);
     const bear = (tDown ? 1 : 0) + (fcDown ? 1 : 0) + (isSellS ? 1 : 0);
 
     if (bull > bear && bull >= 2) {
-        const why = tUp && fcUp ? "Trend + Forecast aligned UP"
-            : tUp ? `Trend BULLISH · Forecast ${fc?.direction ?? "?"}`
+        const why = tUp && fcUp
+            ? "Trend + Forecast aligned UP"
+            : tUp
+                ? `Trend BULLISH · Forecast ${fc?.direction ?? "?"}`
                 : `Forecast UP · ${fcConf}% conf`;
-        return { arrow: "▲", label: "BUY / CE", sublabel: why, color: "#4ade80", bg: "rgba(34,197,94,0.08)", border: "rgba(34,197,94,0.2)", conf: fcConf, confColor: "#4ade80" };
+        return {
+            arrow: "▲",
+            label: "BUY / CE",
+            sublabel: why,
+            color: "#4ade80",
+            bg: "rgba(34,197,94,0.08)",
+            border: "rgba(34,197,94,0.2)",
+            conf: fcConf,
+            confColor: "#4ade80",
+        };
     }
     if (bear > bull && bear >= 2) {
-        const why = tDown && fcDown ? "Trend + Forecast aligned DOWN"
-            : tDown ? `Trend BEARISH · Forecast ${fc?.direction ?? "?"}`
+        const why = tDown && fcDown
+            ? "Trend + Forecast aligned DOWN"
+            : tDown
+                ? `Trend BEARISH · Forecast ${fc?.direction ?? "?"}`
                 : `Forecast DOWN · ${fcConf}% conf`;
-        return { arrow: "▼", label: "SELL / PE", sublabel: why, color: "#f87171", bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)", conf: fcConf, confColor: "#f87171" };
+        return {
+            arrow: "▼",
+            label: "SELL / PE",
+            sublabel: why,
+            color: "#f87171",
+            bg: "rgba(239,68,68,0.08)",
+            border: "rgba(239,68,68,0.2)",
+            conf: fcConf,
+            confColor: "#f87171",
+        };
     }
 
-    // Conflicting
     const lean = fcUp ? "Lean UP" : fcDown ? "Lean DOWN" : "No clear direction";
-    return { arrow: "◆", label: "WAIT", sublabel: `Mixed signals — ${lean}`, color: "#94a3b8", bg: "rgba(148,163,184,0.06)", border: "rgba(148,163,184,0.15)", conf: fcConf, confColor: "#94a3b8" };
+    return {
+        arrow: "◆",
+        label: "WAIT",
+        sublabel: `Mixed signals - ${lean}`,
+        color: "#94a3b8",
+        bg: "rgba(148,163,184,0.06)",
+        border: "rgba(148,163,184,0.15)",
+        conf: fcConf,
+        confColor: "#94a3b8",
+    };
 }
 
-function StatItem({ label, value, color = "#94a3b8" }: { label: string, value: string | number, color?: string }) {
+function StatItem({ label, value, color = "#94a3b8" }: { label: string; value: string | number; color?: string }) {
     return (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
             <span style={{ fontSize: "0.65rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>{label}</span>
@@ -94,48 +179,76 @@ function StatItem({ label, value, color = "#94a3b8" }: { label: string, value: s
     );
 }
 
-function CheckpointCard({ panel, index, isLatest }: { panel: Panel; index: number; isLatest: boolean }) {
+function CheckpointCard({
+    panel,
+    isLatest,
+    boardDate,
+}: {
+    panel: Panel;
+    isLatest: boolean;
+    boardDate: string | null;
+}) {
     const [h, m] = panel.time.split(":").map(Number);
-    const targetTime = new Date(); targetTime.setHours(h, m, 0, 0);
-    const isPending = !panel.data && new Date() < targetTime;
-    const isMissed = !panel.data && new Date() >= targetTime;
+    const targetTime = new Date();
+    targetTime.setHours(h, m, 0, 0);
+
+    const isForToday = boardDate ? boardDate === getIstDateStr() : true;
+    const isPending = !panel.data && isForToday && new Date() < targetTime;
+    const isMissed = !panel.data && isForToday && new Date() >= targetTime;
+    const isHistoricMissing = !panel.data && !isForToday;
     const isPopulated = !!panel.data;
     const move = isPopulated ? getNextMove(panel.data!) : null;
 
     return (
-        <div style={{
-            background: !isPopulated ? "rgba(15,23,42,0.2)" : move?.bg ?? "rgba(148,163,184,0.06)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-            border: isLatest ? "1px solid rgba(212,175,55,0.4)"
-                : !isPopulated ? "1px dashed rgba(255,255,255,0.05)"
-                    : `1px solid ${move?.border ?? "rgba(148,163,184,0.15)"}`,
-            borderRadius: "16px",
-            padding: "1.2rem",
-            minWidth: "200px",
-            position: "relative",
-            transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)",
-            boxShadow: isLatest ? "0 10px 30px -10px rgba(212,175,55,0.15)" : "none",
-            transform: isLatest ? "scale(1.02)" : "scale(1)",
-            zIndex: isLatest ? 2 : 1
-        }}>
-            {/* Header */}
+        <div
+            style={{
+                background: !isPopulated ? "rgba(15,23,42,0.2)" : move?.bg ?? "rgba(148,163,184,0.06)",
+                backdropFilter: "blur(16px)",
+                WebkitBackdropFilter: "blur(16px)",
+                border: isLatest
+                    ? "1px solid rgba(212,175,55,0.4)"
+                    : !isPopulated
+                        ? "1px dashed rgba(255,255,255,0.05)"
+                        : `1px solid ${move?.border ?? "rgba(148,163,184,0.15)"}`,
+                borderRadius: "16px",
+                padding: "1.2rem",
+                minWidth: "200px",
+                position: "relative",
+                transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)",
+                boxShadow: isLatest ? "0 10px 30px -10px rgba(212,175,55,0.15)" : "none",
+                transform: isLatest ? "scale(1.02)" : "scale(1)",
+                zIndex: isLatest ? 2 : 1,
+            }}
+        >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.9rem" }}>
                 <div>
                     <h4 style={{ color: isPopulated ? "#f8fafc" : "#475569", margin: 0, fontSize: "0.82rem", fontWeight: 700 }}>{panel.label}</h4>
-                    <span style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>{panel.time} IST</span>
+                    <span style={{ display: "block", fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>{panel.time} IST</span>
+                    <span style={{ display: "block", fontSize: "0.6rem", color: "#475569", fontWeight: 700 }}>
+                        {formatBoardDate(boardDate)}
+                    </span>
                 </div>
                 {isLatest && (
-                    <div style={{ background: "#d4af37", color: "#000", fontSize: "0.55rem", fontWeight: 900, padding: "2px 6px", borderRadius: "4px", textTransform: "uppercase" }}>Latest</div>
+                    <div
+                        style={{
+                            background: "#d4af37",
+                            color: "#000",
+                            fontSize: "0.55rem",
+                            fontWeight: 900,
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            textTransform: "uppercase",
+                        }}
+                    >
+                        Latest
+                    </div>
                 )}
             </div>
 
             {isPopulated && move ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-
-                    {/* ── HERO: ONE UNIFIED NEXT MOVE ── */}
                     <div style={{ background: move.bg, border: `1px solid ${move.border}`, borderRadius: "12px", padding: "10px 12px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                        <span style={{ fontSize: "0.5rem", color: "#64748b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em" }}>Next Move →</span>
+                        <span style={{ fontSize: "0.5rem", color: "#64748b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em" }}>Next Move</span>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                             <span style={{ fontSize: "1.5rem", fontWeight: 900, color: move.color, textShadow: `0 0 18px ${move.color}55`, lineHeight: 1 }}>{move.arrow}</span>
                             <span style={{ fontSize: "1.05rem", fontWeight: 900, color: move.color, letterSpacing: "0.04em", lineHeight: 1 }}>{move.label}</span>
@@ -147,25 +260,36 @@ function CheckpointCard({ panel, index, isLatest }: { panel: Panel; index: numbe
                         <span style={{ fontSize: "0.55rem", color: "#475569", fontWeight: 600 }}>{move.conf}% confidence</span>
                     </div>
 
-                    {/* Price + Option */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "0.55rem" }}>
-                        <StatItem label="Price" value={`₹${panel.data!.spot_price.toLocaleString("en-IN")}`} color="#e2e8f0" />
+                        <StatItem label="Price" value={`Rs ${panel.data!.spot_price.toLocaleString("en-IN")}`} color="#e2e8f0" />
+                        <StatItem label="Captured" value={formatCapturedAt(panel.data!.captured_at)} color="#94a3b8" />
                         {panel.data!.option_strike?.strike && (
-                            <div style={{ background: "rgba(212,175,55,0.05)", padding: "4px 8px", borderRadius: "6px", fontSize: "0.65rem", color: "#d4af37", fontWeight: 700, border: "1px solid rgba(212,175,55,0.12)", display: "flex", justifyContent: "space-between" }}>
-                                <span>🎯 Option</span>
+                            <div
+                                style={{
+                                    background: "rgba(212,175,55,0.05)",
+                                    padding: "4px 8px",
+                                    borderRadius: "6px",
+                                    fontSize: "0.65rem",
+                                    color: "#d4af37",
+                                    fontWeight: 700,
+                                    border: "1px solid rgba(212,175,55,0.12)",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                }}
+                            >
+                                <span>Option</span>
                                 <span>{panel.data!.option_strike!.option_type} {panel.data!.option_strike!.strike}</span>
                             </div>
                         )}
                     </div>
-
                 </div>
             ) : (
                 <div style={{ height: "120px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", opacity: 0.6 }}>
                     <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem", animation: (isPending || isMissed) ? "pulse 1.5s infinite" : "none" }}>
-                        {isPending ? "⏳" : isMissed ? "🔄" : "📭"}
+                        {isPending ? "..." : isMissed ? "..." : "..."}
                     </div>
                     <p style={{ color: "#64748b", fontSize: "0.65rem", textAlign: "center", margin: 0, textTransform: "uppercase", fontWeight: 700 }}>
-                        {isPending ? "Waiting..." : isMissed ? "Catching up..." : "No Data"}
+                        {isPending ? "Waiting..." : isMissed ? "Catching up..." : isHistoricMissing ? "Not captured" : "No Data"}
                     </p>
                 </div>
             )}
@@ -177,6 +301,7 @@ export default function CheckpointBoard() {
     const [panels, setPanels] = useState<Panel[]>([]);
     const [loading, setLoading] = useState(true);
     const [catchingUp, setCatchingUp] = useState(false);
+    const [boardDate, setBoardDate] = useState<string | null>(null);
 
     const fetchPanels = useCallback(async () => {
         try {
@@ -184,7 +309,7 @@ export default function CheckpointBoard() {
             if (!res.ok) return;
             const json = await res.json();
             setPanels(json.panels || []);
-            // If backend triggered a historical catch-up, show feedback and refresh faster
+            setBoardDate(json.date ?? null);
             setCatchingUp(json.catchup_triggered === true);
         } catch (err) {
             console.error("Failed to fetch checkpoints:", err);
@@ -195,70 +320,76 @@ export default function CheckpointBoard() {
 
     useEffect(() => {
         fetchPanels();
-        // Fast refresh (10s) while catching up; slow (30s) once stable
         const interval = setInterval(fetchPanels, catchingUp ? 10000 : 30000);
         return () => clearInterval(interval);
     }, [fetchPanels, catchingUp]);
 
-    // Find the index of the most recent populated panel
-    const latestIndex = panels.length - 1 - [...panels].reverse().findIndex(p => p.data);
+    const latestIndex = panels.length - 1 - [...panels].reverse().findIndex((p) => p.data);
     const effectiveLatestIndex = latestIndex >= 0 ? latestIndex : -1;
 
     return (
         <div style={{ margin: "2.5rem 0" }}>
-            {/* Header */}
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1.5rem" }}>
                 <div style={{ width: "3px", height: "18px", background: "#d4af37", borderRadius: "2px" }} />
-                <h2 style={{
-                    fontSize: "0.75rem",
-                    fontWeight: 900,
-                    color: "#94a3b8",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.2em",
-                    margin: 0
-                }}>
+                <h2
+                    style={{
+                        fontSize: "0.75rem",
+                        fontWeight: 900,
+                        color: "#94a3b8",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.2em",
+                        margin: 0,
+                    }}
+                >
                     Nifty 50 Market Timeline
                 </h2>
                 <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, rgba(148,163,184,0.1), transparent)" }} />
                 {catchingUp ? (
                     <span style={{ fontSize: "0.6rem", color: "#f59e0b", fontWeight: 700, animation: "pulse 1.5s infinite" }}>
-                        🔄 CATCHING UP HISTORICAL DATA...
+                        CATCHING UP HISTORICAL DATA...
                     </span>
                 ) : (
-                    <span style={{ fontSize: "0.6rem", color: "#475569", fontWeight: 700 }}>CAPTURING 7 STRATEGIC POINTS</span>
+                    <span style={{ fontSize: "0.6rem", color: "#475569", fontWeight: 700 }}>
+                        {boardDate
+                            ? `DATA DATE ${formatBoardDate(boardDate)} · CAPTURING 7 STRATEGIC POINTS`
+                            : "CAPTURING 7 STRATEGIC POINTS"}
+                    </span>
                 )}
             </div>
 
-            {/* Grid Container */}
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                gap: "1rem",
-                perspective: "1000px"
-            }}>
+            <div
+                style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                    gap: "1rem",
+                    perspective: "1000px",
+                }}
+            >
                 {loading && panels.length === 0 ? (
-                    Array(7).fill(0).map((_, i) => (
-                        <div key={i} style={{ height: "200px", background: "rgba(255,255,255,0.02)", borderRadius: "16px", animation: "pulse 2s shadow infinite" }} />
-                    ))
+                    Array(7)
+                        .fill(0)
+                        .map((_, i) => (
+                            <div key={i} style={{ height: "200px", background: "rgba(255,255,255,0.02)", borderRadius: "16px", animation: "pulse 2s shadow infinite" }} />
+                        ))
                 ) : (
                     panels.map((panel, i) => (
                         <CheckpointCard
                             key={panel.id}
                             panel={panel}
-                            index={i}
                             isLatest={i === effectiveLatestIndex}
+                            boardDate={boardDate}
                         />
                     ))
                 )}
             </div>
 
             <style>{`
-        @keyframes pulse {
-          0% { transform: scale(1); opacity: 0.5; }
-          50% { transform: scale(1.05); opacity: 1; }
-          100% { transform: scale(1); opacity: 0.5; }
-        }
-      `}</style>
+                @keyframes pulse {
+                    0% { transform: scale(1); opacity: 0.5; }
+                    50% { transform: scale(1.05); opacity: 1; }
+                    100% { transform: scale(1); opacity: 0.5; }
+                }
+            `}</style>
         </div>
     );
 }
