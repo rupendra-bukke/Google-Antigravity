@@ -166,6 +166,84 @@ async def checkpoint_diag():
     }
 
 
+async def reconcile_missing_checkpoints(date_str: str | None = None) -> dict:
+    """
+    Fill any missing checkpoint slots for a target date using historical slice mode.
+    Intended for EOD safety reconciliation (e.g. 15:31 / 15:36 IST).
+    """
+    import asyncio
+
+    global LAST_ERROR
+    target_date = date_str or _today_ist()
+
+    try:
+        target_day = datetime.strptime(target_date, "%Y-%m-%d").date()
+    except ValueError:
+        return {
+            "date": target_date,
+            "skipped": True,
+            "reason": "invalid_date_format",
+            "filled_checkpoint_ids": [],
+            "missing_by_symbol": {},
+        }
+
+    if not _is_nse_trading_day(target_day):
+        return {
+            "date": target_date,
+            "skipped": True,
+            "reason": "non_trading_day",
+            "filled_checkpoint_ids": [],
+            "missing_by_symbol": {},
+        }
+
+    await log_debug(f"EOD reconcile started for {target_date}")
+    missing_by_symbol: dict[str, list[str]] = {}
+    missing_union: set[str] = set()
+
+    for sym in SYMBOLS:
+        panels = await load_all_checkpoints(target_date, sym)
+        missing_ids = [p["id"] for p in panels if p["data"] is None]
+        if missing_ids:
+            missing_by_symbol[sym] = missing_ids
+            missing_union.update(missing_ids)
+
+    filled_ids: list[str] = []
+    failed_ids: list[str] = []
+
+    for cp_id in sorted(missing_union):
+        try:
+            await run_checkpoint_for_all_symbols(cp_id, date_str=target_date, use_historical=True)
+            filled_ids.append(cp_id)
+            await asyncio.sleep(1)
+        except Exception as e:
+            LAST_ERROR = str(e)
+            failed_ids.append(cp_id)
+            await log_debug(f"EOD reconcile failed for {target_date} {cp_id}: {e}")
+
+    await log_debug(
+        f"EOD reconcile done for {target_date} | filled={filled_ids} failed={failed_ids}"
+    )
+
+    return {
+        "date": target_date,
+        "skipped": False,
+        "reason": None,
+        "filled_checkpoint_ids": filled_ids,
+        "failed_checkpoint_ids": failed_ids,
+        "missing_by_symbol": missing_by_symbol,
+    }
+
+
+@router.post("/reconcile")
+async def reconcile_checkpoints(date: str = Query(default=None)):
+    """
+    Manual reconcile endpoint:
+    POST /api/v1/checkpoints/reconcile?date=YYYY-MM-DD
+    """
+    result = await reconcile_missing_checkpoints(date_str=date)
+    return {"status": "ok", **result}
+
+
 async def run_catchup_sequential(checkpoint_ids: list[str]):
     """Runs missing checkpoints using historical data at each slot's time."""
     import asyncio

@@ -11,7 +11,11 @@ from apscheduler.triggers.cron import CronTrigger
 
 from config import settings
 from routers.analyze import router as analyze_router
-from routers.checkpoints import router as checkpoints_router, run_checkpoint_for_all_symbols
+from routers.checkpoints import (
+    router as checkpoints_router,
+    run_checkpoint_for_all_symbols,
+    reconcile_missing_checkpoints,
+)
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -55,6 +59,36 @@ scheduler.add_job(
     _trigger_eod_analysis,
     CronTrigger(day_of_week="mon-fri", hour=15, minute=30),
     id="eod_analysis",
+    replace_existing=True,
+)
+
+
+async def _run_eod_reconcile():
+    """Backfill any missing checkpoint slots after market close."""
+    try:
+        result = await reconcile_missing_checkpoints()
+        print(
+            f"[EOD-RECON] done | date={result.get('date')} "
+            f"filled={result.get('filled_checkpoint_ids')} "
+            f"failed={result.get('failed_checkpoint_ids')}"
+        )
+    except Exception as e:
+        print(f"[EOD-RECON] failed: {e}")
+
+
+# Primary EOD reconcile run
+scheduler.add_job(
+    _run_eod_reconcile,
+    CronTrigger(day_of_week="mon-fri", hour=15, minute=31),
+    id="eod_reconcile_1531",
+    replace_existing=True,
+)
+
+# Retry reconcile run (safety in case first attempt fails)
+scheduler.add_job(
+    _run_eod_reconcile,
+    CronTrigger(day_of_week="mon-fri", hour=15, minute=36),
+    id="eod_reconcile_1536",
     replace_existing=True,
 )
 
