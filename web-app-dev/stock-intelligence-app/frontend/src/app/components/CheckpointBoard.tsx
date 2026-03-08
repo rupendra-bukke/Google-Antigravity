@@ -134,7 +134,7 @@ function getNextMove(data: CheckpointData): MoveView {
 
     if (strong && isBuyS) {
         return {
-            arrow: "â–²",
+            arrow: "^",
             label: "BUY / CE",
             sublabel: tUp ? "Trend bullish and confirmed" : "Scalp BUY strong",
             color: "#4ade80",
@@ -146,7 +146,7 @@ function getNextMove(data: CheckpointData): MoveView {
     }
     if (strong && isSellS) {
         return {
-            arrow: "â–¼",
+            arrow: "v",
             label: "SELL / PE",
             sublabel: tDown ? "Trend bearish and confirmed" : "Scalp SELL strong",
             color: "#f87171",
@@ -162,7 +162,7 @@ function getNextMove(data: CheckpointData): MoveView {
 
     if (bull > bear && bull >= 2) {
         return {
-            arrow: "â–²",
+            arrow: "^",
             label: "BUY / CE",
             sublabel: "Bias up based on alignment",
             color: "#4ade80",
@@ -174,7 +174,7 @@ function getNextMove(data: CheckpointData): MoveView {
     }
     if (bear > bull && bear >= 2) {
         return {
-            arrow: "â–¼",
+            arrow: "v",
             label: "SELL / PE",
             sublabel: "Bias down based on alignment",
             color: "#f87171",
@@ -186,7 +186,7 @@ function getNextMove(data: CheckpointData): MoveView {
     }
 
     return {
-        arrow: "â—†",
+        arrow: "-",
         label: "WAIT",
         sublabel: "Mixed signals",
         color: "#94a3b8",
@@ -499,7 +499,7 @@ function EvalResultPanel({ rows, boardDate }: { rows: EvalRow[]; boardDate: stri
                             </div>
 
                             <div style={{ marginTop: "0.55rem", fontSize: "0.66rem", color: "#94a3b8", fontWeight: 700 }}>
-                                Decision {r.intent} Â· Next {r.nextLabel}
+                                Decision {r.intent} - Next {r.nextLabel}
                             </div>
                             <div style={{ marginTop: "0.28rem", fontSize: "0.7rem", color: "#cbd5e1", fontWeight: 700 }}>
                                 {formatPrice(r.entry)} {"->"} {formatPrice(r.exit)}
