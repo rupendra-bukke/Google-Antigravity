@@ -28,6 +28,8 @@ from services.checkpoint_store import (
     UPSTASH_URL,
     UPSTASH_TOKEN,
     log_debug,
+    save_eod_close,
+    load_eod_close,
 )
 
 router = APIRouter(prefix="/api/v1/checkpoints", tags=["checkpoints"])
@@ -86,6 +88,26 @@ def _resolve_default_date_ist(now_ist: datetime) -> tuple[str, str]:
     return last_trading_day.strftime("%Y-%m-%d"), "last_trading_day"
 
 
+async def _compute_session_close_price(symbol: str, date_str: str) -> float | None:
+    """
+    Compute session close reference price for a date using data sliced to 15:30 IST.
+    Prefers 1m frame, then 5m, then 15m.
+    """
+    try:
+        frames = await fetch_multi_timeframe_at_time(symbol, "1530", date_str)
+    except Exception:
+        return None
+
+    for tf in ("1m", "5m", "15m"):
+        df = frames.get(tf)
+        if df is not None and not df.empty and "Close" in df.columns:
+            try:
+                return round(float(df["Close"].iloc[-1]), 2)
+            except Exception:
+                continue
+    return None
+
+
 # Read all 7 panels
 @router.get("")
 async def get_checkpoints(
@@ -122,11 +144,31 @@ async def get_checkpoints(
         if missing_ids:
             background_tasks.add_task(run_catchup_sequential, missing_ids)
 
+    eod_close = await load_eod_close(date_str, symbol)
+    today_str = now_ist.strftime("%Y-%m-%d")
+    should_try_eod = (
+        eod_close is None
+        and (
+            date_str < today_str
+            or (date_str == today_str and now_ist.time() >= time(15, 30))
+        )
+    )
+    if should_try_eod:
+        close_price = await _compute_session_close_price(symbol, date_str)
+        if close_price is not None:
+            eod_close = {
+                "price": close_price,
+                "time": "15:30",
+                "captured_at": datetime.now(IST).isoformat(),
+            }
+            await save_eod_close(date_str, symbol, eod_close)
+
     return {
         "date": date_str,
         "date_source": date_source,
         "symbol": symbol,
         "panels": panels,
+        "eod_close": eod_close,
         "checkpoints_meta": CHECKPOINTS,
         "catchup_triggered": bool(missing_ids),
         "version": "2.2",
@@ -220,6 +262,21 @@ async def reconcile_missing_checkpoints(date_str: str | None = None) -> dict:
             failed_ids.append(cp_id)
             await log_debug(f"EOD reconcile failed for {target_date} {cp_id}: {e}")
 
+    eod_saved_for: dict[str, float] = {}
+    for sym in SYMBOLS:
+        eod_payload = await load_eod_close(target_date, sym)
+        if eod_payload is None:
+            close_price = await _compute_session_close_price(sym, target_date)
+            if close_price is not None:
+                payload = {
+                    "price": close_price,
+                    "time": "15:30",
+                    "captured_at": datetime.now(IST).isoformat(),
+                }
+                ok = await save_eod_close(target_date, sym, payload)
+                if ok:
+                    eod_saved_for[sym] = close_price
+
     await log_debug(
         f"EOD reconcile done for {target_date} | filled={filled_ids} failed={failed_ids}"
     )
@@ -231,6 +288,7 @@ async def reconcile_missing_checkpoints(date_str: str | None = None) -> dict:
         "filled_checkpoint_ids": filled_ids,
         "failed_checkpoint_ids": failed_ids,
         "missing_by_symbol": missing_by_symbol,
+        "eod_close_saved_for": eod_saved_for,
     }
 
 

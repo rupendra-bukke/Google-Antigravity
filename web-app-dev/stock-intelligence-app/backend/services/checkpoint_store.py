@@ -40,6 +40,11 @@ def _make_key(date_str: str, checkpoint_id: str, symbol: str) -> str:
     return f"checkpoint:{date_str}:{checkpoint_id}:{symbol}"
 
 
+def _make_eod_close_key(date_str: str, symbol: str) -> str:
+    """e.g. checkpoint:2026-02-20:eod_close:^NSEI"""
+    return f"checkpoint:{date_str}:eod_close:{symbol}"
+
+
 def _is_nse_trading_day(day: date_cls) -> bool:
     """
     Holiday-aware NSE session check for a specific IST date.
@@ -182,3 +187,50 @@ async def load_all_checkpoints(date_str: str, symbol: str) -> list[dict]:
             }
         )
     return out
+
+
+async def save_eod_close(date_str: str, symbol: str, payload: dict) -> bool:
+    """Save session close payload (e.g. 15:30 close) for a day + symbol."""
+    base_url = _get_base_url()
+    if not base_url or not UPSTASH_TOKEN:
+        return False
+
+    key = _make_eod_close_key(date_str, symbol)
+    ttl = _ttl_seconds()
+    value = json.dumps(payload)
+
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(
+                base_url,
+                json=["SET", key, value, "EX", str(ttl)],
+                headers=_headers(),
+                timeout=15,
+            )
+            return resp.status_code == 200
+        except Exception:
+            return False
+
+
+async def load_eod_close(date_str: str, symbol: str) -> dict | None:
+    """Load saved session close payload for day + symbol."""
+    base_url = _get_base_url()
+    if not base_url or not UPSTASH_TOKEN:
+        return None
+
+    key = _make_eod_close_key(date_str, symbol)
+
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(
+                base_url,
+                json=["GET", key],
+                headers=_headers(),
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                return None
+            result = resp.json().get("result")
+            return json.loads(result) if result else None
+        except Exception:
+            return None

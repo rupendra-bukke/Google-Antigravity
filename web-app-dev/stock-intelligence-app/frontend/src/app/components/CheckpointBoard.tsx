@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 
@@ -35,6 +35,12 @@ interface Panel {
     label: string;
     time: string;
     data: CheckpointData | null;
+}
+
+interface EodCloseData {
+    price: number;
+    time?: string;
+    captured_at?: string;
 }
 
 type TradeIntent = "BUY" | "SELL" | "WAIT";
@@ -128,7 +134,7 @@ function getNextMove(data: CheckpointData): MoveView {
 
     if (strong && isBuyS) {
         return {
-            arrow: "▲",
+            arrow: "â–²",
             label: "BUY / CE",
             sublabel: tUp ? "Trend bullish and confirmed" : "Scalp BUY strong",
             color: "#4ade80",
@@ -140,7 +146,7 @@ function getNextMove(data: CheckpointData): MoveView {
     }
     if (strong && isSellS) {
         return {
-            arrow: "▼",
+            arrow: "â–¼",
             label: "SELL / PE",
             sublabel: tDown ? "Trend bearish and confirmed" : "Scalp SELL strong",
             color: "#f87171",
@@ -156,7 +162,7 @@ function getNextMove(data: CheckpointData): MoveView {
 
     if (bull > bear && bull >= 2) {
         return {
-            arrow: "▲",
+            arrow: "â–²",
             label: "BUY / CE",
             sublabel: "Bias up based on alignment",
             color: "#4ade80",
@@ -168,7 +174,7 @@ function getNextMove(data: CheckpointData): MoveView {
     }
     if (bear > bull && bear >= 2) {
         return {
-            arrow: "▼",
+            arrow: "â–¼",
             label: "SELL / PE",
             sublabel: "Bias down based on alignment",
             color: "#f87171",
@@ -180,7 +186,7 @@ function getNextMove(data: CheckpointData): MoveView {
     }
 
     return {
-        arrow: "◆",
+        arrow: "â—†",
         label: "WAIT",
         sublabel: "Mixed signals",
         color: "#94a3b8",
@@ -198,19 +204,20 @@ function getTradeIntent(data: CheckpointData): TradeIntent {
     return "WAIT";
 }
 
-function buildEvalRows(panels: Panel[]): EvalRow[] {
+function buildEvalRows(panels: Panel[], eodClose: EodCloseData | null): EvalRow[] {
     return panels.map((panel, idx) => {
         const next = panels[idx + 1] ?? null;
+        const hasEodClose = eodClose?.price !== null && eodClose?.price !== undefined;
         const base: EvalRow = {
             id: panel.id,
             label: panel.label,
             time: panel.time,
-            nextLabel: next?.label ?? "-",
-            nextTime: next?.time ?? "-",
+            nextLabel: next?.label ?? (hasEodClose ? "Session Close" : "-"),
+            nextTime: next?.time ?? (eodClose?.time ?? (hasEodClose ? "15:30" : "-")),
             intent: panel.data ? getTradeIntent(panel.data) : "WAIT",
             outcome: "PENDING",
             entry: panel.data?.spot_price ?? null,
-            exit: next?.data?.spot_price ?? null,
+            exit: next?.data?.spot_price ?? (hasEodClose ? eodClose!.price : null),
             points: null,
             note: "",
         };
@@ -219,7 +226,47 @@ function buildEvalRows(panels: Panel[]): EvalRow[] {
             return { ...base, outcome: "PENDING", note: "Checkpoint data missing" };
         }
         if (!next) {
-            return { ...base, outcome: "NO_NEXT", note: "Last slot has no next checkpoint" };
+            if (!hasEodClose) {
+                return { ...base, outcome: "PENDING", note: "Session close data missing" };
+            }
+            const entry = panel.data.spot_price;
+            const exit = eodClose!.price;
+            const diff = Number((exit - entry).toFixed(2));
+            const intent = getTradeIntent(panel.data);
+
+            if (intent === "WAIT") {
+                return {
+                    ...base,
+                    intent,
+                    outcome: "SKIP",
+                    entry,
+                    exit,
+                    points: diff,
+                    note: "WAIT signal, checked till session close",
+                };
+            }
+            if (diff === 0) {
+                return {
+                    ...base,
+                    intent,
+                    outcome: "FLAT",
+                    entry,
+                    exit,
+                    points: diff,
+                    note: "No move till session close",
+                };
+            }
+
+            const isWin = (intent === "BUY" && diff > 0) || (intent === "SELL" && diff < 0);
+            return {
+                ...base,
+                intent,
+                outcome: isWin ? "WIN" : "LOSS",
+                entry,
+                exit,
+                points: diff,
+                note: `${intent} checked till session close`,
+            };
         }
         if (!next.data) {
             return { ...base, outcome: "PENDING", note: "Next checkpoint data missing" };
@@ -419,7 +466,7 @@ function EvalResultPanel({ rows, boardDate }: { rows: EvalRow[]; boardDate: stri
                     Checkpoint Win/Loss Review
                 </h3>
                 <span style={{ fontSize: "0.62rem", color: "#64748b", fontWeight: 700 }}>
-                    Data date {formatBoardDate(boardDate)} · Until next checkpoint
+                    Data date {formatBoardDate(boardDate)} - Next checkpoint (last slot uses session close)
                 </span>
             </div>
 
@@ -452,7 +499,7 @@ function EvalResultPanel({ rows, boardDate }: { rows: EvalRow[]; boardDate: stri
                             </div>
 
                             <div style={{ marginTop: "0.55rem", fontSize: "0.66rem", color: "#94a3b8", fontWeight: 700 }}>
-                                Decision {r.intent} · Next {r.nextLabel}
+                                Decision {r.intent} Â· Next {r.nextLabel}
                             </div>
                             <div style={{ marginTop: "0.28rem", fontSize: "0.7rem", color: "#cbd5e1", fontWeight: 700 }}>
                                 {formatPrice(r.entry)} {"->"} {formatPrice(r.exit)}
@@ -471,6 +518,7 @@ function EvalResultPanel({ rows, boardDate }: { rows: EvalRow[]; boardDate: stri
 
 export default function CheckpointBoard() {
     const [panels, setPanels] = useState<Panel[]>([]);
+    const [eodClose, setEodClose] = useState<EodCloseData | null>(null);
     const [loading, setLoading] = useState(true);
     const [catchingUp, setCatchingUp] = useState(false);
     const [boardDate, setBoardDate] = useState<string | null>(null);
@@ -481,6 +529,7 @@ export default function CheckpointBoard() {
             if (!res.ok) return;
             const json = await res.json();
             setPanels(json.panels || []);
+            setEodClose(json.eod_close ?? null);
             setBoardDate(json.date ?? null);
             setCatchingUp(json.catchup_triggered === true);
         } catch (err) {
@@ -498,7 +547,7 @@ export default function CheckpointBoard() {
 
     const latestIndex = panels.length - 1 - [...panels].reverse().findIndex((p) => p.data);
     const effectiveLatestIndex = latestIndex >= 0 ? latestIndex : -1;
-    const evalRows = useMemo(() => buildEvalRows(panels), [panels]);
+    const evalRows = useMemo(() => buildEvalRows(panels, eodClose), [panels, eodClose]);
 
     return (
         <div style={{ margin: "2.5rem 0" }}>
@@ -545,3 +594,4 @@ export default function CheckpointBoard() {
         </div>
     );
 }
+
