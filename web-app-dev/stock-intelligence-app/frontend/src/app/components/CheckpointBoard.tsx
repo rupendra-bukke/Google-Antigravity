@@ -100,6 +100,12 @@ function formatCapturedAt(capturedAt: string | undefined): string {
     })} IST`;
 }
 
+function formatCheckpointSlot(boardDate: string | null, slotTime: string): string {
+    const d = formatBoardDate(boardDate);
+    if (d === "--") return `${slotTime} IST`;
+    return `${d}, ${slotTime} IST`;
+}
+
 function formatPrice(v: number | null): string {
     if (v === null || Number.isNaN(v)) return "--";
     return `Rs ${v.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
@@ -379,7 +385,8 @@ function CheckpointCard({
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "0.55rem" }}>
                         <StatItem label="Price" value={formatPrice(panel.data!.spot_price)} color="#e2e8f0" />
-                        <StatItem label="Captured" value={formatCapturedAt(panel.data!.captured_at)} color="#94a3b8" />
+                        <StatItem label="Checkpoint" value={formatCheckpointSlot(boardDate, panel.time)} color="#94a3b8" />
+                        <StatItem label="Saved At" value={formatCapturedAt(panel.data!.captured_at)} color="#94a3b8" />
                     </div>
                 </div>
             ) : (
