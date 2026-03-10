@@ -1,6 +1,6 @@
-"""
+﻿"""
 AI-powered intraday decision service using Google Gemini REST API.
-- Uses httpx (already installed) to call Gemini directly — no SDK needed
+- Uses httpx (already installed) to call Gemini directly â€” no SDK needed
 - Builds a price-action + smart money prompt with real Nifty OHLC data
 - Gemini's training includes recent market knowledge for news context
 - Results cached via Upstash Redis REST API for 5 minutes
@@ -8,10 +8,14 @@ AI-powered intraday decision service using Google Gemini REST API.
 
 from __future__ import annotations
 
+import asyncio
+import html
 import json
 import logging
 import re
 from datetime import datetime, timezone, timedelta
+from email.utils import parsedate_to_datetime
+from xml.etree import ElementTree as ET
 
 import httpx
 import pytz
@@ -32,19 +36,307 @@ GEMINI_MODELS = [
 ]
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
-# ── Prompt template ──────────────────────────────────────────────────────────
+NEWS_CACHE_KEY_PREFIX = "ai_news:"
+NEWS_CACHE_TTL_SECONDS = 600  # 10 minutes
+
+# No-key RSS sources. Mix of global macro + India market relevance.
+NEWS_RSS_FEEDS: list[tuple[str, str]] = [
+    (
+        "Google-Geo",
+        "https://news.google.com/rss/search?q=(usa+iran+war+OR+middle+east+conflict+OR+sanctions+OR+geopolitical)+when:1d&hl=en-IN&gl=IN&ceid=IN:en",
+    ),
+    (
+        "Google-Global",
+        "https://news.google.com/rss/search?q=(global+markets+OR+federal+reserve+OR+bond+yields+OR+crude+oil+price)+when:1d&hl=en-IN&gl=IN&ceid=IN:en",
+    ),
+    (
+        "Google-IndiaMkt",
+        "https://news.google.com/rss/search?q=(india+stock+market+OR+nifty+OR+sensex+OR+fii+dii+OR+rupee)+when:1d&hl=en-IN&gl=IN&ceid=IN:en",
+    ),
+    (
+        "ET-Markets",
+        "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
+    ),
+]
+
+NEWS_KEYWORD_WEIGHTS: dict[str, int] = {
+    "war": 8,
+    "attack": 8,
+    "missile": 8,
+    "sanction": 7,
+    "military": 7,
+    "iran": 8,
+    "usa": 5,
+    "us ": 5,
+    "middle east": 8,
+    "oil": 7,
+    "crude": 9,
+    "opec": 7,
+    "federal reserve": 7,
+    "fed": 6,
+    "interest rate": 7,
+    "inflation": 6,
+    "recession": 6,
+    "bond yield": 6,
+    "dollar": 5,
+    "rupee": 6,
+    "fii": 7,
+    "dii": 6,
+    "nifty": 7,
+    "sensex": 7,
+    "bank nifty": 6,
+    "rbi": 6,
+    "tariff": 6,
+    "china": 4,
+    "israel": 6,
+}
+
+
+def _clean_news_text(v: str) -> str:
+    text = html.unescape((v or "").strip())
+    text = re.sub(r"\s+", " ", text)
+    return text
+
+
+def _normalize_headline(v: str) -> str:
+    text = _clean_news_text(v).lower()
+    text = re.sub(r"[^a-z0-9 ]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _parse_news_dt(v: str | None) -> datetime | None:
+    if not v:
+        return None
+    try:
+        dt = parsedate_to_datetime(v)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _score_news_impact(title: str, summary: str) -> int:
+    text = f"{title} {summary}".lower()
+    score = 0
+    for kw, weight in NEWS_KEYWORD_WEIGHTS.items():
+        if kw in text:
+            score += weight
+    # Boost for direct India market relevance.
+    if any(x in text for x in ("india", "indian", "nse", "bse", "nifty", "sensex", "bank nifty")):
+        score += 5
+    return score
+
+
+def _recent_bonus(pub_dt: datetime | None, now_utc: datetime) -> int:
+    if pub_dt is None:
+        return 0
+    try:
+        age_hours = (now_utc - pub_dt).total_seconds() / 3600.0
+    except Exception:
+        return 0
+    if age_hours <= 2:
+        return 5
+    if age_hours <= 6:
+        return 3
+    if age_hours <= 24:
+        return 1
+    return 0
+
+
+def _find_child_text(node, tag_names: set[str]) -> str:
+    for child in list(node):
+        tag = child.tag.split("}")[-1].lower()
+        if tag in tag_names:
+            return _clean_news_text(child.text or "")
+    return ""
+
+
+def _parse_feed_entries(xml_text: str, source_name: str) -> list[dict]:
+    items: list[dict] = []
+    if not xml_text:
+        return items
+    try:
+        root = ET.fromstring(xml_text)
+    except Exception:
+        return items
+
+    for node in root.iter():
+        tag = node.tag.split("}")[-1].lower()
+        if tag not in ("item", "entry"):
+            continue
+
+        title = _find_child_text(node, {"title"})
+        if not title:
+            continue
+
+        summary = _find_child_text(node, {"description", "summary"})
+        pub_raw = _find_child_text(node, {"pubdate", "published", "updated"})
+        pub_dt = _parse_news_dt(pub_raw)
+        link = ""
+        for child in list(node):
+            ctag = child.tag.split("}")[-1].lower()
+            if ctag != "link":
+                continue
+            href = (child.attrib or {}).get("href")
+            link = _clean_news_text(href or child.text or "")
+            if link:
+                break
+
+        items.append(
+            {
+                "title": title,
+                "summary": summary,
+                "source": source_name,
+                "link": link,
+                "published_at": pub_dt.isoformat() if pub_dt else "",
+            }
+        )
+    return items
+
+
+async def _fetch_single_news_feed(client: httpx.AsyncClient, source_name: str, url: str) -> list[dict]:
+    try:
+        resp = await client.get(url)
+        if resp.status_code != 200:
+            return []
+        return _parse_feed_entries(resp.text, source_name)
+    except Exception:
+        return []
+
+
+def _build_live_news_prompt_block(news_items: list[str]) -> str:
+    if not news_items:
+        return "- No reliable live headlines fetched."
+    lines = [f"- {headline}" for headline in news_items]
+    return "\n".join(lines)
+
+
+def _merge_unique_news(primary: list[str], secondary: list[str], limit: int = 5) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for raw in (primary or []) + (secondary or []):
+        if not isinstance(raw, str):
+            continue
+        item = _clean_news_text(raw)
+        if not item:
+            continue
+        key = _normalize_headline(item)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(item)
+        if len(out) >= limit:
+            break
+    return out
+
+
+async def _collect_live_market_news(now: datetime, max_items: int = 5) -> dict:
+    """
+    Fetch latest global + India market relevant headlines from public RSS feeds,
+    rank by likely market impact, and cache for a short interval.
+    """
+    now_utc = now.astimezone(timezone.utc)
+    bucket = now.astimezone(IST).strftime("%Y%m%d%H") + f"{now.minute // 10}"
+    cache_key = f"{NEWS_CACHE_KEY_PREFIX}{bucket}"
+
+    cached = cache_get(cache_key)
+    if cached:
+        try:
+            payload = json.loads(cached)
+            if isinstance(payload, dict):
+                return payload
+        except Exception:
+            pass
+
+    headers = {
+        "User-Agent": "TradeCraftNewsBot/1.0 (+market-impact)",
+        "Accept": "application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
+    }
+
+    async with httpx.AsyncClient(timeout=10, follow_redirects=True, headers=headers) as client:
+        tasks = [
+            _fetch_single_news_feed(client, source_name=src, url=url)
+            for src, url in NEWS_RSS_FEEDS
+        ]
+        feed_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    raw_items: list[dict] = []
+    for result in feed_results:
+        if isinstance(result, Exception):
+            continue
+        raw_items.extend(result)
+
+    dedup: dict[str, dict] = {}
+    for item in raw_items:
+        key = _normalize_headline(item.get("title", ""))
+        if not key:
+            continue
+        if key in dedup:
+            continue
+        dedup[key] = item
+
+    ranked: list[tuple[int, dict]] = []
+    for item in dedup.values():
+        title = item.get("title", "")
+        summary = item.get("summary", "")
+        impact_score = _score_news_impact(title, summary)
+        pub_dt = _parse_news_dt(item.get("published_at") or "")
+        rank_score = impact_score * 10 + _recent_bonus(pub_dt, now_utc)
+        ranked.append((rank_score, item))
+
+    ranked.sort(key=lambda x: x[0], reverse=True)
+    selected = ranked[: max(12, max_items * 2)]
+
+    headline_list: list[str] = []
+    for _, item in selected:
+        title = _clean_news_text(item.get("title", ""))
+        if not title:
+            continue
+        source = _clean_news_text(item.get("source", "News"))
+        title = title[:140]
+        headline_list.append(f"[{source}] {title}")
+        if len(headline_list) >= max_items:
+            break
+
+    if not headline_list:
+        impact_summary = "No major live trigger"
+    else:
+        top_rank = selected[0][0] if selected else 0
+        if top_rank >= 90:
+            impact_summary = "High-risk global trigger active"
+        elif top_rank >= 50:
+            impact_summary = "Moderate global risk cues active"
+        else:
+            impact_summary = "Mixed cues, monitor market reaction"
+
+    payload = {
+        "items": headline_list,
+        "impact_summary": impact_summary,
+        "prompt_block": _build_live_news_prompt_block(headline_list),
+        "fetched_at": now.astimezone(IST).isoformat(),
+        "source_count": len(raw_items),
+    }
+    cache_set(cache_key, json.dumps(payload), NEWS_CACHE_TTL_SECONDS)
+    return payload
+
+# â”€â”€ Prompt template â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 PRICE_ACTION_PROMPT = """Expert NSE Nifty 50 intraday trader. Analyze using smart money concepts.
 
 {market_data_block}
 
+LIVE NEWS SNAPSHOT (externally fetched, last 24h):
+{live_news_block}
+
 ANALYSIS CONTEXT:
-- Consider major global macro/geopolitical cues relevant to current IST date/time.
+- Use ONLY the LIVE NEWS SNAPSHOT above for world events.
 - Examples: war escalation, sanctions, crude oil spike, US/Asia risk-off, central bank surprises.
 - If no strong global trigger is available, keep "news_items" empty and set "news_impact" to "No major trigger".
 
 CRITICAL RULES:
-1. Reply ONLY with valid JSON object — NO markdown, NO ```json, NO text outside.
+1. Reply ONLY with valid JSON object â€” NO markdown, NO ```json, NO text outside.
 2. Every string field MUST be under 8 words. Truncation causes errors.
 3. "reasoning" max 20 words total.
 
@@ -71,7 +363,7 @@ def _build_market_data_block(frames: dict, symbol: str, now: datetime) -> tuple:
     """
     Format OHLC data into a text block for the Gemini prompt.
     Returns (market_block_text, has_live_price).
-    Uses 5m as primary source — far more reliable for NSE via yfinance than 1m.
+    Uses 5m as primary source â€” far more reliable for NSE via yfinance than 1m.
     Falls back to 3m (from 1m) if 5m is also unavailable.
     """
     import pandas as pd
@@ -83,7 +375,7 @@ def _build_market_data_block(frames: dict, symbol: str, now: datetime) -> tuple:
     ]
     has_live_price = False
 
-    # ── Current price + recent candles: prefer 5m then 3m ───────────
+    # â”€â”€ Current price + recent candles: prefer 5m then 3m â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     for frame_key in ("5m", "3m"):
         df = frames.get(frame_key)
         if df is not None and not df.empty:
@@ -101,7 +393,7 @@ def _build_market_data_block(frames: dict, symbol: str, now: datetime) -> tuple:
             has_live_price = True
             break
 
-    # ── Prev day levels + today open: 15m is reliable ────────────────
+    # â”€â”€ Prev day levels + today open: 15m is reliable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     df15 = frames.get("15m")
     if df15 is not None and not df15.empty:
         today_ist = ist_now.date()
@@ -125,7 +417,7 @@ def _build_market_data_block(frames: dict, symbol: str, now: datetime) -> tuple:
                 lines.append(f"Latest Close(15m): Rs.{float(today_data['Close'].iloc[-1]):,.2f}")
                 has_live_price = True
 
-    # ── Hourly candles for HTF trend ─────────────────────────
+    # â”€â”€ Hourly candles for HTF trend â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     df1h = frames.get("1h")
     if df1h is not None and not df1h.empty:
         last_3h = df1h.tail(3)[["Open", "High", "Low", "Close"]]
@@ -142,7 +434,7 @@ def _build_market_data_block(frames: dict, symbol: str, now: datetime) -> tuple:
 async def _call_gemini(prompt: str, api_key: str) -> str:
     """Call Gemini via REST API, trying each model in GEMINI_MODELS until one succeeds.
     - 404: try next model (model not available)
-    - 429: stop immediately (quota/rate-limit — retrying wastes quota)
+    - 429: stop immediately (quota/rate-limit â€” retrying wastes quota)
     """
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -159,7 +451,7 @@ async def _call_gemini(prompt: str, api_key: str) -> str:
             try:
                 resp = await client.post(url, json=payload, headers={"Content-Type": "application/json"})
                 if resp.status_code == 429:
-                    # Rate limit — don't retry other models, raise directly
+                    # Rate limit â€” don't retry other models, raise directly
                     logger.warning("Gemini rate limit (429) hit on model %s", model)
                     resp.raise_for_status()
                 if resp.status_code == 404:
@@ -212,7 +504,7 @@ def _extract_json(raw_text: str) -> str:
     if obj_match:
         return obj_match.group(0)
 
-    # Give up — return original so json.loads gives a clear error
+    # Give up â€” return original so json.loads gives a clear error
     return text
 
 
@@ -251,16 +543,27 @@ async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
     if not settings.gemini_api_key:
         return _fallback("GEMINI_API_KEY not configured. Add it to Render environment variables.")
 
+    news_ctx = {
+        "items": [],
+        "impact_summary": "No major trigger",
+        "prompt_block": "- No reliable live headlines fetched.",
+        "fetched_at": now.astimezone(IST).isoformat(),
+    }
+
     try:
         market_block, has_live_price = _build_market_data_block(frames, symbol, now)
 
         # If yfinance returned no live price data, skip Gemini (saves quota) and
         # let the caller fall back to EOD. A WAIT/LOW result would also trigger that.
         if not has_live_price:
-            logger.warning("No live price data available for %s — skipping Gemini call", symbol)
+            logger.warning("No live price data available for %s - skipping Gemini call", symbol)
             return _fallback("No live market data (yfinance returned empty 5m/15m data for this symbol).")
 
-        prompt = PRICE_ACTION_PROMPT.format(market_data_block=market_block)
+        news_ctx = await _collect_live_market_news(now)
+        prompt = PRICE_ACTION_PROMPT.format(
+            market_data_block=market_block,
+            live_news_block=news_ctx.get("prompt_block", "- No reliable live headlines fetched."),
+        )
 
         raw_text = await _call_gemini(prompt, settings.gemini_api_key)
         logger.debug("Gemini intraday raw (first 300): %s", raw_text[:300])
@@ -269,6 +572,15 @@ async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
         result = json.loads(text)
         result["captured_at"] = now.astimezone(IST).isoformat()
         result["symbol"] = symbol
+        result["news_items"] = _merge_unique_news(
+            result.get("news_items") if isinstance(result.get("news_items"), list) else [],
+            news_ctx.get("items", []),
+            limit=5,
+        )
+        if not result.get("news_impact"):
+            result["news_impact"] = news_ctx.get("impact_summary", "No major trigger")
+        result["live_news_fetched_at"] = news_ctx.get("fetched_at")
+        result["news_source_count"] = int(news_ctx.get("source_count", 0) or 0)
         return result
 
     except json.JSONDecodeError as e:
@@ -282,6 +594,14 @@ async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
             repaired.setdefault("symbol", symbol)
             repaired.setdefault("decision", "WAIT")
             repaired.setdefault("bias_strength", "LOW")
+            repaired["news_items"] = _merge_unique_news(
+                repaired.get("news_items") if isinstance(repaired.get("news_items"), list) else [],
+                news_ctx.get("items", []),
+                limit=5,
+            )
+            repaired.setdefault("news_impact", news_ctx.get("impact_summary", "No major trigger"))
+            repaired["live_news_fetched_at"] = news_ctx.get("fetched_at")
+            repaired["news_source_count"] = int(news_ctx.get("source_count", 0) or 0)
             return repaired
         logger.error("Gemini intraday non-JSON | raw[:400]: %.400s | extracted[:300]: %.300s | error: %s",
                      raw_snippet, extracted, e)
@@ -291,16 +611,14 @@ async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
         logger.error("Gemini HTTP error %s: %s", e.response.status_code, body)
         if e.response.status_code == 429:
             return _fallback(
-                "⏳ Gemini rate limit reached (free tier: 15 req/min). "
+                "Gemini rate limit reached (free tier: 15 req/min). "
                 "Please wait 1-2 minutes and click Refresh."
             )
         return _fallback(f"Gemini API error {e.response.status_code}: {body}")
     except Exception as e:
         logger.error("AI decision error: %s", e)
         return _fallback(str(e))
-
-
-# ── EOD Next-Day Outlook ─────────────────────────────────────────────────────
+# â”€â”€ EOD Next-Day Outlook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 EOD_CACHE_KEY_PREFIX = "ai_eod:"
 EOD_CACHE_TTL = 72000  # 20 hours
@@ -313,10 +631,14 @@ Today's market session has ended. Analyze the following end-of-day data and prov
 {market_data_block}
 ----------------------------
 
+--- LIVE NEWS SNAPSHOT (last 24h) ---
+{live_news_block}
+-------------------------------------
+
 ANALYSIS FRAMEWORK:
 
 1. Session Summary: What type of day was today? (Trending up/down, inside bar, volatile range, breakout day?)
-2. Close analysis: Where did price close relative to the day's range — top/middle/bottom?
+2. Close analysis: Where did price close relative to the day's range â€” top/middle/bottom?
 3. Key levels to watch TOMORROW:
    - Major resistance zones above (where sellers may appear)
    - Major support zones below (where buyers may appear)
@@ -325,7 +647,7 @@ ANALYSIS FRAMEWORK:
 5. NEXT DAY BIAS: Based on today's close structure, what is the high-probability direction for TOMORROW?
    - Bullish (expect gap-up or upside continuation)
    - Bearish (expect gap-down or downside pressure)
-   - Wait (market in balance — wait for the opening range)
+   - Wait (market in balance â€” wait for the opening range)
 6. Tomorrow's trade plan:
    - Best time window for entry
    - Ideal entry zone
@@ -334,7 +656,7 @@ ANALYSIS FRAMEWORK:
 
 RULES:
 - Pure price action only (no indicator bias)
-- Think like smart money — where will retail get trapped tomorrow?
+- Think like smart money â€” where will retail get trapped tomorrow?
 - Consider today's close as the most important data point
 
 Respond ONLY with a valid JSON object (no markdown, no explanation outside JSON):
@@ -368,6 +690,13 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
     if not settings.gemini_api_key:
         return _fallback("GEMINI_API_KEY not configured on Render.")
 
+    news_ctx = {
+        "items": [],
+        "impact_summary": "No major trigger",
+        "prompt_block": "- No reliable live headlines fetched.",
+        "fetched_at": now.astimezone(IST).isoformat(),
+    }
+
     # Build cache key for today's EOD
     ist_now = now.astimezone(IST)
     date_str = ist_now.strftime("%Y-%m-%d")
@@ -381,7 +710,7 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
         except Exception:
             pass
 
-    # Fetch recent market data — get 5 days of 5m data for full day view
+    # Fetch recent market data â€” get 5 days of 5m data for full day view
     try:
         import yfinance as yf
         ticker = yf.Ticker(symbol)
@@ -425,7 +754,11 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
         for idx, row in last5.iterrows():
             market_block += f"  {idx.strftime('%H:%M')} | {row['Open']:.0f} | {row['High']:.0f} | {row['Low']:.0f} | {row['Close']:.0f}\n"
 
-        prompt = EOD_NEXT_DAY_PROMPT.format(market_data_block=market_block)
+        news_ctx = await _collect_live_market_news(now)
+        prompt = EOD_NEXT_DAY_PROMPT.format(
+            market_data_block=market_block,
+            live_news_block=news_ctx.get("prompt_block", "- No reliable live headlines fetched."),
+        )
         raw_text = await _call_gemini(prompt, settings.gemini_api_key)
         logger.debug("Gemini EOD raw (first 300): %s", raw_text[:300])
         text = _extract_json(raw_text)
@@ -434,6 +767,13 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
         result["captured_at"] = ist_now.isoformat()
         result["session_date"] = str(latest_date)
         result["symbol"] = symbol
+        result["news_tomorrow"] = _merge_unique_news(
+            result.get("news_tomorrow") if isinstance(result.get("news_tomorrow"), list) else [],
+            news_ctx.get("items", []),
+            limit=6,
+        )
+        result["live_news_fetched_at"] = news_ctx.get("fetched_at")
+        result["news_source_count"] = int(news_ctx.get("source_count", 0) or 0)
 
         # Cache for 20 hours
         cache_set(cache_key, json.dumps(result), EOD_CACHE_TTL)
@@ -476,7 +816,7 @@ def _eod_fallback(symbol: str, reason: str) -> dict:
     }
 
 
-# ── Upstash Redis cache helpers ──────────────────────────────────────────────
+# â”€â”€ Upstash Redis cache helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 UPSTASH_URL  = ""  # loaded lazily from env
 UPSTASH_TOKEN = ""
@@ -503,7 +843,7 @@ def cache_get(key: str) -> str | None:
 
 
 def cache_set(key: str, value: str, ttl_seconds: int = 300) -> None:
-    """Store value in Upstash using pipeline POST — avoids URL encoding issues with JSON payloads."""
+    """Store value in Upstash using pipeline POST â€” avoids URL encoding issues with JSON payloads."""
     try:
         base = _upstash_base()
         if not base:
@@ -534,10 +874,11 @@ def _fallback(reason: str) -> dict:
         "stop_loss": None,
         "target": None,
         "trade_quality": "RISKY",
-        "missing_confirmation": "AI service unavailable — check manually",
+        "missing_confirmation": "AI service unavailable â€” check manually",
         "news_items": [],
         "news_impact": reason,
         "reasoning": f"AI analysis is temporarily unavailable: {reason}",
         "captured_at": datetime.now(IST).isoformat(),
-        "symbol": "—",
+        "symbol": "â€”",
     }
+
