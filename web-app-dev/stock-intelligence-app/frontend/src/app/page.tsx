@@ -9,6 +9,7 @@ import CandlestickChart from "./components/CandlestickChart";
 import DecisionBadge from "./components/DecisionBadge"; // kept for now — unused after removal below
 
 import AIDecision from "./components/AIDecision";
+import ExpiryZeroHeroPanel from "./components/ExpiryZeroHeroPanel";
 import MarketStatusBanner from "./components/MarketStatusBanner";
 import CheckpointBoard from "./components/CheckpointBoard";
 import ISTClock from "./components/ISTClock";
@@ -335,7 +336,8 @@ export default function Dashboard() {
             />
 
             {/* ── AI Price Action Decision ── */}
-            <AIDecision symbol={selectedSymbol} spotPrice={data?.price ?? null} />
+            <AIDecision symbol={selectedSymbol} />
+            <ExpiryZeroHeroPanel symbol={selectedSymbol} spotPrice={data?.price ?? null} />
 
             {/* ── Compact Indicators Strip ── */}
             <div>
