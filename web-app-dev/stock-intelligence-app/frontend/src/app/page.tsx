@@ -337,7 +337,7 @@ export default function Dashboard() {
 
             {/* ── AI Price Action Decision ── */}
             <AIDecision symbol={selectedSymbol} />
-            <ExpiryZeroHeroPanel symbol={selectedSymbol} spotPrice={data?.price ?? null} />
+            <ExpiryZeroHeroPanel />
 
             {/* ── Compact Indicators Strip ── */}
             <div>
