@@ -335,7 +335,7 @@ export default function Dashboard() {
             />
 
             {/* ── AI Price Action Decision ── */}
-            <AIDecision symbol={selectedSymbol} />
+            <AIDecision symbol={selectedSymbol} spotPrice={data?.price ?? null} />
 
             {/* ── Compact Indicators Strip ── */}
             <div>
