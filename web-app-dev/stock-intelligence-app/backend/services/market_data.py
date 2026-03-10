@@ -22,9 +22,11 @@ logger = logging.getLogger(__name__)
 TV_SYMBOL_MAP: dict[str, tuple[str, str]] = {
     "^NSEI":     ("NIFTY",     "NSE"),
     "^NSEBANK":  ("BANKNIFTY", "NSE"),
+    "^CNXFINSERVICE": ("FINNIFTY", "NSE"),
     "^BSESN":    ("SENSEX",    "BSE"),
     "NIFTY":     ("NIFTY",     "NSE"),
     "BANKNIFTY": ("BANKNIFTY", "NSE"),
+    "FINNIFTY":  ("FINNIFTY",  "NSE"),
     "SENSEX":    ("SENSEX",    "BSE"),
 }
 
