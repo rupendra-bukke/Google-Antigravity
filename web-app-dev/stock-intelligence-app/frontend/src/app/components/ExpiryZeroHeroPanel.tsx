@@ -39,10 +39,8 @@ interface ZeroHeroPlan {
     no_trade_filter: string;
     risk_note: string;
     windows: WindowPlan[];
-    news_items?: string[];
     source: "ai" | "fallback" | "info" | string;
     captured_at: string;
-    message?: string;
 }
 
 const EXPIRY_INDICES: ExpirySpec[] = [
@@ -104,15 +102,30 @@ function riskColor(risk: string): string {
     return "#f59e0b";
 }
 
-function confidenceColor(conf: string): string {
-    if (conf === "HIGH") return "#22c55e";
-    if (conf === "MEDIUM") return "#f59e0b";
-    return "#94a3b8";
+function phaseToWindow(phase: string): string {
+    if (phase === "1PM_2PM" || phase === "PRE_1PM") return "1PM";
+    if (phase === "2PM_3PM") return "2PM";
+    return "3PM";
+}
+
+function pickPrimaryWindow(plan: ZeroHeroPlan): WindowPlan | null {
+    if (!plan.windows || plan.windows.length === 0) return null;
+    const active = plan.windows.find((w) => (w.status || "").toUpperCase() === "ACTIVE");
+    if (active) return active;
+    const phaseMatch = plan.windows.find((w) => (w.window || "").toUpperCase().startsWith(phaseToWindow(plan.market_phase)));
+    return phaseMatch || plan.windows[0];
+}
+
+function compactText(value: string | undefined, maxLen: number): string {
+    const text = (value || "").trim();
+    if (text.length <= maxLen) return text || "--";
+    return `${text.slice(0, maxLen - 1)}...`;
 }
 
 export default function ExpiryZeroHeroPanel() {
     const [istNow, setIstNow] = useState<Date>(getIstShiftedNow());
     const [plansByIndex, setPlansByIndex] = useState<Record<string, ZeroHeroPlan>>({});
+    const [expandedByIndex, setExpandedByIndex] = useState<Record<string, boolean>>({});
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [countdown, setCountdown] = useState(300);
@@ -168,10 +181,8 @@ export default function ExpiryZeroHeroPanel() {
                         no_trade_filter: data.no_trade_filter || "Skip unclear setups.",
                         risk_note: data.risk_note || "High risk section.",
                         windows: Array.isArray(data.windows) ? data.windows : [],
-                        news_items: Array.isArray(data.news_items) ? data.news_items : [],
                         source: data.source || "info",
                         captured_at: data.captured_at || "",
-                        message: data.message || undefined,
                     };
                     return [idx.abbr, normalized] as const;
                 })
@@ -218,28 +229,21 @@ export default function ExpiryZeroHeroPanel() {
                     <div style={{ fontSize: "0.64rem", fontWeight: 900, color: "#fb923c", textTransform: "uppercase", letterSpacing: "0.14em" }}>
                         Expiry Zero-To-Hero (AI Plan)
                     </div>
-                    <div style={{ marginTop: "0.2rem", fontSize: "0.73rem", color: "#e2e8f0", fontWeight: 700 }}>
+                    <div style={{ marginTop: "0.18rem", fontSize: "0.72rem", color: "#e2e8f0", fontWeight: 700 }}>
                         {todayExpiries.length > 0
-                            ? `Today's expiry indices: ${todayExpiries.map((x) => x.abbr).join(", ")}`
-                            : `No expiry today | Next: ${nearest.abbr} (${nearest.exchange}) on ${fmtDateShort(nearest.nextExpiry)}${nearest.days === 1 ? " (Tomorrow)" : ` (in ${nearest.days} days)`}`}
-                    </div>
-                    <div style={{ marginTop: "0.2rem", fontSize: "0.58rem", color: "#94a3b8" }}>
-                        Separate AI prompt panel. Exact CE/PE contracts with entry, SL, and target.
+                            ? `Today's expiry: ${todayExpiries.map((x) => x.abbr).join(", ")}`
+                            : `No expiry today | Next: ${nearest.abbr} on ${fmtDateShort(nearest.nextExpiry)}`}
                     </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
-                    {todayExpiries.length > 0 && (
-                        <span style={{ fontSize: "0.58rem", color: "#64748b", fontWeight: 700 }}>
-                            Next refresh: {mins}:{secs}
-                        </span>
-                    )}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                    {todayExpiries.length > 0 && <span style={{ fontSize: "0.58rem", color: "#64748b", fontWeight: 700 }}>Next refresh: {mins}:{secs}</span>}
                     <button
                         onClick={fetchPlans}
                         disabled={isLoading}
                         style={{
                             fontSize: "0.62rem",
-                            padding: "5px 11px",
+                            padding: "4px 10px",
                             borderRadius: "8px",
                             background: "rgba(99,102,241,0.12)",
                             border: "1px solid rgba(99,102,241,0.24)",
@@ -251,114 +255,115 @@ export default function ExpiryZeroHeroPanel() {
                         {isLoading ? "Loading..." : "Refresh"}
                     </button>
                     <span style={{ fontSize: "0.58rem", color: "#94a3b8", fontWeight: 700 }}>
-                        Time now: {String(istNow.getUTCHours()).padStart(2, "0")}:{String(istNow.getUTCMinutes()).padStart(2, "0")} IST
+                        {String(istNow.getUTCHours()).padStart(2, "0")}:{String(istNow.getUTCMinutes()).padStart(2, "0")} IST
                     </span>
                 </div>
             </div>
 
             {error && (
-                <div style={{ borderRadius: "10px", border: "1px solid rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.08)", padding: "0.7rem", marginBottom: "0.7rem", color: "#fca5a5", fontSize: "0.64rem", fontWeight: 700 }}>
+                <div style={{ borderRadius: "10px", border: "1px solid rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.08)", padding: "0.65rem", marginBottom: "0.65rem", color: "#fca5a5", fontSize: "0.64rem", fontWeight: 700 }}>
                     {error}
                 </div>
             )}
 
             {todayExpiries.length === 0 ? (
-                <div style={{ borderRadius: "10px", border: "1px solid rgba(148,163,184,0.2)", background: "rgba(15,23,42,0.45)", padding: "0.75rem" }}>
-                    <div style={{ fontSize: "0.66rem", color: "#cbd5e1", lineHeight: 1.55 }}>
-                        No index expiry today. This AI panel activates only on expiry day.
-                    </div>
-                    <div style={{ marginTop: "0.45rem", fontSize: "0.62rem", color: "#94a3b8", lineHeight: 1.5 }}>
-                        Upcoming expiry: {nearest.name} ({nearest.abbr}) on {fmtDateShort(nearest.nextExpiry)}. On expiry day, this panel will show exact CE/PE contracts for 1 PM, 2 PM, and 3 PM windows.
+                <div style={{ borderRadius: "10px", border: "1px solid rgba(148,163,184,0.2)", background: "rgba(15,23,42,0.45)", padding: "0.7rem" }}>
+                    <div style={{ fontSize: "0.64rem", color: "#cbd5e1", lineHeight: 1.5 }}>
+                        This panel activates on expiry day only. It will show exact CE/PE contracts with entry, SL, and target.
                     </div>
                 </div>
             ) : (
-                <div style={{ display: "grid", gap: "0.8rem" }}>
+                <div style={{ display: "grid", gap: "0.7rem" }}>
                     {todayExpiries.map((expiryIdx) => {
                         const plan = plansByIndex[expiryIdx.abbr];
+                        const primary = plan ? pickPrimaryWindow(plan) : null;
+                        const showAll = Boolean(expandedByIndex[expiryIdx.abbr]);
+                        const otherWindows = plan?.windows?.filter((w) => w !== primary) || [];
+
                         return (
-                            <div key={expiryIdx.abbr} style={{ borderRadius: "12px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(2,6,23,0.55)", padding: "0.75rem" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.6rem", flexWrap: "wrap", marginBottom: "0.55rem" }}>
-                                    <div style={{ fontSize: "0.72rem", fontWeight: 900, color: "#e2e8f0" }}>
-                                        {expiryIdx.abbr} ({expiryIdx.exchange}) | AI Expiry Plan
+                            <div key={expiryIdx.abbr} style={{ borderRadius: "11px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(2,6,23,0.55)", padding: "0.7rem" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.55rem" }}>
+                                    <div style={{ fontSize: "0.7rem", fontWeight: 900, color: "#e2e8f0" }}>
+                                        {expiryIdx.abbr} ({expiryIdx.exchange})
                                     </div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.48rem", flexWrap: "wrap" }}>
-                                        <span style={{ fontSize: "0.58rem", color: "#94a3b8", fontWeight: 700 }}>
-                                            Spot: {typeof plan?.spot === "number" ? fmtNum(plan.spot) : "Not available"}
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                                        <span style={{ fontSize: "0.56rem", color: "#94a3b8", fontWeight: 700 }}>
+                                            Spot: {typeof plan?.spot === "number" ? fmtNum(plan.spot) : "--"}
                                         </span>
-                                        <span style={{ fontSize: "0.56rem", fontWeight: 900, color: "#f87171", border: "1px solid rgba(239,68,68,0.45)", borderRadius: "999px", padding: "2px 8px" }}>
-                                            EXPIRY TODAY
-                                        </span>
-                                        <span style={{ fontSize: "0.56rem", fontWeight: 900, color: plan?.source === "ai" ? "#22c55e" : "#f59e0b", border: `1px solid ${plan?.source === "ai" ? "rgba(34,197,94,0.4)" : "rgba(245,158,11,0.4)"}`, borderRadius: "999px", padding: "2px 8px" }}>
+                                        <span style={{ fontSize: "0.54rem", fontWeight: 900, color: plan?.source === "ai" ? "#22c55e" : "#f59e0b", border: `1px solid ${plan?.source === "ai" ? "rgba(34,197,94,0.4)" : "rgba(245,158,11,0.4)"}`, borderRadius: "999px", padding: "2px 7px" }}>
                                             {plan?.source === "ai" ? "AI LIVE" : "FALLBACK"}
+                                        </span>
+                                        <span style={{ fontSize: "0.54rem", fontWeight: 800, color: plan ? riskColor(plan.overall_risk) : "#94a3b8" }}>
+                                            {plan ? `RISK ${plan.overall_risk}` : ""}
                                         </span>
                                     </div>
                                 </div>
 
-                                {!plan ? (
-                                    <div style={{ borderRadius: "10px", border: "1px solid rgba(148,163,184,0.2)", background: "rgba(15,23,42,0.45)", padding: "0.75rem", fontSize: "0.64rem", color: "#94a3b8" }}>
-                                        Loading AI setup...
+                                {!plan || !primary ? (
+                                    <div style={{ borderRadius: "8px", border: "1px solid rgba(148,163,184,0.2)", background: "rgba(15,23,42,0.45)", padding: "0.65rem", fontSize: "0.62rem", color: "#94a3b8" }}>
+                                        Loading setup...
                                     </div>
                                 ) : (
-                                    <div style={{ display: "grid", gap: "0.62rem" }}>
-                                        <div style={{ borderRadius: "10px", border: "1px solid rgba(251,146,60,0.24)", background: "rgba(251,146,60,0.08)", padding: "0.65rem" }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                                                <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#fcd34d" }}>{plan.headline}</div>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
-                                                    <span style={{ fontSize: "0.56rem", color: riskColor(plan.overall_risk), fontWeight: 800 }}>Risk {plan.overall_risk}</span>
+                                    <div style={{ display: "grid", gap: "0.55rem" }}>
+                                        <div style={{ borderRadius: "8px", border: "1px solid rgba(251,146,60,0.24)", background: "rgba(251,146,60,0.08)", padding: "0.58rem" }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                                                <div style={{ fontSize: "0.64rem", fontWeight: 800, color: "#fcd34d" }}>
+                                                    {compactText(plan.headline, 62)}
+                                                </div>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                                    <span style={{ fontSize: "0.56rem", color: statusColor(primary.status), fontWeight: 800 }}>{primary.window} {primary.status}</span>
                                                     <span style={{ fontSize: "0.56rem", color: "#94a3b8", fontWeight: 700 }}>{plan.market_phase}</span>
                                                 </div>
                                             </div>
-                                            <div style={{ marginTop: "0.35rem", fontSize: "0.62rem", color: "#cbd5e1", lineHeight: 1.5 }}>
-                                                No-trade filter: {plan.no_trade_filter}
+                                            <div style={{ marginTop: "0.28rem", fontSize: "0.58rem", color: "#cbd5e1", lineHeight: 1.4 }}>
+                                                Filter: {compactText(plan.no_trade_filter, 95)}
                                             </div>
                                         </div>
 
-                                        {plan.windows.map((w) => (
-                                            <div key={`${plan.index}-${w.window}`} style={{ borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(15,23,42,0.5)", padding: "0.65rem" }}>
-                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.45rem" }}>
-                                                    <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "#e2e8f0" }}>
-                                                        {w.window} Window | AI contracts
-                                                    </div>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
-                                                        <span style={{ fontSize: "0.56rem", color: confidenceColor(w.confidence), fontWeight: 800 }}>Confidence {w.confidence}</span>
-                                                        <span style={{ fontSize: "0.56rem", fontWeight: 900, color: statusColor(w.status), border: `1px solid ${statusColor(w.status)}55`, borderRadius: "999px", padding: "2px 7px" }}>
-                                                            {w.status}
+                                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "0.5rem" }}>
+                                            <CompactLeg title="CE" color="#22c55e" leg={primary.ce} />
+                                            <CompactLeg title="PE" color="#ef4444" leg={primary.pe} />
+                                        </div>
+
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
+                                            <div style={{ fontSize: "0.58rem", color: "#fbbf24", fontWeight: 700 }}>
+                                                {primary.window} note: {compactText(primary.note, 70)}
+                                            </div>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                                                <span style={{ fontSize: "0.56rem", color: "#64748b", fontWeight: 700 }}>
+                                                    Updated: {fmtTime(plan.captured_at)} IST
+                                                </span>
+                                                <button
+                                                    onClick={() => setExpandedByIndex((p) => ({ ...p, [expiryIdx.abbr]: !showAll }))}
+                                                    style={{
+                                                        fontSize: "0.56rem",
+                                                        padding: "3px 8px",
+                                                        borderRadius: "7px",
+                                                        background: "rgba(148,163,184,0.1)",
+                                                        border: "1px solid rgba(148,163,184,0.25)",
+                                                        color: "#cbd5e1",
+                                                        cursor: "pointer",
+                                                        fontWeight: 700,
+                                                    }}
+                                                >
+                                                    {showAll ? "Hide extra windows" : "Show all windows"}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {showAll && otherWindows.length > 0 && (
+                                            <div style={{ borderRadius: "8px", border: "1px solid rgba(148,163,184,0.2)", background: "rgba(15,23,42,0.4)", padding: "0.55rem", display: "grid", gap: "0.4rem" }}>
+                                                {otherWindows.map((w) => (
+                                                    <div key={`${plan.index}-${w.window}`} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "0.4rem", alignItems: "center" }}>
+                                                        <span style={{ fontSize: "0.58rem", color: "#cbd5e1", fontWeight: 700 }}>
+                                                            {w.window}: {w.ce?.contract || "--"} | {w.pe?.contract || "--"}
                                                         </span>
+                                                        <span style={{ fontSize: "0.54rem", color: "#94a3b8", fontWeight: 700 }}>{w.confidence}</span>
+                                                        <span style={{ fontSize: "0.54rem", color: statusColor(w.status), fontWeight: 800 }}>{w.status}</span>
                                                     </div>
-                                                </div>
-
-                                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "0.6rem" }}>
-                                                    <div style={{ borderRadius: "10px", border: "1px solid rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)", padding: "0.65rem" }}>
-                                                        <div style={{ fontSize: "0.62rem", fontWeight: 900, color: "#22c55e", letterSpacing: "0.1em", textTransform: "uppercase" }}>CE Buy Setup</div>
-                                                        <div style={{ marginTop: "0.3rem", fontSize: "0.74rem", fontWeight: 900, color: "#e2e8f0" }}>{w.ce?.contract || `${plan.index} CE`}</div>
-                                                        <div style={{ marginTop: "0.32rem", fontSize: "0.62rem", color: "#cbd5e1", lineHeight: 1.5 }}>Entry: {w.ce?.entry || "--"}</div>
-                                                        <div style={{ marginTop: "0.22rem", fontSize: "0.62rem", color: "#cbd5e1", lineHeight: 1.5 }}>SL/Invalidation: {w.ce?.sl || "--"}</div>
-                                                        <div style={{ marginTop: "0.22rem", fontSize: "0.62rem", color: "#cbd5e1", lineHeight: 1.5 }}>Target/Exit: {w.ce?.target || "--"}</div>
-                                                    </div>
-
-                                                    <div style={{ borderRadius: "10px", border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", padding: "0.65rem" }}>
-                                                        <div style={{ fontSize: "0.62rem", fontWeight: 900, color: "#ef4444", letterSpacing: "0.1em", textTransform: "uppercase" }}>PE Buy Setup</div>
-                                                        <div style={{ marginTop: "0.3rem", fontSize: "0.74rem", fontWeight: 900, color: "#e2e8f0" }}>{w.pe?.contract || `${plan.index} PE`}</div>
-                                                        <div style={{ marginTop: "0.32rem", fontSize: "0.62rem", color: "#cbd5e1", lineHeight: 1.5 }}>Entry: {w.pe?.entry || "--"}</div>
-                                                        <div style={{ marginTop: "0.22rem", fontSize: "0.62rem", color: "#cbd5e1", lineHeight: 1.5 }}>SL/Invalidation: {w.pe?.sl || "--"}</div>
-                                                        <div style={{ marginTop: "0.22rem", fontSize: "0.62rem", color: "#cbd5e1", lineHeight: 1.5 }}>Target/Exit: {w.pe?.target || "--"}</div>
-                                                    </div>
-                                                </div>
-
-                                                <div style={{ marginTop: "0.45rem", fontSize: "0.6rem", color: "#fbbf24", fontWeight: 700, lineHeight: 1.5 }}>
-                                                    Note: {w.note || "Use strict risk and fast execution."}
-                                                </div>
+                                                ))}
                                             </div>
-                                        ))}
-
-                                        <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
-                                            <div style={{ fontSize: "0.6rem", color: "#fbbf24", fontWeight: 700 }}>
-                                                Risk note: {plan.risk_note}
-                                            </div>
-                                            <div style={{ fontSize: "0.58rem", color: "#64748b", fontWeight: 700 }}>
-                                                Updated: {fmtTime(plan.captured_at)} IST
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -366,6 +371,24 @@ export default function ExpiryZeroHeroPanel() {
                     })}
                 </div>
             )}
+        </div>
+    );
+}
+
+function CompactLeg({ title, leg, color }: { title: "CE" | "PE"; leg: OptionLeg; color: string }) {
+    return (
+        <div style={{ borderRadius: "9px", border: `1px solid ${color}55`, background: `${color}12`, padding: "0.56rem" }}>
+            <div style={{ fontSize: "0.56rem", fontWeight: 900, color, letterSpacing: "0.08em" }}>{title} BUY</div>
+            <div style={{ marginTop: "0.18rem", fontSize: "0.76rem", fontWeight: 900, color: "#e2e8f0" }}>{compactText(leg?.contract, 28)}</div>
+            <div style={{ marginTop: "0.22rem", fontSize: "0.58rem", color: "#cbd5e1", lineHeight: 1.4 }}>
+                Entry: {compactText(leg?.entry, 78)}
+            </div>
+            <div style={{ marginTop: "0.12rem", fontSize: "0.58rem", color: "#cbd5e1", lineHeight: 1.4 }}>
+                SL: {compactText(leg?.sl, 72)}
+            </div>
+            <div style={{ marginTop: "0.12rem", fontSize: "0.58rem", color: "#cbd5e1", lineHeight: 1.4 }}>
+                Target: {compactText(leg?.target, 72)}
+            </div>
         </div>
     );
 }
