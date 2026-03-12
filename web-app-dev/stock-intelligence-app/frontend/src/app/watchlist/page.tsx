@@ -6,12 +6,20 @@ import { useSymbol } from "../context/SymbolContext";
 
 type Signal = "BUY" | "SELL" | "HOLD" | "UNKNOWN";
 
-interface AnalyzeApiResponse {
+interface SnapshotRowResponse {
     symbol: string;
-    price: number;
+    label: string;
+    price: number | null;
+    move_pct: number | null;
     decision: string;
-    timestamp: string;
-    candles?: Array<{ open: number }>;
+    timestamp: string | null;
+    status: "ok" | "error";
+    error?: string;
+}
+
+interface SnapshotResponse {
+    captured_at: string;
+    items: SnapshotRowResponse[];
 }
 
 interface WatchItem {
@@ -37,6 +45,7 @@ const WATCHLIST: WatchItem[] = [
 ];
 
 const API_BASE = "/api";
+const WATCHLIST_REFRESH_MS = 180_000;
 
 function signalColor(signal: Signal): string {
     if (signal === "BUY") return "#22c55e";
@@ -90,54 +99,67 @@ export default function WatchlistPage() {
 
     const fetchWatchlist = useCallback(async () => {
         setRefreshing(true);
+        try {
+            const symbolsParam = WATCHLIST.map((w) => w.symbol).join(",");
+            const res = await fetch(`${API_BASE}/v1/watchlist-snapshot?symbols=${encodeURIComponent(symbolsParam)}`, { cache: "no-store" });
+            if (!res.ok) {
+                const raw = await res.text();
+                throw new Error(raw || `HTTP ${res.status}`);
+            }
 
-        const results = await Promise.all(
-            WATCHLIST.map(async (item) => {
-                try {
-                    const res = await fetch(`${API_BASE}/v1/analyze?symbol=${encodeURIComponent(item.symbol)}`, { cache: "no-store" });
-                    if (!res.ok) {
-                        const raw = await res.text();
-                        throw new Error(raw || `HTTP ${res.status}`);
-                    }
-                    const json = (await res.json()) as AnalyzeApiResponse;
+            const json = (await res.json()) as SnapshotResponse;
+            const bySymbol = new Map(json.items.map((i) => [i.symbol, i]));
 
-                    const open = typeof json?.candles?.[0]?.open === "number" && json.candles[0].open > 0
-                        ? json.candles[0].open
-                        : json.price;
-                    const movePct = open > 0 ? ((json.price - open) / open) * 100 : null;
-                    const signal = (["BUY", "SELL", "HOLD"].includes(json.decision) ? json.decision : "UNKNOWN") as Signal;
-
-                    return {
-                        ...item,
-                        price: typeof json.price === "number" ? json.price : null,
-                        movePct,
-                        signal,
-                        updatedAt: json.timestamp || new Date().toISOString(),
-                        status: "ok" as const,
-                    };
-                } catch (err: unknown) {
-                    const message = err instanceof Error ? err.message : "Failed to fetch";
+            const mapped: WatchRow[] = WATCHLIST.map((item) => {
+                const snap = bySymbol.get(item.symbol);
+                if (!snap) {
                     return {
                         ...item,
                         price: null,
                         movePct: null,
-                        signal: "UNKNOWN" as Signal,
+                        signal: "UNKNOWN",
                         updatedAt: null,
-                        status: "error" as const,
-                        error: message,
+                        status: "error",
+                        error: "Missing symbol in response",
                     };
                 }
-            })
-        );
 
-        setRows(results);
-        setLastRefresh(Date.now());
-        setRefreshing(false);
+                const signal = (["BUY", "SELL", "HOLD"].includes(snap.decision) ? snap.decision : "UNKNOWN") as Signal;
+                return {
+                    ...item,
+                    label: snap.label || item.label,
+                    price: typeof snap.price === "number" ? snap.price : null,
+                    movePct: typeof snap.move_pct === "number" ? snap.move_pct : null,
+                    signal,
+                    updatedAt: snap.timestamp || json.captured_at || null,
+                    status: snap.status === "ok" ? "ok" : "error",
+                    error: snap.error,
+                };
+            });
+
+            setRows(mapped);
+            setLastRefresh(Date.now());
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to fetch watchlist";
+            setRows((prev) =>
+                prev.map((p) => ({
+                    ...p,
+                    status: "error",
+                    error: message,
+                }))
+            );
+        } finally {
+            setRefreshing(false);
+        }
     }, []);
 
     useEffect(() => {
         fetchWatchlist();
-        const timer = setInterval(fetchWatchlist, 60_000);
+        const timer = setInterval(() => {
+            if (!document.hidden) {
+                fetchWatchlist();
+            }
+        }, WATCHLIST_REFRESH_MS);
         return () => clearInterval(timer);
     }, [fetchWatchlist]);
 

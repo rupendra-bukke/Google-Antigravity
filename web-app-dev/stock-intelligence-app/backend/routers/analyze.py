@@ -27,7 +27,7 @@ from services.market_data import (
 )
 from services.decision import make_decision
 from services.decision_v2 import run_advanced_analysis
-from services.ai_decision import get_ai_decision
+from services.ai_decision import get_ai_decision, cache_get, cache_set
 from config import settings
 
 router = APIRouter(prefix="/api/v1", tags=["analyze"])
@@ -62,6 +62,81 @@ EXPIRY_INDEX_CONFIG = {
         "strike_step": 100,
     },
 }
+
+WATCHLIST_DEFAULT_SYMBOLS = ["^NSEI", "^NSEBANK", "^CNXFINSERVICE", "^BSESN"]
+WATCHLIST_LABELS = {
+    "^NSEI": "NIFTY 50",
+    "^NSEBANK": "BANK NIFTY",
+    "^CNXFINSERVICE": "FINNIFTY",
+    "^BSESN": "SENSEX",
+}
+ANALYZE_CACHE_KEY_PREFIX = "analyze_v1:"
+ANALYZE_CACHE_TTL_SECONDS = 90
+
+
+def _analyze_cache_key(symbol: str) -> str:
+    import hashlib
+
+    return f"{ANALYZE_CACHE_KEY_PREFIX}{hashlib.md5(symbol.encode()).hexdigest()}"
+
+
+async def _build_analyze_payload(sym: str) -> dict:
+    cache_key = _analyze_cache_key(sym)
+    cached = cache_get(cache_key)
+    if cached:
+        try:
+            return json.loads(cached)
+        except Exception:
+            pass
+
+    # Fetch multi-timeframe to get 3m data (resampled from 1m)
+    frames = await fetch_multi_timeframe(sym)
+    df = frames.get("3m")
+    if df is None or df.empty:
+        # Fallback to intraday if 3m fails
+        df = await fetch_intraday(sym, interval="1m")
+
+    price = get_latest_price(df)
+    ema20 = calc_ema20(df)
+    rsi = calc_rsi(df)
+    vwap = calc_vwap(df)
+    bb_upper, bb_middle, bb_lower = calc_bollinger(df)
+    macd_line, signal_line, histogram = calc_macd(df)
+    candles = get_ohlc_series(df)
+
+    indicator_vals = {
+        "ema20": ema20,
+        "rsi14": rsi,
+        "vwap": vwap,
+        "bollinger": (bb_upper, bb_middle, bb_lower),
+        "macd": (macd_line, signal_line, histogram)
+    }
+
+    signals = calculate_indicator_signals(price, indicator_vals)
+    decision, reasoning = make_decision(
+        price, ema20, rsi, vwap,
+        bollinger=(bb_upper, bb_middle, bb_lower),
+        macd=(macd_line, signal_line, histogram),
+    )
+
+    payload = {
+        "symbol": sym,
+        "price": price,
+        "indicators": {
+            "ema20": ema20,
+            "rsi14": rsi,
+            "vwap": vwap,
+            "bollinger": {"upper": bb_upper, "middle": bb_middle, "lower": bb_lower},
+            "macd": {"macd_line": macd_line, "signal_line": signal_line, "histogram": histogram},
+            "signals": signals,
+        },
+        "decision": decision,
+        "reasoning": reasoning,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "candles": candles,
+    }
+    cache_set(cache_key, json.dumps(payload), ANALYZE_CACHE_TTL_SECONDS)
+    return payload
 
 
 @router.get("/gemini-models")
@@ -178,57 +253,92 @@ async def analyze(symbol: str = Query(default=None)):
     sym = symbol or settings.default_symbol
 
     try:
-        # Fetch multi-timeframe to get 3m data (resampled from 1m)
-        frames = await fetch_multi_timeframe(sym)
-        df = frames.get("3m")
-        if df is None or df.empty:
-            # Fallback to intraday if 3m fails
-            df = await fetch_intraday(sym, interval="1m")
+        payload = await _build_analyze_payload(sym)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to fetch data: {exc}")
 
-    price = get_latest_price(df)
-    ema20 = calc_ema20(df)
-    rsi = calc_rsi(df)
-    vwap = calc_vwap(df)
-    bb_upper, bb_middle, bb_lower = calc_bollinger(df)
-    macd_line, signal_line, histogram = calc_macd(df)
-    candles = get_ohlc_series(df)
-
-    indicator_vals = {
-        "ema20": ema20,
-        "rsi14": rsi,
-        "vwap": vwap,
-        "bollinger": (bb_upper, bb_middle, bb_lower),
-        "macd": (macd_line, signal_line, histogram)
-    }
-    
-    signals = calculate_indicator_signals(price, indicator_vals)
-
-    decision, reasoning = make_decision(
-        price, ema20, rsi, vwap,
-        bollinger=(bb_upper, bb_middle, bb_lower),
-        macd=(macd_line, signal_line, histogram),
-    )
-
-    from models.schemas import IndicatorSignals  # Import inside to avoid circular deps if any
-
     return AnalyzeResponse(
-        symbol=sym,
-        price=price,
+        symbol=payload["symbol"],
+        price=payload["price"],
         indicators=IndicatorData(
-            ema20=ema20, rsi14=rsi, vwap=vwap,
-            bollinger=BollingerData(upper=bb_upper, middle=bb_middle, lower=bb_lower),
-            macd=MacdData(macd_line=macd_line, signal_line=signal_line, histogram=histogram),
-            signals=IndicatorSignals(**signals)
+            ema20=payload["indicators"]["ema20"],
+            rsi14=payload["indicators"]["rsi14"],
+            vwap=payload["indicators"]["vwap"],
+            bollinger=BollingerData(
+                upper=payload["indicators"]["bollinger"]["upper"],
+                middle=payload["indicators"]["bollinger"]["middle"],
+                lower=payload["indicators"]["bollinger"]["lower"],
+            ),
+            macd=MacdData(
+                macd_line=payload["indicators"]["macd"]["macd_line"],
+                signal_line=payload["indicators"]["macd"]["signal_line"],
+                histogram=payload["indicators"]["macd"]["histogram"],
+            ),
+            signals=payload["indicators"]["signals"],
         ),
-        decision=decision,
-        reasoning=reasoning,
-        timestamp=datetime.now(timezone.utc),
-        candles=[OhlcBar(**c) for c in candles],
+        decision=payload["decision"],
+        reasoning=payload["reasoning"],
+        timestamp=payload["timestamp"],
+        candles=[OhlcBar(**c) for c in payload["candles"]],
     )
+
+
+@router.get("/watchlist-snapshot")
+async def watchlist_snapshot(symbols: str = Query(default=",".join(WATCHLIST_DEFAULT_SYMBOLS))):
+    """
+    Batched watchlist endpoint to reduce frontend request count.
+    Returns compact per-symbol rows for UI cards.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    requested = [s.strip() for s in (symbols or "").split(",") if s.strip()]
+    if not requested:
+        requested = WATCHLIST_DEFAULT_SYMBOLS.copy()
+    requested = requested[:8]
+
+    rows: list[dict] = []
+    for sym in requested:
+        try:
+            payload = await _build_analyze_payload(sym)
+            candles = payload.get("candles") or []
+            open_price = None
+            if candles and isinstance(candles[0], dict):
+                o = candles[0].get("open")
+                if isinstance(o, (int, float)) and o > 0:
+                    open_price = float(o)
+            price = float(payload.get("price"))
+            move_pct = ((price - open_price) / open_price * 100.0) if open_price else None
+
+            rows.append(
+                {
+                    "symbol": sym,
+                    "label": WATCHLIST_LABELS.get(sym, sym),
+                    "price": price,
+                    "move_pct": move_pct,
+                    "decision": payload.get("decision", "HOLD"),
+                    "timestamp": payload.get("timestamp"),
+                    "status": "ok",
+                }
+            )
+        except Exception as exc:
+            rows.append(
+                {
+                    "symbol": sym,
+                    "label": WATCHLIST_LABELS.get(sym, sym),
+                    "price": None,
+                    "move_pct": None,
+                    "decision": "UNKNOWN",
+                    "timestamp": None,
+                    "status": "error",
+                    "error": str(exc)[:200],
+                }
+            )
+
+    return {
+        "captured_at": now,
+        "items": rows,
+    }
 
 
 # â”€â”€ Advanced Analysis Endpoint (v2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
