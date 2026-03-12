@@ -1,5 +1,8 @@
 # Branch + Deploy Flow (From Scratch)
 
+For a non-technical end-to-end explanation of product sections and data flow, see:
+- `WORKFLOW_FROM_SCRATCH.md`
+
 This guide explains your exact workflow using one repo with two branches:
 - `dev` for building and testing
 - `main` for production releases

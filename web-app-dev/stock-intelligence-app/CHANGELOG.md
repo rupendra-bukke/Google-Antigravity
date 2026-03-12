@@ -13,6 +13,29 @@ Version format:
 
 - _Add upcoming release notes here before merging `dev` into `main`._
 
+## [v2026.03.12-01] - 2026-03-12
+
+### Added
+- Watchlist MVP page with sidebar navigation entry.
+- Batched watchlist backend endpoint: `GET /api/v1/watchlist-snapshot`.
+- Separate lightweight analyze cache mode for watchlist cards (no candle payload).
+
+### Changed
+- Reduced backend market-data memory footprint:
+  - OHLCV numeric downcast optimization
+  - per-timeframe bar caps
+  - optional 1m fetch in multi-timeframe pipeline (skip 1m for lighter endpoints)
+- Analyze pipeline now prefers lighter frames (`5m`/`15m`) for standard card analysis.
+- AI generation output cap reduced for lower response size and memory pressure.
+- Frontend auto-refresh throttled to reduce Render load:
+  - dashboard polling slowed
+  - checkpoint polling slowed
+  - hidden-tab polling paused for key panels
+
+### Fixed
+- Reduced chance of Render free-tier memory overage caused by repeated heavy fetch/refresh cycles.
+- Lowered request burst pressure from watchlist by moving to a single batched snapshot call.
+
 ## [v2026.03.08-01] - 2026-03-08
 
 ### Added
