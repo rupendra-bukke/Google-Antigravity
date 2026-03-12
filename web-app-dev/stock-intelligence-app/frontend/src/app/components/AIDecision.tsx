@@ -65,6 +65,28 @@ const STRENGTH_COLORS: Record<string, string> = {
 
 type MarketBias = "BULLISH" | "BEARISH" | "WAIT";
 
+function makeLocalFallback(symbol: string, reason: string): IntradayData {
+    return {
+        decision: "WAIT",
+        bias_strength: "LOW",
+        market_structure: "Temporarily unavailable",
+        sl_hunt_detected: false,
+        sl_hunt_detail: null,
+        breakout_type: "NONE",
+        breakout_detail: null,
+        entry_zone: null,
+        stop_loss: null,
+        target: null,
+        trade_quality: "RISKY",
+        missing_confirmation: "AI response unavailable",
+        news_items: [],
+        news_impact: reason,
+        reasoning: "Service is temporarily busy. Use manual confirmation and retry.",
+        captured_at: new Date().toISOString(),
+        symbol,
+    };
+}
+
 function getOptionPlan(bias: MarketBias) {
     if (bias === "BULLISH") {
         return {
@@ -104,16 +126,53 @@ export default function AIDecision({ symbol }: { symbol: string }) {
     const [countdown, setCountdown] = useState(300);
 
     const fetchDecision = useCallback(async () => {
+        const runOnce = async (): Promise<AIData> => {
+            const res = await fetch(`/api/v1/ai-decision?symbol=${encodeURIComponent(symbol)}`, { cache: "no-store" });
+            if (!res.ok) {
+                let detail = `API error ${res.status}`;
+                try {
+                    const raw = await res.text();
+                    if (raw) {
+                        try {
+                            const parsed = JSON.parse(raw);
+                            detail = parsed?.detail || parsed?.error || detail;
+                        } catch {
+                            detail = `${detail}: ${raw.slice(0, 140)}`;
+                        }
+                    }
+                } catch {
+                    // Ignore parsing issues and keep generic detail.
+                }
+                const err = new Error(detail) as Error & { status?: number };
+                err.status = res.status;
+                throw err;
+            }
+            return (await res.json()) as AIData;
+        };
+
         try {
             setIsLoading(true);
             setError(null);
-            const res = await fetch(`/api/v1/ai-decision?symbol=${encodeURIComponent(symbol)}`);
-            if (!res.ok) throw new Error(`API error ${res.status}`);
-            const json: AIData = await res.json();
+            let json: AIData;
+            try {
+                json = await runOnce();
+            } catch (firstErr: unknown) {
+                const status = (firstErr as { status?: number })?.status;
+                if (status && status >= 500) {
+                    // One quick retry for transient Render/Gateway failures.
+                    await new Promise((r) => setTimeout(r, 1200));
+                    json = await runOnce();
+                } else {
+                    throw firstErr;
+                }
+            }
             setData(json);
             setCountdown(300);
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : "Failed to load AI analysis");
+            const msg = e instanceof Error ? e.message : "Failed to load AI analysis";
+            setError(msg);
+            // Keep panel usable even when upstream API returns 5xx.
+            setData((prev) => prev ?? makeLocalFallback(symbol, msg));
         } finally {
             setIsLoading(false);
         }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface ExpirySpec {
     abbr: string;
@@ -177,27 +177,30 @@ export default function ExpiryZeroHeroPanel() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [countdown, setCountdown] = useState(300);
+    const inFlightRef = useRef(false);
 
     useEffect(() => {
         const timer = setInterval(() => setIstClock(getIstClock()), 60_000);
         return () => clearInterval(timer);
     }, []);
 
-    const today = getIstDateOnly(istClock);
+    const dayKey = `${istClock.year}-${istClock.month}-${istClock.day}`;
 
     const rows = useMemo(() => {
+        const today = getIstDateOnly(istClock);
         return EXPIRY_INDICES.map((idx) => {
             const nextExpiry = getNextExpiry(idx.expiryDay, today);
             const days = daysBetween(today, nextExpiry);
             return { ...idx, nextExpiry, days, isToday: days === 0 };
         }).sort((a, b) => a.days - b.days || a.abbr.localeCompare(b.abbr));
-    }, [today]);
+    }, [dayKey]);
 
     const todayExpiries = useMemo(() => rows.filter((r) => r.isToday), [rows]);
     const nearest = rows[0];
     const todayExpiryKey = useMemo(() => todayExpiries.map((x) => x.abbr).join("|"), [todayExpiries]);
 
     const fetchPlans = useCallback(async () => {
+        if (inFlightRef.current) return;
         if (todayExpiries.length === 0) {
             setPlansByIndex({});
             setError(null);
@@ -205,6 +208,7 @@ export default function ExpiryZeroHeroPanel() {
         }
 
         try {
+            inFlightRef.current = true;
             setIsLoading(true);
             setError(null);
 
@@ -245,6 +249,7 @@ export default function ExpiryZeroHeroPanel() {
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : "Unable to load expiry AI plan");
         } finally {
+            inFlightRef.current = false;
             setIsLoading(false);
         }
     }, [todayExpiries]);
