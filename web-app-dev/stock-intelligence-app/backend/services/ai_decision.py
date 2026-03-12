@@ -677,6 +677,334 @@ Respond ONLY with a valid JSON object (no markdown, no explanation outside JSON)
   "reasoning": "Full explanation of why this bias for tomorrow, 3-5 sentences"
 }}"""
 
+ZERO_HERO_PROMPT = """You are an Indian index options scalper focused on expiry-day zero-to-hero opportunities.
+Your job is to give actionable CE and PE buy plans for 1PM, 2PM, and 3PM windows.
+
+INDEX CONTEXT:
+- Index: {index_abbr} ({index_name}) | Exchange: {exchange}
+- Spot now: {spot_text}
+- ATM strike step: {strike_step}
+- Timestamp IST: {timestamp_ist}
+
+MARKET DATA:
+{market_data_block}
+
+LIVE NEWS SNAPSHOT (last 24h):
+{live_news_block}
+
+RULES:
+1) Reply ONLY valid JSON. No markdown and no extra text.
+2) Contracts must include exact strike, example: "NIFTY 23650 CE".
+3) Include both CE and PE plans in every window.
+4) Use short, practical lines for entry, sl, target.
+5) Keep risk-first behavior. If setup is weak, mark status as WAIT.
+
+Output JSON exactly in this shape:
+{{
+  "headline": "max 14 words",
+  "overall_risk": "HIGH|VERY_HIGH|EXTREME",
+  "market_phase": "PRE_1PM|1PM_2PM|2PM_3PM|3PM_330|POST_330",
+  "no_trade_filter": "max 20 words",
+  "risk_note": "max 20 words",
+  "windows": [
+    {{
+      "window": "1PM",
+      "status": "WAIT|ACTIVE|CLOSED",
+      "confidence": "LOW|MEDIUM|HIGH",
+      "ce": {{
+        "contract": "exact CE contract",
+        "entry": "entry rule",
+        "sl": "sl or invalidation",
+        "target": "target or exit rule"
+      }},
+      "pe": {{
+        "contract": "exact PE contract",
+        "entry": "entry rule",
+        "sl": "sl or invalidation",
+        "target": "target or exit rule"
+      }},
+      "note": "max 18 words"
+    }},
+    {{
+      "window": "2PM",
+      "status": "WAIT|ACTIVE|CLOSED",
+      "confidence": "LOW|MEDIUM|HIGH",
+      "ce": {{"contract": "", "entry": "", "sl": "", "target": ""}},
+      "pe": {{"contract": "", "entry": "", "sl": "", "target": ""}},
+      "note": "max 18 words"
+    }},
+    {{
+      "window": "3PM",
+      "status": "WAIT|ACTIVE|CLOSED",
+      "confidence": "LOW|MEDIUM|HIGH",
+      "ce": {{"contract": "", "entry": "", "sl": "", "target": ""}},
+      "pe": {{"contract": "", "entry": "", "sl": "", "target": ""}},
+      "note": "max 18 words"
+    }}
+  ]
+}"""
+
+
+def _safe_text(v: object, default: str, max_len: int = 180) -> str:
+    if isinstance(v, str):
+        text = _clean_news_text(v)
+        if text:
+            return text[:max_len]
+    return default
+
+
+def _window_defaults(index_abbr: str, atm: int | None, strike_step: int) -> list[dict]:
+    offsets = {"1PM": 0, "2PM": 1, "3PM": 0}
+
+    def mk_contract(window: str, option_side: str) -> str:
+        if atm is None:
+            return f"{index_abbr} {option_side}"
+        offset = offsets.get(window, 0)
+        strike = atm + (offset if option_side == "CE" else -offset) * strike_step
+        return f"{index_abbr} {strike} {option_side}"
+
+    rows: list[dict] = []
+    for w in ("1PM", "2PM", "3PM"):
+        rows.append(
+            {
+                "window": w,
+                "status": "WAIT",
+                "confidence": "LOW",
+                "ce": {
+                    "contract": mk_contract(w, "CE"),
+                    "entry": "Take CE only after upside breakout confirmation.",
+                    "sl": "Exit if breakout fails and spot slips below trigger candle low.",
+                    "target": "Book 40-80% burst or force-exit by 3:28 PM.",
+                },
+                "pe": {
+                    "contract": mk_contract(w, "PE"),
+                    "entry": "Take PE only after downside breakdown confirmation.",
+                    "sl": "Exit if breakdown fails and spot reclaims trigger candle high.",
+                    "target": "Book 40-80% burst or force-exit by 3:28 PM.",
+                },
+                "note": "Wait for clean momentum candle before entry.",
+            }
+        )
+    return rows
+
+
+def _normalize_leg(raw_leg: object, fallback_contract: str) -> dict:
+    if not isinstance(raw_leg, dict):
+        raw_leg = {}
+    return {
+        "contract": _safe_text(raw_leg.get("contract"), fallback_contract, 50),
+        "entry": _safe_text(raw_leg.get("entry"), "Wait for confirmation before entry."),
+        "sl": _safe_text(raw_leg.get("sl"), "Use strict invalidation and cut loss fast."),
+        "target": _safe_text(raw_leg.get("target"), "Book partial on burst and hard-exit by 3:28 PM."),
+    }
+
+
+def _normalize_windows(raw_windows: object, index_abbr: str, atm: int | None, strike_step: int) -> list[dict]:
+    fallback_rows = _window_defaults(index_abbr, atm, strike_step)
+    if not isinstance(raw_windows, list):
+        return fallback_rows
+
+    raw_map: dict[str, dict] = {}
+    for row in raw_windows:
+        if not isinstance(row, dict):
+            continue
+        key = str(row.get("window", "")).upper().replace(" ", "")
+        if key.startswith("1"):
+            raw_map["1PM"] = row
+        elif key.startswith("2"):
+            raw_map["2PM"] = row
+        elif key.startswith("3"):
+            raw_map["3PM"] = row
+
+    normalized: list[dict] = []
+    for fallback in fallback_rows:
+        w = fallback["window"]
+        src = raw_map.get(w, {})
+        offset = 1 if w == "2PM" else 0
+        ce_fallback = fallback["ce"]["contract"]
+        pe_fallback = fallback["pe"]["contract"]
+        if atm is not None:
+            ce_fallback = f"{index_abbr} {atm + offset * strike_step} CE"
+            pe_fallback = f"{index_abbr} {atm - offset * strike_step} PE"
+
+        normalized.append(
+            {
+                "window": w,
+                "status": _safe_text(src.get("status"), fallback["status"], 8).upper(),
+                "confidence": _safe_text(src.get("confidence"), fallback["confidence"], 12).upper(),
+                "ce": _normalize_leg(src.get("ce"), ce_fallback),
+                "pe": _normalize_leg(src.get("pe"), pe_fallback),
+                "note": _safe_text(src.get("note"), fallback["note"], 180),
+            }
+        )
+    return normalized
+
+
+def _build_zero_hero_market_block(frames: dict, symbol: str, spot_price: float | None, now: datetime) -> str:
+    lines = [
+        f"Symbol: {symbol}",
+        f"Timestamp IST: {now.astimezone(IST).strftime('%d-%b-%Y %H:%M')}",
+        f"Spot: {spot_price:,.2f}" if isinstance(spot_price, (int, float)) else "Spot: NA",
+    ]
+
+    df = None
+    for key in ("5m", "3m", "15m"):
+        candidate = frames.get(key)
+        if candidate is not None and not candidate.empty:
+            df = candidate
+            break
+    if df is None:
+        lines.append("No fresh candles available from feed.")
+        return "\n".join(lines)
+
+    try:
+        day_high = float(df["High"].max())
+        day_low = float(df["Low"].min())
+        day_open = float(df["Open"].iloc[0])
+        last_close = float(df["Close"].iloc[-1])
+        lines.append(f"Day Open: {day_open:.2f}")
+        lines.append(f"Day High: {day_high:.2f}")
+        lines.append(f"Day Low: {day_low:.2f}")
+        lines.append(f"Last Close: {last_close:.2f}")
+        lines.append("Recent candles (O/H/L/C):")
+        for idx, row in df.tail(6)[["Open", "High", "Low", "Close"]].iterrows():
+            ts = idx.strftime("%H:%M") if hasattr(idx, "strftime") else str(idx)
+            lines.append(f"  {ts} | {row['Open']:.0f} | {row['High']:.0f} | {row['Low']:.0f} | {row['Close']:.0f}")
+    except Exception:
+        lines.append("Could not parse recent candles.")
+
+    return "\n".join(lines)
+
+
+def _compute_market_phase(now: datetime) -> str:
+    hhmm = int(now.astimezone(IST).strftime("%H%M"))
+    if hhmm < 1300:
+        return "PRE_1PM"
+    if hhmm < 1400:
+        return "1PM_2PM"
+    if hhmm < 1500:
+        return "2PM_3PM"
+    if hhmm < 1530:
+        return "3PM_330"
+    return "POST_330"
+
+
+def _zero_hero_fallback(
+    index_abbr: str,
+    index_name: str,
+    exchange: str,
+    symbol: str,
+    strike_step: int,
+    spot_price: float | None,
+    now: datetime,
+    reason: str,
+) -> dict:
+    atm = None
+    if isinstance(spot_price, (int, float)) and spot_price > 0:
+        atm = int(round(float(spot_price) / strike_step) * strike_step)
+    return {
+        "index": index_abbr,
+        "index_name": index_name,
+        "exchange": exchange,
+        "symbol": symbol,
+        "spot": round(float(spot_price), 2) if isinstance(spot_price, (int, float)) else None,
+        "headline": "AI setup unavailable, use strict confirmation only",
+        "overall_risk": "EXTREME",
+        "market_phase": _compute_market_phase(now),
+        "no_trade_filter": "Skip if candles are choppy and range-bound.",
+        "risk_note": "High risk setup. Use strict size and hard stop.",
+        "windows": _window_defaults(index_abbr, atm, strike_step),
+        "news_items": [],
+        "source": "fallback",
+        "reason": reason,
+        "captured_at": now.astimezone(IST).isoformat(),
+    }
+
+
+async def get_expiry_zero_hero_ai(
+    frames: dict,
+    symbol: str,
+    index_abbr: str,
+    index_name: str,
+    exchange: str,
+    strike_step: int,
+    spot_price: float | None,
+    now: datetime,
+) -> dict:
+    from config import settings
+
+    if not settings.gemini_api_key:
+        return _zero_hero_fallback(
+            index_abbr=index_abbr,
+            index_name=index_name,
+            exchange=exchange,
+            symbol=symbol,
+            strike_step=strike_step,
+            spot_price=spot_price,
+            now=now,
+            reason="GEMINI_API_KEY not configured.",
+        )
+
+    market_block = _build_zero_hero_market_block(frames, symbol, spot_price, now)
+    spot_text = f"{spot_price:,.2f}" if isinstance(spot_price, (int, float)) else "NA"
+    news_ctx = {
+        "items": [],
+        "prompt_block": "- No reliable live headlines fetched.",
+        "fetched_at": now.astimezone(IST).isoformat(),
+        "source_count": 0,
+    }
+
+    atm = None
+    if isinstance(spot_price, (int, float)) and spot_price > 0:
+        atm = int(round(float(spot_price) / strike_step) * strike_step)
+
+    try:
+        news_ctx = await _collect_live_market_news(now, max_items=4)
+        prompt = ZERO_HERO_PROMPT.format(
+            index_abbr=index_abbr,
+            index_name=index_name,
+            exchange=exchange,
+            spot_text=spot_text,
+            strike_step=strike_step,
+            timestamp_ist=now.astimezone(IST).strftime("%d-%b-%Y %H:%M"),
+            market_data_block=market_block,
+            live_news_block=news_ctx.get("prompt_block", "- No reliable live headlines fetched."),
+        )
+        raw_text = await _call_gemini(prompt, settings.gemini_api_key)
+        parsed = json.loads(_extract_json(raw_text))
+
+        windows = _normalize_windows(parsed.get("windows"), index_abbr, atm, strike_step)
+        return {
+            "index": index_abbr,
+            "index_name": index_name,
+            "exchange": exchange,
+            "symbol": symbol,
+            "spot": round(float(spot_price), 2) if isinstance(spot_price, (int, float)) else None,
+            "headline": _safe_text(parsed.get("headline"), "Expiry momentum opportunities with strict discipline", 120),
+            "overall_risk": _safe_text(parsed.get("overall_risk"), "HIGH", 16).upper(),
+            "market_phase": _safe_text(parsed.get("market_phase"), _compute_market_phase(now), 16).upper(),
+            "no_trade_filter": _safe_text(parsed.get("no_trade_filter"), "Skip if setup trigger is not confirmed."),
+            "risk_note": _safe_text(parsed.get("risk_note"), "High risk. Position sizing and strict stop mandatory."),
+            "windows": windows,
+            "news_items": _merge_unique_news([], news_ctx.get("items", []), limit=4),
+            "source": "ai",
+            "captured_at": now.astimezone(IST).isoformat(),
+            "live_news_fetched_at": news_ctx.get("fetched_at"),
+            "news_source_count": int(news_ctx.get("source_count", 0) or 0),
+        }
+    except Exception as e:
+        logger.error("Expiry zero-to-hero AI error: %s", e)
+        return _zero_hero_fallback(
+            index_abbr=index_abbr,
+            index_name=index_name,
+            exchange=exchange,
+            symbol=symbol,
+            strike_step=strike_step,
+            spot_price=spot_price,
+            now=now,
+            reason=str(e),
+        )
+
 
 async def get_eod_analysis(symbol: str, now: datetime) -> dict:
     """

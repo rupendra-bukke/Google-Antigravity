@@ -32,6 +32,37 @@ from config import settings
 
 router = APIRouter(prefix="/api/v1", tags=["analyze"])
 
+EXPIRY_INDEX_CONFIG = {
+    "NIFTY": {
+        "symbol": "^NSEI",
+        "name": "Nifty 50",
+        "exchange": "NSE",
+        "expiry_weekday": 3,  # Thursday (Mon=0)
+        "strike_step": 50,
+    },
+    "BANKNIFTY": {
+        "symbol": "^NSEBANK",
+        "name": "Bank Nifty",
+        "exchange": "NSE",
+        "expiry_weekday": 2,  # Wednesday
+        "strike_step": 100,
+    },
+    "FINNIFTY": {
+        "symbol": "^CNXFINSERVICE",
+        "name": "Fin Nifty",
+        "exchange": "NSE",
+        "expiry_weekday": 1,  # Tuesday
+        "strike_step": 50,
+    },
+    "SENSEX": {
+        "symbol": "^BSESN",
+        "name": "Sensex",
+        "exchange": "BSE",
+        "expiry_weekday": 4,  # Friday
+        "strike_step": 100,
+    },
+}
+
 
 @router.get("/gemini-models")
 async def list_gemini_models():
@@ -334,4 +365,83 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
         # No cached EOD — run it now using last trading day data
         result = await get_eod_analysis(sym, now)
         return result
+
+
+@router.get("/expiry-zero-hero")
+async def expiry_zero_hero_endpoint(index: str = Query(..., description="NIFTY|BANKNIFTY|FINNIFTY|SENSEX")):
+    """
+    Dedicated AI endpoint for expiry-day zero-to-hero option plans.
+    Independent from the main AI decision panel.
+    """
+    import hashlib
+    from services.ai_decision import (
+        cache_get,
+        cache_set,
+        get_expiry_zero_hero_ai,
+    )
+
+    idx = (index or "").upper().strip()
+    cfg = EXPIRY_INDEX_CONFIG.get(idx)
+    if not cfg:
+        raise HTTPException(status_code=400, detail="Invalid index. Use NIFTY, BANKNIFTY, FINNIFTY, or SENSEX.")
+
+    now = datetime.now(timezone.utc)
+    ist_now = now.astimezone(timezone(timedelta(hours=5, minutes=30)))
+    weekday = ist_now.weekday()
+    expiry_today = weekday == cfg["expiry_weekday"]
+    diff_days = (cfg["expiry_weekday"] - weekday + 7) % 7
+    next_expiry = (ist_now + timedelta(days=diff_days)).date().isoformat()
+
+    if not expiry_today:
+        return {
+            "index": idx,
+            "index_name": cfg["name"],
+            "exchange": cfg["exchange"],
+            "symbol": cfg["symbol"],
+            "expiry_today": False,
+            "next_expiry": next_expiry,
+            "message": f"Today is not {idx} expiry.",
+            "captured_at": ist_now.isoformat(),
+            "source": "info",
+        }
+
+    cache_key = f"ai_zero_hero:{ist_now.strftime('%Y-%m-%d')}:{hashlib.md5(idx.encode()).hexdigest()}"
+    cached = cache_get(cache_key)
+    if cached:
+        try:
+            payload = json.loads(cached)
+            payload.setdefault("expiry_today", True)
+            payload.setdefault("next_expiry", next_expiry)
+            return payload
+        except Exception:
+            pass
+
+    spot_price = None
+    frames = {}
+    try:
+        frames = await fetch_multi_timeframe(cfg["symbol"])
+        for key in ("5m", "3m", "15m"):
+            df = frames.get(key)
+            if df is not None and not df.empty:
+                spot_price = float(df["Close"].iloc[-1])
+                break
+    except Exception:
+        frames = {}
+
+    result = await get_expiry_zero_hero_ai(
+        frames=frames,
+        symbol=cfg["symbol"],
+        index_abbr=idx,
+        index_name=cfg["name"],
+        exchange=cfg["exchange"],
+        strike_step=cfg["strike_step"],
+        spot_price=spot_price,
+        now=now,
+    )
+    result["expiry_today"] = True
+    result["next_expiry"] = next_expiry
+
+    # Keep one plan per expiry day; manual refresh can still regenerate after cache TTL.
+    cache_set(cache_key, json.dumps(result), 1800)
+    return result
 
