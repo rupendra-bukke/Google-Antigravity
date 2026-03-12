@@ -17,3 +17,6 @@ Minimum required fields in each release note:
 Use template:
 - `RELEASE_NOTE_TEMPLATE.md`
 
+Latest release file:
+- `v2026.03.12-01.md`
+

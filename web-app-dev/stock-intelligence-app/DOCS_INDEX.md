@@ -28,7 +28,11 @@ This file defines which docs are active source-of-truth and which are archive/hi
 - Purpose: versioned production release history.
 - Use when: documenting each prod push.
 
-7. `releases/RELEASE_NOTE_TEMPLATE.md` + `releases/*.md`
+7. `WORKFLOW_FROM_SCRATCH.md`
+- Purpose: beginner-friendly end-to-end explanation from project purpose to release cycle.
+- Use when: onboarding non-technical members or anyone new to this codebase.
+
+8. `releases/RELEASE_NOTE_TEMPLATE.md` + `releases/*.md`
 - Purpose: detailed per-release notes for each production deployment.
 - Use when: every release cycle.
 
@@ -45,12 +49,13 @@ This file defines which docs are active source-of-truth and which are archive/hi
 
 ## Recommended Reference Order
 
-1. `FLOW_QUICK_REF.md`
-2. `BRANCH_DEPLOY_FLOW.md`
-3. `RELEASE_RUNBOOK.md`
-4. `CHANGELOG.md`
-5. `ARCHITECTURE.md`
-6. `README.md`
+1. `WORKFLOW_FROM_SCRATCH.md`
+2. `FLOW_QUICK_REF.md`
+3. `BRANCH_DEPLOY_FLOW.md`
+4. `RELEASE_RUNBOOK.md`
+5. `CHANGELOG.md`
+6. `ARCHITECTURE.md`
+7. `README.md`
 
 ## Rule
 

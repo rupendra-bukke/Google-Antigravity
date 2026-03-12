@@ -7,6 +7,7 @@ Project path:
 
 - Dev (Vercel Preview): `https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/`
 - Prod (Vercel Production): `https://trade-craft-rb.vercel.app/`
+- Current prod release: `v2026.03.12-01` (`main` merge commit: `c28e35f`)
 
 ## Daily Dev (build + preview)
 
