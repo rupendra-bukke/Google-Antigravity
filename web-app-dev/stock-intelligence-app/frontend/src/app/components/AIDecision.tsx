@@ -185,6 +185,9 @@ export default function AIDecision({ symbol }: { symbol: string }) {
     useEffect(() => {
         const tick = setInterval(() => {
             setCountdown((c) => {
+                if (typeof document !== "undefined" && document.hidden) {
+                    return c;
+                }
                 if (c <= 1) {
                     fetchDecision();
                     return 300;

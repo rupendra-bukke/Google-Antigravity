@@ -70,18 +70,20 @@ WATCHLIST_LABELS = {
     "^CNXFINSERVICE": "FINNIFTY",
     "^BSESN": "SENSEX",
 }
-ANALYZE_CACHE_KEY_PREFIX = "analyze_v1:"
+ANALYZE_CACHE_KEY_PREFIX = "analyze_v2:"
 ANALYZE_CACHE_TTL_SECONDS = 90
 
 
-def _analyze_cache_key(symbol: str) -> str:
+def _analyze_cache_key(symbol: str, include_candles: bool) -> str:
     import hashlib
 
-    return f"{ANALYZE_CACHE_KEY_PREFIX}{hashlib.md5(symbol.encode()).hexdigest()}"
+    mode = "full" if include_candles else "lite"
+    cache_input = f"{symbol}:{mode}"
+    return f"{ANALYZE_CACHE_KEY_PREFIX}{hashlib.md5(cache_input.encode()).hexdigest()}"
 
 
-async def _build_analyze_payload(sym: str) -> dict:
-    cache_key = _analyze_cache_key(sym)
+async def _build_analyze_payload(sym: str, include_candles: bool = True, max_candles: int = 180) -> dict:
+    cache_key = _analyze_cache_key(sym, include_candles=include_candles)
     cached = cache_get(cache_key)
     if cached:
         try:
@@ -89,20 +91,22 @@ async def _build_analyze_payload(sym: str) -> dict:
         except Exception:
             pass
 
-    # Fetch multi-timeframe to get 3m data (resampled from 1m)
-    frames = await fetch_multi_timeframe(sym)
-    df = frames.get("3m")
+    # For lightweight endpoints, avoid 1m fetch/resample.
+    frames = await fetch_multi_timeframe(sym, include_1m=False)
+    df = frames.get("5m")
     if df is None or df.empty:
-        # Fallback to intraday if 3m fails
-        df = await fetch_intraday(sym, interval="1m")
+        df = frames.get("15m")
+    if df is None or df.empty:
+        df = await fetch_intraday(sym, interval="5m", period="5d")
 
     price = get_latest_price(df)
+    day_open = round(float(df["Open"].iloc[0]), 2)
     ema20 = calc_ema20(df)
     rsi = calc_rsi(df)
     vwap = calc_vwap(df)
     bb_upper, bb_middle, bb_lower = calc_bollinger(df)
     macd_line, signal_line, histogram = calc_macd(df)
-    candles = get_ohlc_series(df)
+    candles = get_ohlc_series(df, max_points=max_candles) if include_candles else []
 
     indicator_vals = {
         "ema20": ema20,
@@ -122,6 +126,7 @@ async def _build_analyze_payload(sym: str) -> dict:
     payload = {
         "symbol": sym,
         "price": price,
+        "day_open": day_open,
         "indicators": {
             "ema20": ema20,
             "rsi14": rsi,
@@ -300,13 +305,10 @@ async def watchlist_snapshot(symbols: str = Query(default=",".join(WATCHLIST_DEF
     rows: list[dict] = []
     for sym in requested:
         try:
-            payload = await _build_analyze_payload(sym)
-            candles = payload.get("candles") or []
-            open_price = None
-            if candles and isinstance(candles[0], dict):
-                o = candles[0].get("open")
-                if isinstance(o, (int, float)) and o > 0:
-                    open_price = float(o)
+            payload = await _build_analyze_payload(sym, include_candles=False)
+            open_price = payload.get("day_open")
+            if not isinstance(open_price, (int, float)):
+                open_price = None
             price = float(payload.get("price"))
             move_pct = ((price - open_price) / open_price * 100.0) if open_price else None
 
@@ -426,7 +428,7 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
             eod_fallback_key = f"{EOD_CACHE_KEY_PREFIX}{ist_now.strftime('%Y-%m-%d')}:{hashlib.md5(sym.encode()).hexdigest()}"
 
             try:
-                frames = await fetch_multi_timeframe(sym)
+                frames = await fetch_multi_timeframe(sym, include_1m=False)
             except Exception as exc:
                 # yfinance failed — serve today's EOD as fallback
                 eod_cached = cache_get(eod_fallback_key)
@@ -532,8 +534,8 @@ async def expiry_zero_hero_endpoint(index: str = Query(..., description="NIFTY|B
     spot_price = None
     frames = {}
     try:
-        frames = await fetch_multi_timeframe(cfg["symbol"])
-        for key in ("5m", "3m", "15m"):
+        frames = await fetch_multi_timeframe(cfg["symbol"], include_1m=False)
+        for key in ("5m", "15m", "1h", "3m"):
             df = frames.get(key)
             if df is not None and not df.empty:
                 spot_price = float(df["Close"].iloc[-1])

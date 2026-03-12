@@ -43,6 +43,14 @@ TV_N_BARS: dict[str, int] = {
     "1m": 500, "5m": 200, "15m": 100, "1h": 50,
 }
 
+FRAME_MAX_BARS: dict[str, int] = {
+    "1m": 320,
+    "3m": 240,
+    "5m": 220,
+    "15m": 220,
+    "1h": 160,
+}
+
 _tv_client = None
 
 
@@ -57,6 +65,19 @@ def _get_tv() -> object:
         except Exception as exc:
             logger.warning("TvDatafeed init failed (%s) — will use yfinance only", exc)
     return _tv_client
+
+
+def _optimize_ohlcv_frame(df: pd.DataFrame) -> pd.DataFrame:
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    out = df.copy()
+    for col in ("Open", "High", "Low", "Close", "Volume"):
+        if col in out.columns:
+            out[col] = pd.to_numeric(out[col], errors="coerce")
+            if out[col].dtype != np.float32:
+                out[col] = out[col].astype("float32")
+    return out.dropna()
 
 
 def _tv_fetch_sync(symbol: str, exchange: str, interval: str, n_bars: int) -> pd.DataFrame:
@@ -76,7 +97,7 @@ def _tv_fetch_sync(symbol: str, exchange: str, interval: str, n_bars: int) -> pd
         df = df.rename(columns={"open": "Open", "high": "High",
                                  "low": "Low",  "close": "Close", "volume": "Volume"})
         available = [c for c in ["Open", "High", "Low", "Close", "Volume"] if c in df.columns]
-        return df[available].dropna()
+        return _optimize_ohlcv_frame(df[available])
     except Exception as exc:
         logger.warning("_tv_fetch_sync (%s %s %s): %s", symbol, exchange, interval, exc)
         return pd.DataFrame()
@@ -107,7 +128,13 @@ async def fetch_intraday(
 
     # ── 2. Fallback: yfinance ───────────────────────────────────
     ticker = yf.Ticker(symbol)
-    df = ticker.history(period=period, interval=interval)
+    df = ticker.history(
+        period=period,
+        interval=interval,
+        auto_adjust=False,
+        actions=False,
+        prepost=False,
+    )
     if df.empty:
         raise ValueError(f"No data for '{symbol}' at {interval} from TV or yfinance.")
     if isinstance(df.columns, pd.MultiIndex):
@@ -116,10 +143,10 @@ async def fetch_intraday(
     for col in required:
         if col not in df.columns:
             raise ValueError(f"Missing column '{col}' in yfinance data.")
-    return df[required].dropna()
+    return _optimize_ohlcv_frame(df[required])
 
 
-async def fetch_multi_timeframe(symbol: str = "^NSEI") -> dict[str, pd.DataFrame]:
+async def fetch_multi_timeframe(symbol: str = "^NSEI", include_1m: bool = True) -> dict[str, pd.DataFrame]:
     """
     Fetch 5m, 15m, 1h data for price action analysis.
     Also attempts 1m and derives 3m from it (used for very short-term candles).
@@ -134,10 +161,15 @@ async def fetch_multi_timeframe(symbol: str = "^NSEI") -> dict[str, pd.DataFrame
         ("1h",  "5d"),
         ("1m",  "7d"),  # 1m last — least reliable, used only for 3m resample
     ]
+    if not include_1m:
+        configs = [cfg for cfg in configs if cfg[0] != "1m"]
 
     for interval, period in configs:
         try:
             df = await fetch_intraday(symbol, interval=interval, period=period)
+            max_bars = FRAME_MAX_BARS.get(interval)
+            if max_bars and len(df) > max_bars:
+                df = df.tail(max_bars).copy()
             frames[interval] = df
             logger.debug("Frame %s: %d bars", interval, len(df))
         except Exception as exc:
@@ -145,12 +177,15 @@ async def fetch_multi_timeframe(symbol: str = "^NSEI") -> dict[str, pd.DataFrame
             frames[interval] = pd.DataFrame()
 
     # Derive 3m from 1m if available (optional — _build_market_data_block prefers 5m)
-    if not frames.get("1m", pd.DataFrame()).empty:
+    if include_1m and not frames.get("1m", pd.DataFrame()).empty:
         df1 = frames["1m"].copy()
         frames["3m"] = df1.resample("3min").agg({
             "Open": "first", "High": "max", "Low": "min",
             "Close": "last", "Volume": "sum",
         }).dropna()
+        max_bars_3m = FRAME_MAX_BARS.get("3m")
+        if max_bars_3m and len(frames["3m"]) > max_bars_3m:
+            frames["3m"] = frames["3m"].tail(max_bars_3m).copy()
     else:
         frames["3m"] = pd.DataFrame()
 
@@ -203,6 +238,9 @@ async def fetch_multi_timeframe_at_time(
 
             # Slice: only keep rows UP TO the checkpoint time
             sliced = df[df.index <= cutoff_ist]
+            max_bars = FRAME_MAX_BARS.get(interval)
+            if max_bars and len(sliced) > max_bars:
+                sliced = sliced.tail(max_bars).copy()
             frames[interval] = sliced if not sliced.empty else pd.DataFrame()
         except Exception:
             frames[interval] = pd.DataFrame()
@@ -214,6 +252,9 @@ async def fetch_multi_timeframe_at_time(
             "Open": "first", "High": "max",
             "Low": "min", "Close": "last", "Volume": "sum",
         }).dropna()
+        max_bars_3m = FRAME_MAX_BARS.get("3m")
+        if max_bars_3m and len(df3) > max_bars_3m:
+            df3 = df3.tail(max_bars_3m).copy()
         frames["3m"] = df3
     else:
         frames["3m"] = pd.DataFrame()
@@ -296,7 +337,9 @@ def calc_macd(df: pd.DataFrame) -> tuple[float, float, float]:
     return (round(ml, 2), round(sl, 2), round(h, 2))
 
 
-def get_ohlc_series(df: pd.DataFrame) -> list[dict]:
+def get_ohlc_series(df: pd.DataFrame, max_points: int = 180) -> list[dict]:
+    if max_points > 0 and len(df) > max_points:
+        df = df.tail(max_points)
     bars = []
     for idx, row in df.iterrows():
         ts = idx.isoformat() if hasattr(idx, "isoformat") else str(idx)
