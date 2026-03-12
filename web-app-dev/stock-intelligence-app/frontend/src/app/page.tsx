@@ -175,8 +175,12 @@ export default function Dashboard() {
     }, []);
 
     useEffect(() => {
-        fetchData(selectedSymbol);
-        const interval = setInterval(() => fetchData(selectedSymbol), 60_000);
+        const run = () => {
+            if (typeof document !== "undefined" && document.hidden) return;
+            fetchData(selectedSymbol);
+        };
+        run();
+        const interval = setInterval(run, 180_000);
         return () => clearInterval(interval);
     }, [selectedSymbol, fetchData]);
 

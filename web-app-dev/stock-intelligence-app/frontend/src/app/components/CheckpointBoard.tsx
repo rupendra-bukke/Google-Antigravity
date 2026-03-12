@@ -540,8 +540,12 @@ export default function CheckpointBoard() {
     }, []);
 
     useEffect(() => {
-        fetchPanels();
-        const interval = setInterval(fetchPanels, catchingUp ? 10000 : 30000);
+        const run = () => {
+            if (typeof document !== "undefined" && document.hidden) return;
+            fetchPanels();
+        };
+        run();
+        const interval = setInterval(run, catchingUp ? 30_000 : 120_000);
         return () => clearInterval(interval);
     }, [fetchPanels, catchingUp]);
 

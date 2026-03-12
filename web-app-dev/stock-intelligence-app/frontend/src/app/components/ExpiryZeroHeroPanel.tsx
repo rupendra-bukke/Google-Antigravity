@@ -262,6 +262,9 @@ export default function ExpiryZeroHeroPanel() {
         if (todayExpiries.length === 0) return;
         const tick = setInterval(() => {
             setCountdown((c) => {
+                if (typeof document !== "undefined" && document.hidden) {
+                    return c;
+                }
                 if (c <= 1) {
                     fetchPlans();
                     return 300;
