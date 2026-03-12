@@ -52,14 +52,52 @@ const EXPIRY_INDICES: ExpirySpec[] = [
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAY_TO_INDEX: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+};
 
-function getIstShiftedNow(): Date {
-    const now = new Date();
-    return new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+interface IstClock {
+    year: number;
+    month: number;
+    day: number;
+    hour: number;
+    minute: number;
+    weekdayIndex: number;
 }
 
-function getIstDateOnly(d: Date): Date {
-    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+function getIstClock(now: Date = new Date()): IstClock {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    }).formatToParts(now);
+
+    const pick = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value || "";
+    const weekday = pick("weekday");
+
+    return {
+        year: Number(pick("year")),
+        month: Number(pick("month")),
+        day: Number(pick("day")),
+        hour: Number(pick("hour")),
+        minute: Number(pick("minute")),
+        weekdayIndex: WEEKDAY_TO_INDEX[weekday] ?? 0,
+    };
+}
+
+function getIstDateOnly(clock: IstClock): Date {
+    return new Date(Date.UTC(clock.year, clock.month - 1, clock.day));
 }
 
 function getNextExpiry(expiryDay: number, fromDate: Date): Date {
@@ -108,6 +146,16 @@ function phaseToWindow(phase: string): string {
     return "3PM";
 }
 
+function sourceBadge(source: string): { text: string; color: string; border: string } {
+    if (source === "ai") {
+        return { text: "AI LIVE", color: "#22c55e", border: "rgba(34,197,94,0.4)" };
+    }
+    if (source === "info") {
+        return { text: "INFO", color: "#93c5fd", border: "rgba(59,130,246,0.4)" };
+    }
+    return { text: "FALLBACK", color: "#f59e0b", border: "rgba(245,158,11,0.4)" };
+}
+
 function pickPrimaryWindow(plan: ZeroHeroPlan): WindowPlan | null {
     if (!plan.windows || plan.windows.length === 0) return null;
     const active = plan.windows.find((w) => (w.status || "").toUpperCase() === "ACTIVE");
@@ -123,7 +171,7 @@ function compactText(value: string | undefined, maxLen: number): string {
 }
 
 export default function ExpiryZeroHeroPanel() {
-    const [istNow, setIstNow] = useState<Date>(getIstShiftedNow());
+    const [istClock, setIstClock] = useState<IstClock>(getIstClock());
     const [plansByIndex, setPlansByIndex] = useState<Record<string, ZeroHeroPlan>>({});
     const [expandedByIndex, setExpandedByIndex] = useState<Record<string, boolean>>({});
     const [isLoading, setIsLoading] = useState(false);
@@ -131,11 +179,11 @@ export default function ExpiryZeroHeroPanel() {
     const [countdown, setCountdown] = useState(300);
 
     useEffect(() => {
-        const timer = setInterval(() => setIstNow(getIstShiftedNow()), 60_000);
+        const timer = setInterval(() => setIstClock(getIstClock()), 60_000);
         return () => clearInterval(timer);
     }, []);
 
-    const today = getIstDateOnly(istNow);
+    const today = getIstDateOnly(istClock);
 
     const rows = useMemo(() => {
         return EXPIRY_INDICES.map((idx) => {
@@ -255,7 +303,7 @@ export default function ExpiryZeroHeroPanel() {
                         {isLoading ? "Loading..." : "Refresh"}
                     </button>
                     <span style={{ fontSize: "0.58rem", color: "#94a3b8", fontWeight: 700 }}>
-                        {String(istNow.getUTCHours()).padStart(2, "0")}:{String(istNow.getUTCMinutes()).padStart(2, "0")} IST
+                        {String(istClock.hour).padStart(2, "0")}:{String(istClock.minute).padStart(2, "0")} IST
                     </span>
                 </div>
             </div>
@@ -279,6 +327,7 @@ export default function ExpiryZeroHeroPanel() {
                         const primary = plan ? pickPrimaryWindow(plan) : null;
                         const showAll = Boolean(expandedByIndex[expiryIdx.abbr]);
                         const otherWindows = plan?.windows?.filter((w) => w !== primary) || [];
+                        const badge = sourceBadge(plan?.source || "info");
 
                         return (
                             <div key={expiryIdx.abbr} style={{ borderRadius: "11px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(2,6,23,0.55)", padding: "0.7rem" }}>
@@ -290,8 +339,8 @@ export default function ExpiryZeroHeroPanel() {
                                         <span style={{ fontSize: "0.56rem", color: "#94a3b8", fontWeight: 700 }}>
                                             Spot: {typeof plan?.spot === "number" ? fmtNum(plan.spot) : "--"}
                                         </span>
-                                        <span style={{ fontSize: "0.54rem", fontWeight: 900, color: plan?.source === "ai" ? "#22c55e" : "#f59e0b", border: `1px solid ${plan?.source === "ai" ? "rgba(34,197,94,0.4)" : "rgba(245,158,11,0.4)"}`, borderRadius: "999px", padding: "2px 7px" }}>
-                                            {plan?.source === "ai" ? "AI LIVE" : "FALLBACK"}
+                                        <span style={{ fontSize: "0.54rem", fontWeight: 900, color: badge.color, border: `1px solid ${badge.border}`, borderRadius: "999px", padding: "2px 7px" }}>
+                                            {badge.text}
                                         </span>
                                         <span style={{ fontSize: "0.54rem", fontWeight: 800, color: plan ? riskColor(plan.overall_risk) : "#94a3b8" }}>
                                             {plan ? `RISK ${plan.overall_risk}` : ""}
@@ -299,9 +348,13 @@ export default function ExpiryZeroHeroPanel() {
                                     </div>
                                 </div>
 
-                                {!plan || !primary ? (
+                                {!plan ? (
                                     <div style={{ borderRadius: "8px", border: "1px solid rgba(148,163,184,0.2)", background: "rgba(15,23,42,0.45)", padding: "0.65rem", fontSize: "0.62rem", color: "#94a3b8" }}>
                                         Loading setup...
+                                    </div>
+                                ) : !primary ? (
+                                    <div style={{ borderRadius: "8px", border: "1px solid rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.08)", padding: "0.65rem", fontSize: "0.62rem", color: "#bfdbfe", lineHeight: 1.45 }}>
+                                        Back-end says this index is not in active expiry mode right now. Next expiry: {plan.next_expiry || "--"}.
                                     </div>
                                 ) : (
                                     <div style={{ display: "grid", gap: "0.55rem" }}>
