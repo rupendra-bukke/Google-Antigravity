@@ -620,18 +620,69 @@ async def advanced_analyze(symbol: str = Query(default=None)):
 
 # -- AI Price Action Decision Endpoint --
 
-CACHE_KEY_PREFIX = "ai_decision:"
-CACHE_TTL_SECONDS = 2700  # 45 minutes (–8 calls/day per symbol, well within 20 RPD budget)
+# Live intraday AI checkpoints (IST). Output is generated once per checkpoint and
+# reused until the next checkpoint to keep decisions stable during the window.
+LIVE_AI_CHECKPOINTS = [
+    {"id": "1000", "time": "10:00", "hhmm": 1000},
+    {"id": "1200", "time": "12:00", "hhmm": 1200},
+    {"id": "1430", "time": "14:30", "hhmm": 1430},
+]
+INTRADAY_CHECKPOINT_CACHE_PREFIX = "ai_decision_cp:"
 
-# IST_TZ kept for date-string construction below
+
+def _resolve_live_ai_window(ist_now: datetime) -> tuple[dict | None, dict | None]:
+    hhmm = ist_now.hour * 100 + ist_now.minute
+
+    active = None
+    for cp in reversed(LIVE_AI_CHECKPOINTS):
+        if hhmm >= cp["hhmm"]:
+            active = cp
+            break
+
+    if active is None:
+        return None, LIVE_AI_CHECKPOINTS[0]
+
+    idx = next((i for i, cp in enumerate(LIVE_AI_CHECKPOINTS) if cp["id"] == active["id"]), -1)
+    if idx == -1 or idx + 1 >= len(LIVE_AI_CHECKPOINTS):
+        return active, None
+    return active, LIVE_AI_CHECKPOINTS[idx + 1]
+
+
+def _window_valid_until_ist(ist_now: datetime, next_cp: dict | None) -> datetime:
+    if next_cp is not None:
+        return ist_now.replace(
+            hour=int(next_cp["hhmm"] // 100),
+            minute=int(next_cp["hhmm"] % 100),
+            second=0,
+            microsecond=0,
+        )
+    # Last checkpoint (14:30) remains valid until market close.
+    return ist_now.replace(hour=15, minute=30, second=0, microsecond=0)
+
+
+def _window_ttl_seconds(ist_now: datetime, next_cp: dict | None) -> int:
+    valid_until = _window_valid_until_ist(ist_now, next_cp)
+    # Keep a small grace so data does not disappear at boundary due clock skew.
+    ttl = int((valid_until - ist_now).total_seconds()) + 90
+    return max(ttl, 90)
+
+
+def _intraday_checkpoint_cache_key(symbol: str, date_str: str, checkpoint_id: str) -> str:
+    import hashlib
+
+    return (
+        f"{INTRADAY_CHECKPOINT_CACHE_PREFIX}{date_str}:{checkpoint_id}:"
+        f"{hashlib.md5(symbol.encode()).hexdigest()}"
+    )
 
 @router.get("/ai-decision")
 async def ai_decision_endpoint(symbol: str = Query(default=None)):
     """
     Gemini-powered price action analysis.
-    - Market OPEN  → Intraday price action analysis (45-min cache, only caches real signals)
+    - Market OPEN  → Intraday checkpoint analysis at 10:00 / 12:00 / 14:30 IST
+                      (each result stays fixed until next checkpoint)
     - Market CLOSED → EOD next-day outlook (20-hour cache)
-    - Intraday failure → falls back to last EOD analysis (never shows blank WAIT error)
+    - Intraday failure → safe WAIT fallback for current checkpoint window
     """
     import hashlib
     from services.ai_decision import (
@@ -647,47 +698,86 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
         # Use exchange_calendars to check holiday-aware NSE market status (Mon-Fri + all public holidays)
         is_open, _ = is_indian_market_open(now)
         if is_open:
-            # ── Intraday mode ──────────────────────────────────────────────────
-            cache_key = f"{CACHE_KEY_PREFIX}{hashlib.md5(sym.encode()).hexdigest()}"
-            cached = cache_get(cache_key)
+            # ── Intraday checkpoint mode ───────────────────────────────────────
+            date_str = ist_now.strftime("%Y-%m-%d")
+            active_cp, next_cp = _resolve_live_ai_window(ist_now)
+            valid_until = _window_valid_until_ist(ist_now, next_cp)
+
+            # Before first checkpoint (10:00): show wait message until first run.
+            if active_cp is None:
+                pre_open_result = _fallback("First live AI checkpoint starts at 10:00 IST.")
+                pre_open_result.update(
+                    {
+                        "analysis_type": "INTRADAY",
+                        "symbol": sym,
+                        "checkpoint_mode": True,
+                        "active_checkpoint": None,
+                        "active_checkpoint_time_ist": None,
+                        "next_checkpoint": next_cp["id"] if next_cp else None,
+                        "next_checkpoint_time_ist": next_cp["time"] if next_cp else None,
+                        "valid_until_ist": valid_until.isoformat(),
+                    }
+                )
+                return pre_open_result
+
+            checkpoint_cache_key = _intraday_checkpoint_cache_key(
+                sym,
+                date_str,
+                active_cp["id"],
+            )
+            cached = cache_get(checkpoint_cache_key)
             if cached:
                 try:
-                    return json.loads(cached)
+                    data = json.loads(cached)
+                    data.setdefault("analysis_type", "INTRADAY")
+                    data.setdefault("symbol", sym)
+                    data.setdefault("checkpoint_mode", True)
+                    data.setdefault("active_checkpoint", active_cp["id"])
+                    data.setdefault("active_checkpoint_time_ist", active_cp["time"])
+                    data.setdefault("next_checkpoint", next_cp["id"] if next_cp else None)
+                    data.setdefault("next_checkpoint_time_ist", next_cp["time"] if next_cp else None)
+                    data.setdefault("valid_until_ist", valid_until.isoformat())
+                    return data
                 except Exception:
                     pass
 
-            eod_fallback_key = f"{EOD_CACHE_KEY_PREFIX}{ist_now.strftime('%Y-%m-%d')}:{hashlib.md5(sym.encode()).hexdigest()}"
-
             try:
                 frames = await fetch_multi_timeframe(sym, include_1m=False)
+                horizon_target = next_cp["time"] if next_cp else "15:30"
+                horizon_text = (
+                    f"Current checkpoint is {active_cp['time']} IST. "
+                    f"Predict the most probable next move ONLY until {horizon_target} IST. "
+                    "Do not provide full-day forecast."
+                )
+                result = await get_ai_decision(
+                    frames,
+                    sym,
+                    now,
+                    checkpoint_horizon=horizon_text,
+                )
             except Exception as exc:
-                # yfinance failed — serve today's EOD as fallback
-                eod_cached = cache_get(eod_fallback_key)
-                if eod_cached:
-                    try:
-                        return json.loads(eod_cached)
-                    except Exception:
-                        pass
-                return _fallback(f"Market data unavailable: {exc}")
+                result = _fallback(f"Intraday checkpoint analysis failed: {exc}")
+                result["symbol"] = sym
 
-            result = await get_ai_decision(frames, sym, now)
+            result.update(
+                {
+                    "analysis_type": "INTRADAY",
+                    "symbol": sym,
+                    "checkpoint_mode": True,
+                    "active_checkpoint": active_cp["id"],
+                    "active_checkpoint_time_ist": active_cp["time"],
+                    "next_checkpoint": next_cp["id"] if next_cp else None,
+                    "next_checkpoint_time_ist": next_cp["time"] if next_cp else None,
+                    "valid_until_ist": valid_until.isoformat(),
+                    "checkpoint_generated_at_ist": ist_now.isoformat(),
+                }
+            )
 
-            # ONLY cache real BULLISH/BEARISH results — NOT WAIT/error fallbacks.
-            # If we cached an error, the next 45 minutes would show the same error.
-            decision = result.get("decision", "WAIT")
-            bias = result.get("bias_strength", "LOW")
-            is_real_analysis = decision in ("BULLISH", "BEARISH") or (decision == "WAIT" and bias != "LOW")
-            if is_real_analysis:
-                cache_set(cache_key, json.dumps(result), CACHE_TTL_SECONDS)
-            else:
-                # Gemini returned error/low-confidence WAIT — show EOD instead
-                eod_cached = cache_get(eod_fallback_key)
-                if eod_cached:
-                    try:
-                        return json.loads(eod_cached)
-                    except Exception:
-                        pass
-
+            cache_set(
+                checkpoint_cache_key,
+                json.dumps(result),
+                _window_ttl_seconds(ist_now, next_cp),
+            )
             return result
 
         # ── EOD / Market-closed mode ───────────────────────────────────────

@@ -21,6 +21,13 @@ interface IntradayData {
     reasoning: string;
     captured_at: string;
     symbol: string;
+    checkpoint_mode?: boolean;
+    active_checkpoint?: string | null;
+    active_checkpoint_time_ist?: string | null;
+    next_checkpoint?: string | null;
+    next_checkpoint_time_ist?: string | null;
+    valid_until_ist?: string | null;
+    checkpoint_generated_at_ist?: string | null;
 }
 
 interface EODData {
@@ -201,6 +208,7 @@ export default function AIDecision({ symbol }: { symbol: string }) {
     const mins = Math.floor(countdown / 60);
     const secs = String(countdown % 60).padStart(2, "0");
     const isEOD = data?.analysis_type === "EOD";
+    const intraday = !isEOD ? (data as IntradayData | null) : null;
 
     return (
         <div
@@ -229,7 +237,11 @@ export default function AIDecision({ symbol }: { symbol: string }) {
                             letterSpacing: "0.08em",
                         }}
                     >
-                        {isEOD ? `Based on ${(data as EODData)?.session_date || "last session"}` : "Gemini | News Context"}
+                        {isEOD
+                            ? `Based on ${(data as EODData)?.session_date || "last session"}`
+                            : intraday?.checkpoint_mode
+                                ? `Checkpoint ${intraday.active_checkpoint_time_ist || "--"} -> ${intraday.next_checkpoint_time_ist || "15:30"}`
+                                : "Gemini | News Context"}
                     </span>
                 </div>
 
@@ -257,6 +269,11 @@ export default function AIDecision({ symbol }: { symbol: string }) {
             {!isEOD && (
                 <div style={{ marginBottom: "0.9rem", padding: "0.65rem 0.8rem", borderRadius: "10px", background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.18)", fontSize: "0.68rem", color: "#93c5fd", lineHeight: 1.5 }}>
                     News impact can include global macro/geopolitical context. Treat this as decision support and verify critical headlines separately.
+                    {intraday?.checkpoint_mode && (
+                        <div style={{ marginTop: "0.35rem", fontSize: "0.62rem", color: "#bfdbfe", fontWeight: 700 }}>
+                            Live checkpoint mode active. This decision is held until {intraday.next_checkpoint_time_ist || "15:30"} IST.
+                        </div>
+                    )}
                 </div>
             )}
 

@@ -330,10 +330,14 @@ PRICE_ACTION_PROMPT = """Expert NSE Nifty 50 intraday trader. Analyze using smar
 LIVE NEWS SNAPSHOT (externally fetched, last 24h):
 {live_news_block}
 
+CHECKPOINT HORIZON:
+{checkpoint_horizon_block}
+
 ANALYSIS CONTEXT:
 - Use ONLY the LIVE NEWS SNAPSHOT above for world events.
 - Examples: war escalation, sanctions, crude oil spike, US/Asia risk-off, central bank surprises.
 - If no strong global trigger is available, keep "news_items" empty and set "news_impact" to "No major trigger".
+- Forecast ONLY for next checkpoint window (short horizon), not full-day prediction.
 
 CRITICAL RULES:
 1. Reply ONLY with valid JSON object â€” NO markdown, NO ```json, NO text outside.
@@ -533,7 +537,12 @@ def _repair_json(text: str) -> dict | None:
 
 
 
-async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
+async def get_ai_decision(
+    frames: dict,
+    symbol: str,
+    now: datetime,
+    checkpoint_horizon: str | None = None,
+) -> dict:
     """
     Call Gemini with price action prompt and return structured decision dict.
     Falls back gracefully if API key is missing or call fails.
@@ -560,9 +569,11 @@ async def get_ai_decision(frames: dict, symbol: str, now: datetime) -> dict:
             return _fallback("No live market data (yfinance returned empty 5m/15m data for this symbol).")
 
         news_ctx = await _collect_live_market_news(now)
+        horizon_block = checkpoint_horizon or "No checkpoint context provided."
         prompt = PRICE_ACTION_PROMPT.format(
             market_data_block=market_block,
             live_news_block=news_ctx.get("prompt_block", "- No reliable live headlines fetched."),
+            checkpoint_horizon_block=horizon_block,
         )
 
         raw_text = await _call_gemini(prompt, settings.gemini_api_key)
