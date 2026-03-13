@@ -28,6 +28,7 @@ interface IntradayData {
     next_checkpoint_time_ist?: string | null;
     valid_until_ist?: string | null;
     checkpoint_generated_at_ist?: string | null;
+    next_refresh_at_ist?: string | null;
 }
 
 interface EODData {
@@ -48,6 +49,8 @@ interface EODData {
     captured_at: string;
     session_date: string;
     symbol: string;
+    next_refresh_at_ist?: string | null;
+    eod_cache_only?: boolean;
 }
 
 type AIData = IntradayData | EODData;
@@ -139,6 +142,11 @@ function secondsUntilIso(iso: string | null | undefined): number | null {
 
 function getRefreshSeconds(payload: AIData | null): number {
     if (!payload) return INTRADAY_FALLBACK_REFRESH_SECONDS;
+
+    const anyPayload = payload as IntradayData | EODData;
+    const genericNext = secondsUntilIso(anyPayload.next_refresh_at_ist);
+    if (genericNext !== null && genericNext > 0) return genericNext;
+
     if (payload.analysis_type === "EOD") return EOD_REFRESH_SECONDS;
 
     const intraday = payload as IntradayData;
@@ -147,6 +155,19 @@ function getRefreshSeconds(payload: AIData | null): number {
         if (seconds !== null && seconds > 0) return seconds;
     }
     return INTRADAY_FALLBACK_REFRESH_SECONDS;
+}
+
+function formatCountdown(totalSeconds: number): string {
+    const safe = Math.max(0, totalSeconds);
+    const hrs = Math.floor(safe / 3600);
+    const mins = Math.floor((safe % 3600) / 60);
+    const secs = safe % 60;
+    const mm = String(mins).padStart(2, "0");
+    const ss = String(secs).padStart(2, "0");
+    if (hrs > 0) {
+        return `${hrs}:${mm}:${ss}`;
+    }
+    return `${mins}:${ss}`;
 }
 
 export default function AIDecision({ symbol }: { symbol: string }) {
@@ -235,8 +256,7 @@ export default function AIDecision({ symbol }: { symbol: string }) {
         }
     }, [countdown, isLoading, fetchDecision]);
 
-    const mins = Math.floor(countdown / 60);
-    const secs = String(countdown % 60).padStart(2, "0");
+    const refreshLabel = formatCountdown(countdown);
     const isEOD = data?.analysis_type === "EOD";
     const intraday = !isEOD ? (data as IntradayData | null) : null;
 
@@ -276,7 +296,7 @@ export default function AIDecision({ symbol }: { symbol: string }) {
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                    <span style={{ fontSize: "0.58rem", color: "#64748b", fontWeight: 600 }}>Next refresh: {mins}:{secs}</span>
+                    <span style={{ fontSize: "0.58rem", color: "#64748b", fontWeight: 600 }}>Next refresh: {refreshLabel}</span>
                     <button
                         onClick={fetchDecision}
                         disabled={isLoading}

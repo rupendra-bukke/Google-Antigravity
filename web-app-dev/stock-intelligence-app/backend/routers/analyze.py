@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, time as dt_time
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query
@@ -627,6 +627,7 @@ LIVE_AI_CHECKPOINTS = [
     {"id": "1000", "time": "10:00", "hhmm": 1000},
     {"id": "1200", "time": "12:00", "hhmm": 1200},
     {"id": "1430", "time": "14:30", "hhmm": 1430},
+    {"id": "1500", "time": "15:00", "hhmm": 1500},
 ]
 INTRADAY_CHECKPOINT_CACHE_PREFIX = "ai_decision_cp:"
 
@@ -657,7 +658,7 @@ def _window_valid_until_ist(ist_now: datetime, next_cp: dict | None) -> datetime
             second=0,
             microsecond=0,
         )
-    # Last checkpoint (14:30) remains valid until market close.
+    # Last checkpoint remains valid until market close.
     return ist_now.replace(hour=15, minute=30, second=0, microsecond=0)
 
 
@@ -676,19 +677,100 @@ def _intraday_checkpoint_cache_key(symbol: str, date_str: str, checkpoint_id: st
         f"{hashlib.md5(symbol.encode()).hexdigest()}"
     )
 
+
+def _is_nse_trading_day(day: date) -> bool:
+    """
+    Holiday-aware NSE session check for a specific IST date.
+    Falls back to Mon-Fri if exchange_calendars is unavailable.
+    """
+    try:
+        import exchange_calendars as xcals
+        import pandas as pd
+
+        cal = xcals.get_calendar("XNSE")
+        return bool(cal.is_session(pd.Timestamp(day)))
+    except Exception:
+        return day.weekday() < 5
+
+
+def _previous_nse_trading_day(day: date) -> date:
+    probe = day - timedelta(days=1)
+    for _ in range(14):
+        if _is_nse_trading_day(probe):
+            return probe
+        probe -= timedelta(days=1)
+    return day
+
+
+def _next_nse_market_open_ist(now_ist: datetime) -> datetime:
+    today = now_ist.date()
+    open_time = dt_time(9, 15)
+
+    if _is_nse_trading_day(today) and now_ist.time() < open_time:
+        return datetime.combine(today, open_time, tzinfo=IST)
+
+    probe = today + timedelta(days=1)
+    for _ in range(14):
+        if _is_nse_trading_day(probe):
+            return datetime.combine(probe, open_time, tzinfo=IST)
+        probe += timedelta(days=1)
+
+    return datetime.combine(today + timedelta(days=1), open_time, tzinfo=IST)
+
+
+def _latest_eod_date_for_display(now_ist: datetime) -> date:
+    """
+    Which session's EOD should be shown while market is closed:
+    - After 15:30 on a trading day -> today
+    - Otherwise -> most recent previous trading day
+    """
+    today = now_ist.date()
+    if _is_nse_trading_day(today) and now_ist.time() >= dt_time(15, 30):
+        return today
+    return _previous_nse_trading_day(today)
+
+
+def _build_eod_cache_fallback(
+    symbol: str,
+    now_ist: datetime,
+    session_date: str,
+    next_refresh_at_ist: str,
+) -> dict:
+    return {
+        "analysis_type": "EOD",
+        "session_type": "Unavailable",
+        "close_position": "Unknown",
+        "next_day_bias": "WAIT",
+        "bias_strength": "LOW",
+        "key_resistance": [],
+        "key_support": [],
+        "sl_hunt_risk": "Analysis unavailable",
+        "next_day_entry_zone": None,
+        "next_day_stop_loss": None,
+        "next_day_target": None,
+        "alert_levels": [],
+        "news_tomorrow": [],
+        "reasoning": "EOD cached plan not ready yet. Wait for next refresh window.",
+        "captured_at": now_ist.isoformat(),
+        "session_date": session_date,
+        "symbol": symbol,
+        "next_refresh_at_ist": next_refresh_at_ist,
+        "eod_cache_only": True,
+    }
+
 @router.get("/ai-decision")
 async def ai_decision_endpoint(symbol: str = Query(default=None)):
     """
     Gemini-powered price action analysis.
-    - Market OPEN  → Intraday checkpoint analysis at 09:15 / 10:00 / 12:00 / 14:30 IST
+    - Market OPEN  → Intraday checkpoint analysis at 09:15 / 10:00 / 12:00 / 14:30 / 15:00 IST
                       (each result stays fixed until next checkpoint)
-    - Market CLOSED → EOD next-day outlook (20-hour cache)
+    - Market CLOSED → EOD cache-only display until next market open
     - Intraday failure → safe WAIT fallback for current checkpoint window
     """
     import hashlib
     from services.ai_decision import (
         cache_get, cache_set, _fallback,
-        get_eod_analysis, EOD_CACHE_KEY_PREFIX, EOD_CACHE_TTL,
+        EOD_CACHE_KEY_PREFIX,
     )
 
     try:
@@ -717,6 +799,7 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
                         "next_checkpoint": next_cp["id"] if next_cp else None,
                         "next_checkpoint_time_ist": next_cp["time"] if next_cp else None,
                         "valid_until_ist": valid_until.isoformat(),
+                        "next_refresh_at_ist": valid_until.isoformat(),
                     }
                 )
                 return pre_open_result
@@ -738,6 +821,7 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
                     data.setdefault("next_checkpoint", next_cp["id"] if next_cp else None)
                     data.setdefault("next_checkpoint_time_ist", next_cp["time"] if next_cp else None)
                     data.setdefault("valid_until_ist", valid_until.isoformat())
+                    data.setdefault("next_refresh_at_ist", valid_until.isoformat())
                     return data
                 except Exception:
                     pass
@@ -770,6 +854,7 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
                     "next_checkpoint": next_cp["id"] if next_cp else None,
                     "next_checkpoint_time_ist": next_cp["time"] if next_cp else None,
                     "valid_until_ist": valid_until.isoformat(),
+                    "next_refresh_at_ist": valid_until.isoformat(),
                     "checkpoint_generated_at_ist": ist_now.isoformat(),
                 }
             )
@@ -781,24 +866,37 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
             )
             return result
 
-        # ── EOD / Market-closed mode ───────────────────────────────────────
-        ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30)))  # IST
-        date_str = ist_now.strftime("%Y-%m-%d")
-        eod_key = f"{EOD_CACHE_KEY_PREFIX}{date_str}:{hashlib.md5(sym.encode()).hexdigest()}"
+        # ── EOD / Market-closed mode (cache only; no new Gemini call) ───────
+        next_open = _next_nse_market_open_ist(ist_now)
+        session_date = _latest_eod_date_for_display(ist_now)
+        session_dates = [session_date]
+        prev_session = _previous_nse_trading_day(session_date)
+        if prev_session != session_date:
+            session_dates.append(prev_session)
 
-        cached = cache_get(eod_key)
-        if cached:
+        sym_hash = hashlib.md5(sym.encode()).hexdigest()
+        for d in session_dates:
+            eod_key = f"{EOD_CACHE_KEY_PREFIX}{d.strftime('%Y-%m-%d')}:{sym_hash}"
+            cached = cache_get(eod_key)
+            if not cached:
+                continue
             try:
                 data = json.loads(cached)
-                # Ensure analysis_type tag is present
                 data.setdefault("analysis_type", "EOD")
+                data.setdefault("session_date", d.strftime("%Y-%m-%d"))
+                data.setdefault("symbol", sym)
+                data["next_refresh_at_ist"] = next_open.isoformat()
+                data["eod_cache_only"] = True
                 return data
             except Exception:
-                pass
+                continue
 
-        # No cached EOD — run it now using last trading day data
-        result = await get_eod_analysis(sym, now)
-        return result
+        return _build_eod_cache_fallback(
+            symbol=sym,
+            now_ist=ist_now,
+            session_date=session_date.strftime("%Y-%m-%d"),
+            next_refresh_at_ist=next_open.isoformat(),
+        )
     except Exception as exc:
         # Never bubble raw 5xx for this endpoint; keep UI stable with fallback payload.
         return _fallback(f"AI decision endpoint failed: {exc}")
