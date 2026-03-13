@@ -8,6 +8,7 @@ interface IndexConfig {
     exchange: "NSE" | "BSE";
     // Fallback weekday only if exchange API fails.
     expiryDay: number;
+    fallbackMode: "weekly" | "monthly_last";
     color: string;
     bg: string;
     border: string;
@@ -37,7 +38,8 @@ const INDICES: IndexConfig[] = [
         name: "Nifty 50",
         abbr: "NIFTY",
         exchange: "NSE",
-        expiryDay: 4,
+        expiryDay: 2,
+        fallbackMode: "weekly",
         color: "#818cf8",
         bg: "rgba(99,102,241,0.07)",
         border: "rgba(99,102,241,0.18)",
@@ -47,7 +49,8 @@ const INDICES: IndexConfig[] = [
         name: "Bank Nifty",
         abbr: "BANKNIFTY",
         exchange: "NSE",
-        expiryDay: 3,
+        expiryDay: 2,
+        fallbackMode: "monthly_last",
         color: "#22d3ee",
         bg: "rgba(6,182,212,0.07)",
         border: "rgba(6,182,212,0.18)",
@@ -58,6 +61,7 @@ const INDICES: IndexConfig[] = [
         abbr: "FINNIFTY",
         exchange: "NSE",
         expiryDay: 2,
+        fallbackMode: "monthly_last",
         color: "#34d399",
         bg: "rgba(16,185,129,0.07)",
         border: "rgba(16,185,129,0.18)",
@@ -68,6 +72,7 @@ const INDICES: IndexConfig[] = [
         abbr: "SENSEX",
         exchange: "BSE",
         expiryDay: 4,
+        fallbackMode: "weekly",
         color: "#fbbf24",
         bg: "rgba(245,158,11,0.07)",
         border: "rgba(245,158,11,0.18)",
@@ -90,6 +95,14 @@ function getNextExpiry(expiryDay: number, from: Date): Date {
     const d = new Date(from);
     d.setUTCDate(d.getUTCDate() + diff);
     return d;
+}
+
+function getNextMonthlyExpiry(expiryDay: number, from: Date): Date {
+    const current = getLastExpiryOfMonth(expiryDay, from.getUTCFullYear(), from.getUTCMonth());
+    if (current.getTime() >= from.getTime()) return current;
+
+    const nextMonth = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 1));
+    return getLastExpiryOfMonth(expiryDay, nextMonth.getUTCFullYear(), nextMonth.getUTCMonth());
 }
 
 function getLastExpiryOfMonth(expiryDay: number, year: number, month: number): Date {
@@ -180,9 +193,13 @@ export default function ExpiryBanner() {
                 }
 
                 const fallbackExpiry = getNextExpiry(idx.expiryDay, today);
-                const days = daysBetween(today, fallbackExpiry);
-                const monthly = isMonthlyExpiry(fallbackExpiry, idx.expiryDay);
-                return { ...idx, expiry: fallbackExpiry, days, monthly };
+                const fallbackExpiryAdjusted =
+                    idx.fallbackMode === "monthly_last"
+                        ? getNextMonthlyExpiry(idx.expiryDay, today)
+                        : fallbackExpiry;
+                const days = daysBetween(today, fallbackExpiryAdjusted);
+                const monthly = idx.fallbackMode === "monthly_last" || isMonthlyExpiry(fallbackExpiryAdjusted, idx.expiryDay);
+                return { ...idx, expiry: fallbackExpiryAdjusted, days, monthly };
             }),
         [today, liveByIndex]
     );

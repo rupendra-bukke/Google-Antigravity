@@ -7,6 +7,7 @@ interface ExpirySpec {
     name: string;
     exchange: "NSE" | "BSE";
     expiryDay: number; // JS weekday: 0=Sun..6=Sat
+    fallbackMode: "weekly" | "monthly_last";
 }
 
 interface ExpiryCalendarCard {
@@ -55,10 +56,10 @@ interface ZeroHeroPlan {
 }
 
 const EXPIRY_INDICES: ExpirySpec[] = [
-    { abbr: "NIFTY", name: "Nifty 50", exchange: "NSE", expiryDay: 4 },
-    { abbr: "BANKNIFTY", name: "Bank Nifty", exchange: "NSE", expiryDay: 3 },
-    { abbr: "FINNIFTY", name: "Fin Nifty", exchange: "NSE", expiryDay: 2 },
-    { abbr: "SENSEX", name: "Sensex", exchange: "BSE", expiryDay: 4 },
+    { abbr: "NIFTY", name: "Nifty 50", exchange: "NSE", expiryDay: 2, fallbackMode: "weekly" },
+    { abbr: "BANKNIFTY", name: "Bank Nifty", exchange: "NSE", expiryDay: 2, fallbackMode: "monthly_last" },
+    { abbr: "FINNIFTY", name: "Fin Nifty", exchange: "NSE", expiryDay: 2, fallbackMode: "monthly_last" },
+    { abbr: "SENSEX", name: "Sensex", exchange: "BSE", expiryDay: 4, fallbackMode: "weekly" },
 ];
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -125,6 +126,21 @@ function daysBetween(a: Date, b: Date): number {
 
 function fmtDateShort(d: Date): string {
     return `${DAYS[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+}
+
+function getLastExpiryOfMonth(expiryDay: number, year: number, month: number): Date {
+    const d = new Date(Date.UTC(year, month + 1, 0));
+    let back = d.getUTCDay() - expiryDay;
+    if (back < 0) back += 7;
+    d.setUTCDate(d.getUTCDate() - back);
+    return d;
+}
+
+function getNextMonthlyExpiry(expiryDay: number, fromDate: Date): Date {
+    const current = getLastExpiryOfMonth(expiryDay, fromDate.getUTCFullYear(), fromDate.getUTCMonth());
+    if (current.getTime() >= fromDate.getTime()) return current;
+    const nextMonth = new Date(Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth() + 1, 1));
+    return getLastExpiryOfMonth(expiryDay, nextMonth.getUTCFullYear(), nextMonth.getUTCMonth());
 }
 
 function parseIsoDate(value: string): Date | null {
@@ -241,7 +257,10 @@ export default function ExpiryZeroHeroPanel() {
                 }
             }
 
-            const fallbackNext = getNextExpiry(idx.expiryDay, today);
+            const fallbackNext =
+                idx.fallbackMode === "monthly_last"
+                    ? getNextMonthlyExpiry(idx.expiryDay, today)
+                    : getNextExpiry(idx.expiryDay, today);
             const days = daysBetween(today, fallbackNext);
             return { ...idx, nextExpiry: fallbackNext, days, isToday: days === 0 };
         }).sort((a, b) => a.days - b.days || a.abbr.localeCompare(b.abbr));

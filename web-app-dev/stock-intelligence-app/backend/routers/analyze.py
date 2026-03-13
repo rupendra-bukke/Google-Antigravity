@@ -47,14 +47,16 @@ EXPIRY_INDEX_CONFIG = {
         "symbol": "^NSEI",
         "name": "Nifty 50",
         "exchange": "NSE",
-        "expiry_weekday": 3,  # Thursday (Mon=0)
+        "expiry_weekday": 1,  # Tuesday (Mon=0)
+        "fallback_mode": "weekly",
         "strike_step": 50,
     },
     "BANKNIFTY": {
         "symbol": "^NSEBANK",
         "name": "Bank Nifty",
         "exchange": "NSE",
-        "expiry_weekday": 2,  # Wednesday
+        "expiry_weekday": 1,  # Tuesday
+        "fallback_mode": "monthly_last",
         "strike_step": 100,
     },
     "FINNIFTY": {
@@ -62,13 +64,15 @@ EXPIRY_INDEX_CONFIG = {
         "name": "Fin Nifty",
         "exchange": "NSE",
         "expiry_weekday": 1,  # Tuesday
+        "fallback_mode": "monthly_last",
         "strike_step": 50,
     },
     "SENSEX": {
         "symbol": "^BSESN",
         "name": "Sensex",
         "exchange": "BSE",
-        "expiry_weekday": 3,  # Thursday (BSE revision effective Sep 2025)
+        "expiry_weekday": 3,  # Thursday
+        "fallback_mode": "weekly",
         "strike_step": 100,
     },
 }
@@ -108,10 +112,34 @@ def _parse_bse_expiry(value: str) -> str | None:
         return None
 
 
-def _fallback_next_expiry_iso(now_ist: datetime, expiry_weekday: int) -> str:
+def _last_weekday_of_month(year: int, month: int, weekday: int) -> date:
+    # month: 1..12
+    if month == 12:
+        d = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        d = date(year, month + 1, 1) - timedelta(days=1)
+    while d.weekday() != weekday:
+        d -= timedelta(days=1)
+    return d
+
+
+def _fallback_next_expiry_date(now_ist: datetime, expiry_weekday: int, mode: str = "weekly") -> date:
+    today = now_ist.date()
+    if mode == "monthly_last":
+        candidate = _last_weekday_of_month(today.year, today.month, expiry_weekday)
+        if candidate >= today:
+            return candidate
+        next_month = 1 if today.month == 12 else today.month + 1
+        next_year = today.year + 1 if today.month == 12 else today.year
+        return _last_weekday_of_month(next_year, next_month, expiry_weekday)
+
     weekday = now_ist.weekday()
     diff_days = (expiry_weekday - weekday + 7) % 7
-    return (now_ist + timedelta(days=diff_days)).date().isoformat()
+    return (now_ist + timedelta(days=diff_days)).date()
+
+
+def _fallback_next_expiry_iso(now_ist: datetime, expiry_weekday: int, mode: str = "weekly") -> str:
+    return _fallback_next_expiry_date(now_ist, expiry_weekday, mode).isoformat()
 
 
 def _monthly_flag(next_expiry: date, all_expiries: list[date]) -> bool:
@@ -211,7 +239,11 @@ async def _build_expiry_calendar_payload() -> dict:
             expiries = [d.isoformat() for d in parsed_dates[:24]]
         else:
             # Safety fallback if exchange API is unavailable.
-            next_expiry_iso = _fallback_next_expiry_iso(now_ist, cfg["expiry_weekday"])
+            next_expiry_iso = _fallback_next_expiry_iso(
+                now_ist,
+                cfg["expiry_weekday"],
+                cfg.get("fallback_mode", "weekly"),
+            )
             next_expiry_date = datetime.fromisoformat(next_expiry_iso).date()
             days_to_next = (next_expiry_date - today).days
             source = "fallback_weekday_rule"
@@ -709,8 +741,13 @@ async def expiry_zero_hero_endpoint(index: str = Query(..., description="NIFTY|B
 
     now = datetime.now(timezone.utc)
     ist_now = now.astimezone(IST)
-    next_expiry = _fallback_next_expiry_iso(ist_now, cfg["expiry_weekday"])
-    expiry_today = False
+    fallback_next = _fallback_next_expiry_date(
+        ist_now,
+        cfg["expiry_weekday"],
+        cfg.get("fallback_mode", "weekly"),
+    )
+    next_expiry = fallback_next.isoformat()
+    expiry_today = fallback_next == ist_now.date()
 
     try:
         calendar = await get_expiry_calendar(force_refresh=False)
@@ -722,7 +759,7 @@ async def expiry_zero_hero_endpoint(index: str = Query(..., description="NIFTY|B
                 next_expiry = match["next_expiry"]
     except Exception:
         # Keep fallback weekday logic if exchange APIs fail.
-        expiry_today = ist_now.weekday() == cfg["expiry_weekday"]
+        expiry_today = fallback_next == ist_now.date()
 
     if not expiry_today:
         return {

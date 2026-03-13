@@ -19,6 +19,11 @@ Version format:
 ### Changed
 - Expiry banner now uses backend live expiry API instead of local weekday-only logic.
 - Expiry zero-to-hero panel now uses the same live expiry calendar to decide active expiry day.
+- Fallback expiry rules updated to match current structure more closely if API is unavailable:
+  - NIFTY fallback: weekly Tuesday
+  - BANKNIFTY fallback: last Tuesday of month
+  - FINNIFTY fallback: last Tuesday of month
+  - SENSEX fallback: weekly Thursday
 - Free-tier optimization:
   - backend expiry cache increased to 6 hours
   - frontend expiry polling reduced to hourly
