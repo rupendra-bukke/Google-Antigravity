@@ -47,7 +47,7 @@ const EXPIRY_INDICES: ExpirySpec[] = [
     { abbr: "NIFTY", name: "Nifty 50", exchange: "NSE", expiryDay: 4 },
     { abbr: "BANKNIFTY", name: "Bank Nifty", exchange: "NSE", expiryDay: 3 },
     { abbr: "FINNIFTY", name: "Fin Nifty", exchange: "NSE", expiryDay: 2 },
-    { abbr: "SENSEX", name: "Sensex", exchange: "BSE", expiryDay: 5 },
+    { abbr: "SENSEX", name: "Sensex", exchange: "BSE", expiryDay: 4 },
 ];
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

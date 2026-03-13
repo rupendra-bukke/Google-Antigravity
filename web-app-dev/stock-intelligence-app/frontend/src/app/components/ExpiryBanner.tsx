@@ -54,7 +54,7 @@ const INDICES: IndexConfig[] = [
         name: "Sensex",
         abbr: "SENSEX",
         exchange: "BSE",
-        expiryDay: 5,
+        expiryDay: 4,
         color: "#fbbf24",
         bg: "rgba(245,158,11,0.07)",
         border: "rgba(245,158,11,0.18)",

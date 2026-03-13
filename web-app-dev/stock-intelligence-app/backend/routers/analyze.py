@@ -58,7 +58,7 @@ EXPIRY_INDEX_CONFIG = {
         "symbol": "^BSESN",
         "name": "Sensex",
         "exchange": "BSE",
-        "expiry_weekday": 4,  # Friday
+        "expiry_weekday": 3,  # Thursday (BSE revision effective Sep 2025)
         "strike_step": 100,
     },
 }
