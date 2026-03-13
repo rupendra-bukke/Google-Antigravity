@@ -79,3 +79,4 @@ Memory trick: `Show current, then trust`.
 - Test on Preview URL.
 - Promote only tested changes to `main`.
 - Keep Preview env pointing to dev backend, Production env to prod backend.
+- Free-tier guardrail (mandatory): every new feature must stay within free-tier limits of all providers (Vercel, Render, Upstash, AI APIs). Prefer caching, batched calls, slower polling, and graceful fallback over frequent live calls.

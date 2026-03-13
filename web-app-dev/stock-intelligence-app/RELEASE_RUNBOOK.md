@@ -19,6 +19,18 @@ This document captures the DEV -> PROD release flow for `stock-intelligence-app`
   - Backend (Render dev + prod): `APP_VERSION=vYYYY.MM.DD-NN`
   - Optional backend channel override: `APP_CHANNEL=dev|prod`
 
+0.1 Free-tier safety check (mandatory before prod push)
+- Confirm new/updated feature does not exceed free-tier budgets across all active providers:
+  - Vercel (frontend/serverless usage)
+  - Render (RAM/CPU/request load)
+  - Upstash Redis (request volume)
+  - AI/external APIs (request quotas/cost)
+- Enforce efficiency patterns before release:
+  - cache where data is not tick-critical
+  - batch API calls when possible
+  - increase polling interval if real-time is not required
+  - add fallback path if provider API fails/rate-limits
+
 1. Clean `dev` branch
 - `git checkout dev`
 - `git pull origin dev`

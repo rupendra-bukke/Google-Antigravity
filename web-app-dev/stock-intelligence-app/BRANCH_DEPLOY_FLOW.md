@@ -260,6 +260,8 @@ Always:
 1. build in `dev`
 2. test in Preview
 3. merge to `main`
+4. keep every feature free-tier safe across all providers (Vercel, Render, Upstash, AI APIs) by using caching, throttled refresh, and efficient API usage
 
 Memory trick:
 - "No direct main unless emergency"
+- "If it burns free-tier, redesign before release"

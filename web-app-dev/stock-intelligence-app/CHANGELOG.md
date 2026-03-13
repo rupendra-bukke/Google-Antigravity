@@ -11,10 +11,18 @@ Version format:
 
 ## Unreleased
 
+- _Add upcoming release notes here before merging `dev` into `main`._
+
+## [v2026.03.13-01] - 2026-03-13
+
 ### Added
-- Live expiry calendar API: `GET /api/v1/expiry-calendar` using trusted exchange endpoints.
+- Live expiry calendar API: `GET /api/v1/expiry-calendar` using trusted exchange endpoints:
   - NSE source: `option-chain-contract-info`
   - BSE source: `ddlExpiry_IV`
+- Mandatory free-tier guardrail added to core workflow docs:
+  - `FLOW_QUICK_REF.md`
+  - `BRANCH_DEPLOY_FLOW.md`
+  - `RELEASE_RUNBOOK.md`
 
 ### Changed
 - Expiry banner now uses backend live expiry API instead of local weekday-only logic.
