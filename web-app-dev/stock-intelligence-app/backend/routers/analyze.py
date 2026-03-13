@@ -623,6 +623,7 @@ async def advanced_analyze(symbol: str = Query(default=None)):
 # Live intraday AI checkpoints (IST). Output is generated once per checkpoint and
 # reused until the next checkpoint to keep decisions stable during the window.
 LIVE_AI_CHECKPOINTS = [
+    {"id": "0915", "time": "09:15", "hhmm": 915},
     {"id": "1000", "time": "10:00", "hhmm": 1000},
     {"id": "1200", "time": "12:00", "hhmm": 1200},
     {"id": "1430", "time": "14:30", "hhmm": 1430},
@@ -679,7 +680,7 @@ def _intraday_checkpoint_cache_key(symbol: str, date_str: str, checkpoint_id: st
 async def ai_decision_endpoint(symbol: str = Query(default=None)):
     """
     Gemini-powered price action analysis.
-    - Market OPEN  → Intraday checkpoint analysis at 10:00 / 12:00 / 14:30 IST
+    - Market OPEN  → Intraday checkpoint analysis at 09:15 / 10:00 / 12:00 / 14:30 IST
                       (each result stays fixed until next checkpoint)
     - Market CLOSED → EOD next-day outlook (20-hour cache)
     - Intraday failure → safe WAIT fallback for current checkpoint window
@@ -703,9 +704,9 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
             active_cp, next_cp = _resolve_live_ai_window(ist_now)
             valid_until = _window_valid_until_ist(ist_now, next_cp)
 
-            # Before first checkpoint (10:00): show wait message until first run.
+            # Before first checkpoint (09:15): show wait message until first run.
             if active_cp is None:
-                pre_open_result = _fallback("First live AI checkpoint starts at 10:00 IST.")
+                pre_open_result = _fallback("First live AI checkpoint starts at 09:15 IST.")
                 pre_open_result.update(
                     {
                         "analysis_type": "INTRADAY",
