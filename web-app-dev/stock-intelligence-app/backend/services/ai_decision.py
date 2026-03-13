@@ -1121,9 +1121,38 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
     except json.JSONDecodeError as e:
         raw_snippet = raw_text[:400] if 'raw_text' in dir() else '?'
         extracted = _extract_json(raw_snippet) if raw_snippet != '?' else '?'
+        repaired = _repair_json(extracted)
+        if repaired:
+            logger.warning("Gemini EOD JSON repaired (was truncated). Using partial result.")
+            repaired.setdefault("analysis_type", "EOD")
+            repaired.setdefault("session_type", "Unavailable")
+            repaired.setdefault("close_position", "Unknown")
+            repaired.setdefault("next_day_bias", "WAIT")
+            repaired.setdefault("bias_strength", "LOW")
+            repaired.setdefault("key_resistance", [])
+            repaired.setdefault("key_support", [])
+            repaired.setdefault("sl_hunt_risk", "Analysis unavailable")
+            repaired.setdefault("next_day_entry_zone", None)
+            repaired.setdefault("next_day_stop_loss", None)
+            repaired.setdefault("next_day_target", None)
+            repaired.setdefault("alert_levels", [])
+            repaired.setdefault("reasoning", "Using repaired EOD output due temporary AI format issue.")
+            repaired["captured_at"] = ist_now.isoformat()
+            if "latest_date" in locals():
+                repaired["session_date"] = str(latest_date)
+            repaired["symbol"] = symbol
+            repaired["news_tomorrow"] = _merge_unique_news(
+                repaired.get("news_tomorrow") if isinstance(repaired.get("news_tomorrow"), list) else [],
+                news_ctx.get("items", []),
+                limit=6,
+            )
+            repaired["live_news_fetched_at"] = news_ctx.get("fetched_at")
+            repaired["news_source_count"] = int(news_ctx.get("source_count", 0) or 0)
+            cache_set(cache_key, json.dumps(repaired), EOD_CACHE_TTL)
+            return repaired
         logger.error("EOD non-JSON | raw[:400]: %.400s | extracted[:300]: %.300s | error: %s",
                      raw_snippet, extracted, e)
-        return _eod_fallback(symbol, f"JSON parse failed. Extracted starts with: {extracted[:150]}")
+        return _eod_fallback(symbol, "Temporary AI formatting issue. Auto-retry on next refresh.")
     except httpx.HTTPStatusError as e:
         body = e.response.text[:300]
         logger.error("EOD Gemini HTTP error %s: %s", e.response.status_code, body)

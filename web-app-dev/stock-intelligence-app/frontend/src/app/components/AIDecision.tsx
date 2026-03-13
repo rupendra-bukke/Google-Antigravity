@@ -72,6 +72,9 @@ const STRENGTH_COLORS: Record<string, string> = {
 
 type MarketBias = "BULLISH" | "BEARISH" | "WAIT";
 
+const INTRADAY_FALLBACK_REFRESH_SECONDS = 300;
+const EOD_REFRESH_SECONDS = 1800;
+
 function makeLocalFallback(symbol: string, reason: string): IntradayData {
     return {
         decision: "WAIT",
@@ -125,6 +128,27 @@ function getOptionPlan(bias: MarketBias) {
     };
 }
 
+function secondsUntilIso(iso: string | null | undefined): number | null {
+    if (!iso) return null;
+    const target = new Date(iso).getTime();
+    if (Number.isNaN(target)) return null;
+    const now = Date.now();
+    const diff = Math.ceil((target - now) / 1000);
+    return diff > 0 ? diff : 0;
+}
+
+function getRefreshSeconds(payload: AIData | null): number {
+    if (!payload) return INTRADAY_FALLBACK_REFRESH_SECONDS;
+    if (payload.analysis_type === "EOD") return EOD_REFRESH_SECONDS;
+
+    const intraday = payload as IntradayData;
+    if (intraday.checkpoint_mode) {
+        const seconds = secondsUntilIso(intraday.valid_until_ist);
+        if (seconds !== null && seconds > 0) return seconds;
+    }
+    return INTRADAY_FALLBACK_REFRESH_SECONDS;
+}
+
 export default function AIDecision({ symbol }: { symbol: string }) {
     const [data, setData] = useState<AIData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -174,12 +198,16 @@ export default function AIDecision({ symbol }: { symbol: string }) {
                 }
             }
             setData(json);
-            setCountdown(300);
+            setCountdown(getRefreshSeconds(json));
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : "Failed to load AI analysis";
             setError(msg);
             // Keep panel usable even when upstream API returns 5xx.
-            setData((prev) => prev ?? makeLocalFallback(symbol, msg));
+            setData((prev) => {
+                const fallback = prev ?? makeLocalFallback(symbol, msg);
+                setCountdown(getRefreshSeconds(fallback));
+                return fallback;
+            });
         } finally {
             setIsLoading(false);
         }
@@ -195,15 +223,17 @@ export default function AIDecision({ symbol }: { symbol: string }) {
                 if (typeof document !== "undefined" && document.hidden) {
                     return c;
                 }
-                if (c <= 1) {
-                    fetchDecision();
-                    return 300;
-                }
-                return c - 1;
+                return Math.max(c - 1, 0);
             });
         }, 1000);
         return () => clearInterval(tick);
-    }, [fetchDecision]);
+    }, []);
+
+    useEffect(() => {
+        if (countdown === 0 && !isLoading) {
+            fetchDecision();
+        }
+    }, [countdown, isLoading, fetchDecision]);
 
     const mins = Math.floor(countdown / 60);
     const secs = String(countdown % 60).padStart(2, "0");
