@@ -9,6 +9,17 @@ interface ExpirySpec {
     expiryDay: number; // JS weekday: 0=Sun..6=Sat
 }
 
+interface ExpiryCalendarCard {
+    abbr: string;
+    next_expiry: string;
+    days_to_next: number;
+    expiry_today: boolean;
+}
+
+interface ExpiryCalendarResponse {
+    cards?: ExpiryCalendarCard[];
+}
+
 interface OptionLeg {
     contract: string;
     entry: string;
@@ -116,6 +127,12 @@ function fmtDateShort(d: Date): string {
     return `${DAYS[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 }
 
+function parseIsoDate(value: string): Date | null {
+    const parsed = new Date(`${value}T00:00:00Z`);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+}
+
 function fmtNum(v: number): string {
     return v.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 }
@@ -173,6 +190,7 @@ function compactText(value: string | undefined, maxLen: number): string {
 export default function ExpiryZeroHeroPanel() {
     const [istClock, setIstClock] = useState<IstClock>(getIstClock());
     const [plansByIndex, setPlansByIndex] = useState<Record<string, ZeroHeroPlan>>({});
+    const [calendarByIndex, setCalendarByIndex] = useState<Record<string, ExpiryCalendarCard>>({});
     const [expandedByIndex, setExpandedByIndex] = useState<Record<string, boolean>>({});
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -184,16 +202,50 @@ export default function ExpiryZeroHeroPanel() {
         return () => clearInterval(timer);
     }, []);
 
+    useEffect(() => {
+        const fetchCalendar = async () => {
+            try {
+                const res = await fetch("/api/v1/expiry-calendar", { cache: "no-store" });
+                if (!res.ok) return;
+                const data: ExpiryCalendarResponse = await res.json();
+                const cards = Array.isArray(data.cards) ? data.cards : [];
+                const nextMap: Record<string, ExpiryCalendarCard> = {};
+                for (const card of cards) {
+                    if (!card || typeof card.abbr !== "string" || typeof card.next_expiry !== "string") continue;
+                    nextMap[card.abbr.toUpperCase()] = card;
+                }
+                if (Object.keys(nextMap).length > 0) {
+                    setCalendarByIndex(nextMap);
+                }
+            } catch {
+                // Fallback to local weekday rules below.
+            }
+        };
+
+        void fetchCalendar();
+        const timer = setInterval(() => void fetchCalendar(), 60 * 60 * 1000);
+        return () => clearInterval(timer);
+    }, []);
+
     const dayKey = `${istClock.year}-${istClock.month}-${istClock.day}`;
 
     const rows = useMemo(() => {
         const today = getIstDateOnly(istClock);
         return EXPIRY_INDICES.map((idx) => {
-            const nextExpiry = getNextExpiry(idx.expiryDay, today);
-            const days = daysBetween(today, nextExpiry);
-            return { ...idx, nextExpiry, days, isToday: days === 0 };
+            const live = calendarByIndex[idx.abbr];
+            if (live) {
+                const parsed = parseIsoDate(live.next_expiry);
+                if (parsed) {
+                    const days = Number.isFinite(live.days_to_next) ? live.days_to_next : daysBetween(today, parsed);
+                    return { ...idx, nextExpiry: parsed, days, isToday: Boolean(live.expiry_today) || days === 0 };
+                }
+            }
+
+            const fallbackNext = getNextExpiry(idx.expiryDay, today);
+            const days = daysBetween(today, fallbackNext);
+            return { ...idx, nextExpiry: fallbackNext, days, isToday: days === 0 };
         }).sort((a, b) => a.days - b.days || a.abbr.localeCompare(b.abbr));
-    }, [dayKey]);
+    }, [dayKey, calendarByIndex]);
 
     const todayExpiries = useMemo(() => rows.filter((r) => r.isToday), [rows]);
     const nearest = rows[0];

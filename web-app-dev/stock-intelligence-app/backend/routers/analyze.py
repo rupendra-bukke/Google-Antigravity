@@ -1,8 +1,11 @@
 ﻿"""Router for the /api/v1/ endpoints."""
 
-from fastapi import APIRouter, HTTPException, Query
-from datetime import datetime, timezone, timedelta
+import asyncio
 import json
+from datetime import date, datetime, timedelta, timezone
+
+import httpx
+from fastapi import APIRouter, HTTPException, Query
 
 from models.schemas import (
     AnalyzeResponse,
@@ -31,6 +34,13 @@ from services.ai_decision import get_ai_decision, cache_get, cache_set
 from config import settings
 
 router = APIRouter(prefix="/api/v1", tags=["analyze"])
+
+IST = timezone(timedelta(hours=5, minutes=30))
+# Expiry dates do not change frequently intraday; long cache keeps free-tier API usage low.
+EXPIRY_CACHE_TTL_SECONDS = 21600
+_expiry_cache_payload: dict | None = None
+_expiry_cache_ts: float = 0.0
+_expiry_cache_lock = asyncio.Lock()
 
 EXPIRY_INDEX_CONFIG = {
     "NIFTY": {
@@ -63,6 +73,16 @@ EXPIRY_INDEX_CONFIG = {
     },
 }
 
+NSE_EXPIRY_SYMBOLS = {
+    "NIFTY": "NIFTY",
+    "BANKNIFTY": "BANKNIFTY",
+    "FINNIFTY": "FINNIFTY",
+}
+
+BSE_EXPIRY_SCRIP_CODES = {
+    "SENSEX": 1,
+}
+
 WATCHLIST_DEFAULT_SYMBOLS = ["^NSEI", "^NSEBANK", "^CNXFINSERVICE", "^BSESN"]
 WATCHLIST_LABELS = {
     "^NSEI": "NIFTY 50",
@@ -72,6 +92,185 @@ WATCHLIST_LABELS = {
 }
 ANALYZE_CACHE_KEY_PREFIX = "analyze_v2:"
 ANALYZE_CACHE_TTL_SECONDS = 90
+
+
+def _parse_nse_expiry(value: str) -> str | None:
+    try:
+        return datetime.strptime(value.strip(), "%d-%b-%Y").date().isoformat()
+    except Exception:
+        return None
+
+
+def _parse_bse_expiry(value: str) -> str | None:
+    try:
+        return datetime.strptime(value.strip(), "%d %b %Y").date().isoformat()
+    except Exception:
+        return None
+
+
+def _fallback_next_expiry_iso(now_ist: datetime, expiry_weekday: int) -> str:
+    weekday = now_ist.weekday()
+    diff_days = (expiry_weekday - weekday + 7) % 7
+    return (now_ist + timedelta(days=diff_days)).date().isoformat()
+
+
+def _monthly_flag(next_expiry: date, all_expiries: list[date]) -> bool:
+    month_dates = [d for d in all_expiries if d.year == next_expiry.year and d.month == next_expiry.month]
+    if not month_dates:
+        return False
+    return next_expiry == max(month_dates)
+
+
+async def _fetch_nse_expiry_dates(index_symbol: str) -> list[str]:
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) "
+            "Gecko/20100101 Firefox/118.0"
+        ),
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate",
+        "Referer": "https://www.nseindia.com/option-chain",
+    }
+    async with httpx.AsyncClient(timeout=20, headers=headers, follow_redirects=True) as client:
+        # Prime NSE cookies before API call.
+        await client.get("https://www.nseindia.com/option-chain")
+        resp = await client.get(
+            "https://www.nseindia.com/api/option-chain-contract-info",
+            params={"symbol": index_symbol},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    raw_dates = data.get("expiryDates", []) if isinstance(data, dict) else []
+    return sorted({d for d in (_parse_nse_expiry(x) for x in raw_dates) if d})
+
+
+async def _fetch_bse_expiry_dates(scrip_cd: int) -> list[str]:
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://www.bseindia.com/markets/Derivatives/DeriReports/DeriOptionchain.html",
+        "Origin": "https://www.bseindia.com",
+        "Accept": "application/json, text/plain, */*",
+    }
+    async with httpx.AsyncClient(timeout=20, headers=headers, follow_redirects=True) as client:
+        resp = await client.get(
+            "https://api.bseindia.com/BseIndiaAPI/api/ddlExpiry_IV/w",
+            params={"ProductType": "IO", "scrip_cd": str(scrip_cd)},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    table1 = data.get("Table1", []) if isinstance(data, dict) else []
+    raw_dates = [row.get("ExpiryDate", "") for row in table1 if isinstance(row, dict)]
+    return sorted({d for d in (_parse_bse_expiry(x) for x in raw_dates) if d})
+
+
+async def _build_expiry_calendar_payload() -> dict:
+    now_ist = datetime.now(timezone.utc).astimezone(IST)
+    today = now_ist.date()
+    source_by_index: dict[str, str] = {}
+    dates_by_index: dict[str, list[str]] = {}
+    errors: dict[str, str] = {}
+
+    for idx, nse_symbol in NSE_EXPIRY_SYMBOLS.items():
+        try:
+            expiry_dates = await _fetch_nse_expiry_dates(nse_symbol)
+            if not expiry_dates:
+                raise ValueError("No expiry dates from NSE response")
+            dates_by_index[idx] = expiry_dates
+            source_by_index[idx] = "NSE option-chain-contract-info"
+        except Exception as exc:
+            errors[idx] = str(exc)
+
+    for idx, scrip_cd in BSE_EXPIRY_SCRIP_CODES.items():
+        try:
+            expiry_dates = await _fetch_bse_expiry_dates(scrip_cd)
+            if not expiry_dates:
+                raise ValueError("No expiry dates from BSE response")
+            dates_by_index[idx] = expiry_dates
+            source_by_index[idx] = "BSE ddlExpiry_IV"
+        except Exception as exc:
+            errors[idx] = str(exc)
+
+    cards: list[dict] = []
+    for idx, cfg in EXPIRY_INDEX_CONFIG.items():
+        parsed_dates = sorted(
+            datetime.fromisoformat(d).date()
+            for d in dates_by_index.get(idx, [])
+            if isinstance(d, str)
+        )
+        future_dates = [d for d in parsed_dates if d >= today]
+
+        if future_dates:
+            next_expiry_date = future_dates[0]
+            next_expiry_iso = next_expiry_date.isoformat()
+            days_to_next = (next_expiry_date - today).days
+            monthly = _monthly_flag(next_expiry_date, parsed_dates)
+            source = source_by_index.get(idx, "exchange_api")
+            expiry_type = "MONTHLY" if monthly else "WEEKLY"
+            expiries = [d.isoformat() for d in parsed_dates[:24]]
+        else:
+            # Safety fallback if exchange API is unavailable.
+            next_expiry_iso = _fallback_next_expiry_iso(now_ist, cfg["expiry_weekday"])
+            next_expiry_date = datetime.fromisoformat(next_expiry_iso).date()
+            days_to_next = (next_expiry_date - today).days
+            source = "fallback_weekday_rule"
+            expiry_type = "WEEKLY"
+            expiries = [next_expiry_iso]
+
+        cards.append(
+            {
+                "abbr": idx,
+                "name": cfg["name"],
+                "exchange": cfg["exchange"],
+                "next_expiry": next_expiry_iso,
+                "days_to_next": int(days_to_next),
+                "expiry_today": days_to_next == 0,
+                "expiry_type": expiry_type,
+                "expiries": expiries,
+                "source": source,
+            }
+        )
+
+    cards.sort(key=lambda c: (c.get("days_to_next", 999), c.get("abbr", "")))
+    return {
+        "as_of_ist": now_ist.isoformat(),
+        "source": "NSE/BSE exchange APIs",
+        "today_expiries": [c["abbr"] for c in cards if c.get("expiry_today")],
+        "cards": cards,
+        "errors": errors,
+    }
+
+
+async def get_expiry_calendar(force_refresh: bool = False) -> dict:
+    global _expiry_cache_payload, _expiry_cache_ts
+
+    now_ts = datetime.now(timezone.utc).timestamp()
+    if (
+        not force_refresh
+        and _expiry_cache_payload is not None
+        and (now_ts - _expiry_cache_ts) < EXPIRY_CACHE_TTL_SECONDS
+    ):
+        return _expiry_cache_payload
+
+    async with _expiry_cache_lock:
+        now_ts = datetime.now(timezone.utc).timestamp()
+        if (
+            not force_refresh
+            and _expiry_cache_payload is not None
+            and (now_ts - _expiry_cache_ts) < EXPIRY_CACHE_TTL_SECONDS
+        ):
+            return _expiry_cache_payload
+
+        try:
+            payload = await _build_expiry_calendar_payload()
+            _expiry_cache_payload = payload
+            _expiry_cache_ts = now_ts
+            return payload
+        except Exception:
+            if _expiry_cache_payload is not None:
+                return _expiry_cache_payload
+            raise
 
 
 def _analyze_cache_key(symbol: str, include_candles: bool) -> str:
@@ -482,6 +681,14 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
         return _fallback(f"AI decision endpoint failed: {exc}")
 
 
+@router.get("/expiry-calendar")
+async def expiry_calendar(refresh: bool = Query(False, description="Force refresh from exchange APIs")):
+    try:
+        return await get_expiry_calendar(force_refresh=refresh)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Failed to fetch expiry calendar: {exc}")
+
+
 @router.get("/expiry-zero-hero")
 async def expiry_zero_hero_endpoint(index: str = Query(..., description="NIFTY|BANKNIFTY|FINNIFTY|SENSEX")):
     """
@@ -501,11 +708,21 @@ async def expiry_zero_hero_endpoint(index: str = Query(..., description="NIFTY|B
         raise HTTPException(status_code=400, detail="Invalid index. Use NIFTY, BANKNIFTY, FINNIFTY, or SENSEX.")
 
     now = datetime.now(timezone.utc)
-    ist_now = now.astimezone(timezone(timedelta(hours=5, minutes=30)))
-    weekday = ist_now.weekday()
-    expiry_today = weekday == cfg["expiry_weekday"]
-    diff_days = (cfg["expiry_weekday"] - weekday + 7) % 7
-    next_expiry = (ist_now + timedelta(days=diff_days)).date().isoformat()
+    ist_now = now.astimezone(IST)
+    next_expiry = _fallback_next_expiry_iso(ist_now, cfg["expiry_weekday"])
+    expiry_today = False
+
+    try:
+        calendar = await get_expiry_calendar(force_refresh=False)
+        cards = calendar.get("cards", []) if isinstance(calendar, dict) else []
+        match = next((c for c in cards if c.get("abbr") == idx), None)
+        if isinstance(match, dict):
+            expiry_today = bool(match.get("expiry_today"))
+            if isinstance(match.get("next_expiry"), str) and match.get("next_expiry"):
+                next_expiry = match["next_expiry"]
+    except Exception:
+        # Keep fallback weekday logic if exchange APIs fail.
+        expiry_today = ist_now.weekday() == cfg["expiry_weekday"]
 
     if not expiry_today:
         return {

@@ -11,7 +11,17 @@ Version format:
 
 ## Unreleased
 
-- _Add upcoming release notes here before merging `dev` into `main`._
+### Added
+- Live expiry calendar API: `GET /api/v1/expiry-calendar` using trusted exchange endpoints.
+  - NSE source: `option-chain-contract-info`
+  - BSE source: `ddlExpiry_IV`
+
+### Changed
+- Expiry banner now uses backend live expiry API instead of local weekday-only logic.
+- Expiry zero-to-hero panel now uses the same live expiry calendar to decide active expiry day.
+- Free-tier optimization:
+  - backend expiry cache increased to 6 hours
+  - frontend expiry polling reduced to hourly
 
 ## [v2026.03.12-01] - 2026-03-12
 

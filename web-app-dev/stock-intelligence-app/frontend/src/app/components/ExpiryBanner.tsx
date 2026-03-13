@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface IndexConfig {
     name: string;
     abbr: string;
     exchange: "NSE" | "BSE";
+    // Fallback weekday only if exchange API fails.
     expiryDay: number;
     color: string;
     bg: string;
@@ -17,6 +18,18 @@ interface ExpiryCard extends IndexConfig {
     expiry: Date;
     days: number;
     monthly: boolean;
+}
+
+interface ExpiryCalendarCard {
+    abbr: string;
+    next_expiry: string;
+    days_to_next: number;
+    expiry_today: boolean;
+    expiry_type: string;
+}
+
+interface ExpiryCalendarResponse {
+    cards?: ExpiryCalendarCard[];
 }
 
 const INDICES: IndexConfig[] = [
@@ -113,20 +126,66 @@ function urgencyHint(days: number): string {
     return "Routine monitoring.";
 }
 
+function parseIsoDate(value: string): Date | null {
+    const parsed = new Date(`${value}T00:00:00Z`);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+}
+
 export default function ExpiryBanner() {
     const [today, setToday] = useState<Date>(getISTToday);
+    const [liveByIndex, setLiveByIndex] = useState<Record<string, ExpiryCalendarCard>>({});
 
     useEffect(() => {
         const timer = setInterval(() => setToday(getISTToday()), 60_000);
         return () => clearInterval(timer);
     }, []);
 
-    const cards: ExpiryCard[] = INDICES.map((idx) => {
-        const expiry = getNextExpiry(idx.expiryDay, today);
-        const days = daysBetween(today, expiry);
-        const monthly = isMonthlyExpiry(expiry, idx.expiryDay);
-        return { ...idx, expiry, days, monthly };
-    });
+    useEffect(() => {
+        const fetchCalendar = async () => {
+            try {
+                const res = await fetch("/api/v1/expiry-calendar", { cache: "no-store" });
+                if (!res.ok) return;
+                const data: ExpiryCalendarResponse = await res.json();
+                const cards = Array.isArray(data.cards) ? data.cards : [];
+                const nextMap: Record<string, ExpiryCalendarCard> = {};
+                for (const card of cards) {
+                    if (!card || typeof card.abbr !== "string" || typeof card.next_expiry !== "string") continue;
+                    nextMap[card.abbr.toUpperCase()] = card;
+                }
+                if (Object.keys(nextMap).length > 0) {
+                    setLiveByIndex(nextMap);
+                }
+            } catch {
+                // Silent fallback to local weekday rules.
+            }
+        };
+
+        void fetchCalendar();
+        const timer = setInterval(() => void fetchCalendar(), 60 * 60 * 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const cards: ExpiryCard[] = useMemo(
+        () =>
+            INDICES.map((idx) => {
+                const live = liveByIndex[idx.abbr];
+                if (live) {
+                    const expiry = parseIsoDate(live.next_expiry);
+                    if (expiry) {
+                        const days = Number.isFinite(live.days_to_next) ? live.days_to_next : daysBetween(today, expiry);
+                        const monthly = (live.expiry_type || "").toUpperCase() === "MONTHLY";
+                        return { ...idx, expiry, days, monthly };
+                    }
+                }
+
+                const fallbackExpiry = getNextExpiry(idx.expiryDay, today);
+                const days = daysBetween(today, fallbackExpiry);
+                const monthly = isMonthlyExpiry(fallbackExpiry, idx.expiryDay);
+                return { ...idx, expiry: fallbackExpiry, days, monthly };
+            }),
+        [today, liveByIndex]
+    );
 
     const sorted = [...cards].sort((a, b) => a.days - b.days || a.abbr.localeCompare(b.abbr));
     const nearest = sorted[0];
