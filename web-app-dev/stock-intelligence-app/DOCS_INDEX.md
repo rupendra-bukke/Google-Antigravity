@@ -32,7 +32,11 @@ This file defines which docs are active source-of-truth and which are archive/hi
 - Purpose: beginner-friendly end-to-end explanation from project purpose to release cycle.
 - Use when: onboarding non-technical members or anyone new to this codebase.
 
-8. `releases/RELEASE_NOTE_TEMPLATE.md` + `releases/*.md`
+8. `BEGINNER_SYSTEM_GUIDE.md`
+- Purpose: full from-scratch beginner guide with plain-English explanation of libraries, file roles, runtime flow, and UI section outputs.
+- Use when: onboarding new/non-technical team members who need deeper clarity on what runs where and why.
+
+9. `releases/RELEASE_NOTE_TEMPLATE.md` + `releases/*.md`
 - Purpose: detailed per-release notes for each production deployment.
 - Use when: every release cycle.
 
@@ -49,13 +53,14 @@ This file defines which docs are active source-of-truth and which are archive/hi
 
 ## Recommended Reference Order
 
-1. `WORKFLOW_FROM_SCRATCH.md`
-2. `FLOW_QUICK_REF.md`
-3. `BRANCH_DEPLOY_FLOW.md`
-4. `RELEASE_RUNBOOK.md`
-5. `CHANGELOG.md`
-6. `ARCHITECTURE.md`
-7. `README.md`
+1. `BEGINNER_SYSTEM_GUIDE.md`
+2. `WORKFLOW_FROM_SCRATCH.md`
+3. `FLOW_QUICK_REF.md`
+4. `BRANCH_DEPLOY_FLOW.md`
+5. `RELEASE_RUNBOOK.md`
+6. `CHANGELOG.md`
+7. `ARCHITECTURE.md`
+8. `README.md`
 
 ## Rule
 
@@ -64,4 +69,3 @@ If two docs conflict, prefer:
 1. `ARCHITECTURE.md` for technical behavior
 2. `BRANCH_DEPLOY_FLOW.md` / `RELEASE_RUNBOOK.md` for process
 3. `README.md` for entry-level summary
-
