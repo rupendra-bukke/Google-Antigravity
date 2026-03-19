@@ -515,7 +515,7 @@ export default function Dashboard() {
 
             {/* ── Checkpoint Board — PRIME POSITION ── */}
             <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1rem" }}>
-                <CheckpointBoard />
+                <CheckpointBoard symbol={selectedSymbol} />
             </div>
 
 
@@ -527,11 +527,9 @@ export default function Dashboard() {
                             timeZone: "Asia/Kolkata",
                         })} IST`
                         : "Connecting…"}{" "}
-                    · Data via TradingView · Not financial advice
+                    · Data via market feeds + exchange APIs · Not financial advice
                 </p>
             </div>
         </div>
     );
 }
-
-

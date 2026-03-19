@@ -1,6 +1,6 @@
 # Trade-Craft Architecture (Current)
 
-Last updated: 2026-03-07
+Last updated: 2026-03-19
 Status: Active source-of-truth for technical behavior
 
 ## 1) System Overview
@@ -11,8 +11,9 @@ Frontend (Next.js on Vercel)
   -> Backend (FastAPI on Render)
   -> Upstash Redis (cache + checkpoint storage)
   -> External sources:
-     - tvDatafeed (primary market candles)
-     - yfinance (fallback market candles)
+     - yfinance (active deployed market candles)
+     - tvDatafeed (optional local source if installed)
+     - NSE/BSE expiry APIs
      - Gemini API (AI analysis)
 ```
 
@@ -22,11 +23,12 @@ Main page file:
 - `frontend/src/app/page.tsx`
 
 Data fetch pattern:
-- Every 60 seconds, page fetches:
+- Dashboard page fetches every 180 seconds (hidden tabs paused):
   - `/api/v1/analyze`
   - `/api/v1/advanced-analyze`
-- AI panel fetches `/api/v1/ai-decision` on its own cycle.
-- Timeline panel fetches `/api/v1/checkpoints` on its own cycle.
+- AI panel fetches `/api/v1/ai-decision` on its own checkpoint-aware cycle.
+- Timeline panel fetches `/api/v1/checkpoints` for the selected symbol on its own cycle.
+- Expiry panels fetch `/api/v1/expiry-calendar` hourly.
 
 Current UI order:
 1. Header (title, clock, refresh)
@@ -36,9 +38,10 @@ Current UI order:
 5. Expiry banner
 6. Stock header
 7. AI decision panel
-8. Indicators strip + combined signal
-9. Checkpoint timeline
-10. Footer
+8. Expiry zero-to-hero panel
+9. Indicators strip + combined signal
+10. Checkpoint timeline
+11. Footer
 
 ## 3) Backend API Surface
 
@@ -49,6 +52,9 @@ Primary endpoints:
 - `GET /analyze`
 - `GET /advanced-analyze`
 - `GET /ai-decision`
+- `GET /watchlist-snapshot`
+- `GET /expiry-calendar`
+- `GET /expiry-zero-hero`
 - `GET /gemini-test`
 - `GET /gemini-models`
 
@@ -68,9 +74,10 @@ Files:
 - `backend/services/decision_v2.py`
 - `backend/services/ai_decision.py`
 
-Source priority:
-1. tvDatafeed
-2. yfinance fallback
+Source strategy:
+1. Attempt tvDatafeed if it is installed locally
+2. Fall back to yfinance per timeframe
+3. Production Render deploy currently runs without tvDatafeed, so yfinance is the effective live source
 
 Indicator layer:
 - EMA, RSI, VWAP, Bollinger, MACD
@@ -126,8 +133,9 @@ File:
 
 Checks:
 1. Manual holiday safety list (`NSE_HOLIDAYS_2026`)
-2. `exchange_calendars` (`XNSE`) when available
-3. Time-window validation (09:15 to 15:30 IST)
+2. Shared `is_nse_trading_day(...)` helper used by market status, EOD selection, and checkpoint TTL
+3. `exchange_calendars` (`XNSE`) only when it is available locally
+4. Time-window validation (09:15 to 15:30 IST)
 
 Frontend also has a status fallback check in `page.tsx`.
 
@@ -138,14 +146,17 @@ File:
 
 Tracks:
 - Nifty, Bank Nifty, FinNifty, Sensex expiry schedules
+- exchange API backed next-expiry dates
 - weekly/monthly state
 - urgency visuals (`today` / `tomorrow` / `in N days`)
 
 Refresh:
-- Recomputed every 60 seconds on client.
+- Client clock state every 60 seconds
+- Live expiry calendar refresh every 60 minutes
 
 Note:
-- Current logic is weekday-based and does not yet adjust for exchange holiday-shifted expiry.
+- Primary path uses `/api/v1/expiry-calendar` backed by NSE/BSE exchange APIs.
+- Client-side weekday rules are fallback only if the expiry API is unavailable.
 
 ## 9) Caching Summary
 
@@ -177,4 +188,3 @@ Reference docs:
 - `BRANCH_DEPLOY_FLOW.md`
 - `FLOW_QUICK_REF.md`
 - `RELEASE_RUNBOOK.md`
-

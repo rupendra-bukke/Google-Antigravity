@@ -6,19 +6,20 @@ Trade-Craft is a full-stack intraday market intelligence dashboard for Indian in
 - Backend: FastAPI (Render)
 - Cache/Store: Upstash Redis
 - AI: Gemini (intraday + EOD outlook)
-- Market data: `tvDatafeed` primary, `yfinance` fallback
+- Market data: `yfinance` in deployed runtime, `tvDatafeed` optional locally if installed
 
 ## Current Product Scope
 
-- Index support: `^NSEI`, `^NSEBANK`, `^BSESN` (Nifty 50, Bank Nifty, Sensex)
+- Index support: `^NSEI`, `^NSEBANK`, `^CNXFINSERVICE`, `^BSESN` (Nifty 50, Bank Nifty, FinNifty, Sensex)
 - Live/near-live technical analysis (EMA, RSI, VWAP, BB, MACD)
 - Advanced multi-timeframe analysis (`/advanced-analyze`)
 - AI decision panel (`/ai-decision`) with:
   - market-open intraday mode
   - market-closed EOD next-day mode
+- Watchlist MVP with batched snapshot fetch
 - Checkpoint timeline with 7 strategic market-time snapshots
 - Holiday-aware market status handling
-- Expiry banner (Nifty, Bank Nifty, FinNifty, Sensex weekly/monthly logic)
+- Live expiry calendar plus expiry zero-to-hero panel
 
 ## UI Sections (Current Order in `page.tsx`)
 
@@ -29,9 +30,10 @@ Trade-Craft is a full-stack intraday market intelligence dashboard for Indian in
 5. Expiry banner
 6. Stock header (symbol + price)
 7. AI decision panel
-8. Indicators strip + combined signal
-9. Nifty 50 market timeline (checkpoint board)
-10. Footer
+8. Expiry zero-to-hero panel
+9. Indicators strip + combined signal
+10. Selected index market timeline (checkpoint board)
+11. Footer
 
 ## Folder Structure
 
@@ -90,8 +92,12 @@ Open `http://localhost:3000`.
 - `GET /api/v1/analyze?symbol=^NSEI`
 - `GET /api/v1/advanced-analyze?symbol=^NSEI`
 - `GET /api/v1/ai-decision?symbol=^NSEI`
+- `GET /api/v1/watchlist-snapshot?symbols=^NSEI,^NSEBANK,^CNXFINSERVICE,^BSESN`
 - `GET /api/v1/checkpoints?symbol=^NSEI`
 - `POST /api/v1/checkpoints/trigger?checkpoint_id=0915&symbol=^NSEI`
+- `POST /api/v1/checkpoints/reconcile?date=YYYY-MM-DD`
+- `GET /api/v1/expiry-calendar`
+- `GET /api/v1/expiry-zero-hero?index=NIFTY`
 - `GET /api/v1/checkpoints/diag`
 - `GET /api/v1/gemini-test`
 - `GET /api/v1/gemini-models`
@@ -127,4 +133,3 @@ Detailed docs:
 ## Documentation Map
 
 Use `DOCS_INDEX.md` to know which files are active vs archived.
-

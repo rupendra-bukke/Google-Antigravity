@@ -1,20 +1,36 @@
-"""Market data service — multi-timeframe fetching + technical indicator calculations.
+"""Market data service for multi-timeframe fetching and indicator calculations.
 
-Data source priority:
-  1. TradingView via tvDatafeed (primary — more reliable for NSE/BSE live indices)
-  2. yfinance (automatic fallback per interval if tvDatafeed fails)
+Source strategy:
+  1. Attempt TradingView via tvDatafeed when it is installed locally
+  2. Fall back to yfinance per interval if TradingView is unavailable
+
+Render free-tier deploys do not install tvDatafeed, so yfinance is the active
+production market-data source.
 """
 
 import asyncio
 import logging
 
-import yfinance as yf
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytz
-from datetime import datetime, timezone, time
+import yfinance as yf
+from datetime import date as date_cls, datetime, time, timezone
 
 logger = logging.getLogger(__name__)
+
+NSE_HOLIDAYS_2026 = {
+    "2026-01-26",  # Republic Day
+    "2026-03-03",  # Holi (Dhuleti)
+    "2026-04-02",  # Good Friday / Ram Navami
+    "2026-04-14",  # Dr Ambedkar Jayanti
+    "2026-05-01",  # Maharashtra Day
+    "2026-08-15",  # Independence Day
+    "2026-10-02",  # Gandhi Jayanti
+    "2026-10-20",  # Diwali Laxmi Pujan (approx)
+    "2026-10-21",  # Diwali Balipratipada (approx)
+    "2026-11-18",  # Guru Nanak Jayanti (approx)
+}
 
 # ── TradingView configuration ─────────────────────────────────────────────────
 
@@ -357,78 +373,56 @@ def get_latest_price(df: pd.DataFrame) -> float:
     return round(float(df["Close"].iloc[-1]), 2)
 
 
-def is_indian_market_open(dt: datetime) -> tuple[bool, str]:
-    """
-    Check if the Indian stock market (NSE) is currently open.
-    Uses the official XNSE trading calendar via exchange_calendars,
-    which knows about weekends AND all NSE public holidays.
-    Market hours: 09:15 to 15:30 IST.
-    """
-    # ── Manual 2026 NSE holiday list (safety net for exchange_calendars lag) ──
-    NSE_HOLIDAYS_2026 = {
-        "2026-01-26",  # Republic Day
-        "2026-03-03",  # Holi (Dhuleti)
-        "2026-04-02",  # Good Friday / Ram Navami
-        "2026-04-14",  # Dr Ambedkar Jayanti
-        "2026-05-01",  # Maharashtra Day
-        "2026-08-15",  # Independence Day
-        "2026-10-02",  # Gandhi Jayanti
-        "2026-10-20",  # Diwali Laxmi Pujan (approx)
-        "2026-10-21",  # Diwali Balipratipada (approx)
-        "2026-11-18",  # Guru Nanak Jayanti (approx)
-    }
+def is_nse_trading_day(day: date_cls) -> bool:
+    """Return True only for actual NSE trading days."""
+    day_str = day.isoformat()
+    if day_str in NSE_HOLIDAYS_2026:
+        return False
+    if day.weekday() >= 5:
+        return False
+
     try:
         import exchange_calendars as xcals
         import pandas as pd
 
-        ist = pytz.timezone("Asia/Kolkata")
-        now_ist = dt.astimezone(ist)
-        today_str = now_ist.strftime("%Y-%m-%d")
-
-        # Manual holiday pre-check (catches holidays exchange_calendars may not know yet)
-        if today_str in NSE_HOLIDAYS_2026:
-            return False, f"Market is CLOSED — NSE Holiday ({today_str})"
-
-        today = pd.Timestamp(now_ist.date())
-
-        # Check if today is a trading session on NSE
         cal = xcals.get_calendar("XNSE")
-        if not cal.is_session(today):
-            weekday_name = now_ist.strftime("%A")
-            return False, f"Market is CLOSED — {weekday_name} / NSE Holiday"
-
-        # It's a trading day — now check the time window
-        market_start = time(9, 15)
-        market_end = time(15, 30)
-        current_time = now_ist.time()
-
-        if current_time < market_start:
-            return False, f"Market Opens at 09:15 AM IST (Current: {current_time.strftime('%H:%M')})"
-        if current_time >= market_end:
-            return False, f"Market Closed at 03:30 PM IST (Current: {current_time.strftime('%H:%M')})"
-
-        return True, "Market is OPEN"
-
-    except ImportError:
-        # Fallback if exchange_calendars not installed yet
-        ist = pytz.timezone("Asia/Kolkata")
-        now_ist = dt.astimezone(ist)
-        today_str = now_ist.strftime("%Y-%m-%d")
-        if today_str in NSE_HOLIDAYS_2026:
-            return False, f"Market is CLOSED — NSE Holiday ({today_str})"
-        if now_ist.weekday() >= 5:
-            return False, f"Market is CLOSED ({now_ist.strftime('%A')})"
-        market_start = time(9, 15)
-        market_end = time(15, 30)
-        current_time = now_ist.time()
-        if current_time < market_start:
-            return False, f"Market Opens at 09:15 AM IST (Current: {current_time.strftime('%H:%M')})"
-        if current_time >= market_end:
-            return False, f"Market Closed at 03:30 PM IST (Current: {current_time.strftime('%H:%M')})"
-        return True, "Market is OPEN"
+        return bool(cal.is_session(pd.Timestamp(day)))
+    except Exception:
+        return True
 
 
-# ── Swing / Structure Detection ────────────────────────────
+def is_indian_market_open(dt: datetime) -> tuple[bool, str]:
+    """
+    Check if the Indian stock market (NSE) is currently open.
+    Uses a shared trading-day helper with a manual holiday list and, when
+    available, exchange_calendars for calendar confirmation.
+    Market hours: 09:15 to 15:30 IST.
+    """
+    ist = pytz.timezone("Asia/Kolkata")
+    now_ist = dt.astimezone(ist)
+    today = now_ist.date()
+    today_str = today.isoformat()
+
+    if today_str in NSE_HOLIDAYS_2026:
+        return False, f"Market is CLOSED - NSE Holiday ({today_str})"
+    if now_ist.weekday() >= 5:
+        return False, f"Market is CLOSED ({now_ist.strftime('%A')})"
+    if not is_nse_trading_day(today):
+        weekday_name = now_ist.strftime("%A")
+        return False, f"Market is CLOSED - {weekday_name} / NSE Holiday"
+
+    market_start = time(9, 15)
+    market_end = time(15, 30)
+    current_time = now_ist.time()
+
+    if current_time < market_start:
+        return False, f"Market Opens at 09:15 AM IST (Current: {current_time.strftime('%H:%M')})"
+    if current_time >= market_end:
+        return False, f"Market Closed at 03:30 PM IST (Current: {current_time.strftime('%H:%M')})"
+
+    return True, "Market is OPEN"
+
+# Swing / Structure Detection
 
 
 def detect_swings(df: pd.DataFrame, lookback: int = 3) -> str:

@@ -1,9 +1,14 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 
 const API_BASE = "/api";
-const FIXED_SYMBOL = "^NSEI";
+const TIMELINE_LABELS: Record<string, string> = {
+    "^NSEI": "Nifty 50",
+    "^NSEBANK": "Bank Nifty",
+    "^CNXFINSERVICE": "Fin Nifty",
+    "^BSESN": "Sensex",
+};
 
 interface CheckpointData {
     captured_at: string;
@@ -516,16 +521,17 @@ function EvalResultPanel({ rows, boardDate }: { rows: EvalRow[]; boardDate: stri
     );
 }
 
-export default function CheckpointBoard() {
+export default function CheckpointBoard({ symbol }: { symbol: string }) {
     const [panels, setPanels] = useState<Panel[]>([]);
     const [eodClose, setEodClose] = useState<EodCloseData | null>(null);
     const [loading, setLoading] = useState(true);
     const [catchingUp, setCatchingUp] = useState(false);
     const [boardDate, setBoardDate] = useState<string | null>(null);
+    const timelineLabel = TIMELINE_LABELS[symbol] || symbol;
 
     const fetchPanels = useCallback(async () => {
         try {
-            const res = await fetch(`${API_BASE}/v1/checkpoints?symbol=${encodeURIComponent(FIXED_SYMBOL)}`);
+            const res = await fetch(`${API_BASE}/v1/checkpoints?symbol=${encodeURIComponent(symbol)}`);
             if (!res.ok) return;
             const json = await res.json();
             setPanels(json.panels || []);
@@ -537,7 +543,15 @@ export default function CheckpointBoard() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [symbol]);
+
+    useEffect(() => {
+        setPanels([]);
+        setEodClose(null);
+        setBoardDate(null);
+        setCatchingUp(false);
+        setLoading(true);
+    }, [symbol]);
 
     useEffect(() => {
         const run = () => {
@@ -558,7 +572,7 @@ export default function CheckpointBoard() {
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1.5rem" }}>
                 <div style={{ width: "3px", height: "18px", background: "#d4af37", borderRadius: "2px" }} />
                 <h2 style={{ fontSize: "0.75rem", fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.2em", margin: 0 }}>
-                    Nifty 50 Market Timeline
+                    {timelineLabel} Market Timeline
                 </h2>
                 <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, rgba(148,163,184,0.1), transparent)" }} />
                 {catchingUp ? (
@@ -598,4 +612,3 @@ export default function CheckpointBoard() {
         </div>
     );
 }
-

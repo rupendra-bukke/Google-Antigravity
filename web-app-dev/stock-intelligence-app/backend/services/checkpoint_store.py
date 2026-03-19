@@ -13,6 +13,7 @@ import os
 from datetime import datetime, timezone, timedelta, time, date as date_cls
 
 import httpx
+from services.market_data import is_nse_trading_day as market_is_nse_trading_day
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -46,19 +47,8 @@ def _make_eod_close_key(date_str: str, symbol: str) -> str:
 
 
 def _is_nse_trading_day(day: date_cls) -> bool:
-    """
-    Holiday-aware NSE session check for a specific IST date.
-    Falls back to Mon-Fri if exchange_calendars is unavailable.
-    """
-    try:
-        import exchange_calendars as xcals
-        import pandas as pd
-
-        cal = xcals.get_calendar("XNSE")
-        return bool(cal.is_session(pd.Timestamp(day)))
-    except Exception:
-        return day.weekday() < 5
-
+    """Shared helper so Redis TTL follows the same holiday rules as the API."""
+    return market_is_nse_trading_day(day)
 
 def _next_nse_reset_9am_ist(now_ist: datetime) -> datetime:
     """Return next 09:00 IST boundary on an actual NSE trading session day."""

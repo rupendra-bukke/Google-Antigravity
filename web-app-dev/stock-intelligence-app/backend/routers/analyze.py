@@ -1,4 +1,4 @@
-﻿"""Router for the /api/v1/ endpoints."""
+"""Router for the /api/v1/ endpoints."""
 
 import asyncio
 import json
@@ -27,6 +27,7 @@ from services.market_data import (
     get_ohlc_series,
     get_latest_price,
     is_indian_market_open,
+    is_nse_trading_day as market_is_nse_trading_day,
 )
 from services.decision import make_decision
 from services.decision_v2 import run_advanced_analysis
@@ -679,19 +680,8 @@ def _intraday_checkpoint_cache_key(symbol: str, date_str: str, checkpoint_id: st
 
 
 def _is_nse_trading_day(day: date) -> bool:
-    """
-    Holiday-aware NSE session check for a specific IST date.
-    Falls back to Mon-Fri if exchange_calendars is unavailable.
-    """
-    try:
-        import exchange_calendars as xcals
-        import pandas as pd
-
-        cal = xcals.get_calendar("XNSE")
-        return bool(cal.is_session(pd.Timestamp(day)))
-    except Exception:
-        return day.weekday() < 5
-
+    """Shared helper so EOD and checkpoint timing stay holiday-aware."""
+    return market_is_nse_trading_day(day)
 
 def _previous_nse_trading_day(day: date) -> date:
     probe = day - timedelta(days=1)
@@ -779,7 +769,7 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
         now = datetime.now(timezone.utc)
         ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
 
-        # Use exchange_calendars to check holiday-aware NSE market status (Mon-Fri + all public holidays)
+        # Use shared market-status helper so holiday handling stays consistent.
         is_open, _ = is_indian_market_open(now)
         if is_open:
             # ── Intraday checkpoint mode ───────────────────────────────────────
@@ -1012,4 +1002,3 @@ async def expiry_zero_hero_endpoint(index: str = Query(..., description="NIFTY|B
     # Keep one plan per expiry day; manual refresh can still regenerate after cache TTL.
     cache_set(cache_key, json.dumps(result), 1800)
     return result
-

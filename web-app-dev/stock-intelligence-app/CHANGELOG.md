@@ -11,7 +11,12 @@ Version format:
 
 ## Unreleased
 
-- _Add upcoming release notes here before merging `dev` into `main`._
+### Fixed
+- Checkpoint board now follows the selected dashboard index instead of staying hardcoded to Nifty 50.
+- Shared NSE trading-day logic now keeps EOD date selection and checkpoint TTL holiday-aware even when `exchange_calendars` is not installed.
+
+### Changed
+- Active docs refreshed to match the deployed data-source strategy, live expiry APIs, selected-symbol timeline behavior, and latest production release reference.
 
 ## [v2026.03.13-01] - 2026-03-13
 
@@ -115,4 +120,3 @@ Version format:
 - Dashboard layout updated: indicators strip moved above checkpoint timeline.
 - Core docs refreshed (`README.md`, `ARCHITECTURE.md`).
 - Legacy docs marked archived with clear warning banners.
-

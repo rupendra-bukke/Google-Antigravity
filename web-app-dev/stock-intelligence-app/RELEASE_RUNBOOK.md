@@ -78,8 +78,8 @@ This document captures the DEV -> PROD release flow for `stock-intelligence-app`
   - `NEXT_PUBLIC_APP_VERSION`
   - `NEXT_PUBLIC_APP_CHANNEL`
 
-6. Known issue to verify/fix before prod
-- `frontend/src/app/components/CheckpointBoard.tsx` is hardcoded to `^NSEI`.
+6. Regression checks to verify before prod
+- Confirm `frontend/src/app/components/CheckpointBoard.tsx` follows the currently selected symbol.
 
 7. Release promotion
 - Push tested changes to `origin/dev`.
