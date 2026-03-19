@@ -444,7 +444,7 @@ async def _call_gemini(prompt: str, api_key: str) -> str:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.3,
-            "maxOutputTokens": 1200,
+            "maxOutputTokens": 2048,
             "response_mime_type": "application/json",  # Forces pure JSON output, no markdown fences
         },
     }
