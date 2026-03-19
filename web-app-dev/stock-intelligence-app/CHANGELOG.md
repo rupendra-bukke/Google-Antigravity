@@ -17,6 +17,8 @@ Version format:
 
 ### Changed
 - Active docs refreshed to match the deployed data-source strategy, live expiry APIs, selected-symbol timeline behavior, and latest production release reference.
+- AI panel now shows clearer payload-state cues for live checkpoint, cached EOD, partial AI, and fallback output.
+- EOD mode now uses overnight-cues wording, softer fallback copy, and next-market-open refresh messaging.
 
 ## [v2026.03.13-01] - 2026-03-13
 

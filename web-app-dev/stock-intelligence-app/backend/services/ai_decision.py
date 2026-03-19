@@ -1,4 +1,4 @@
-﻿"""
+"""
 AI-powered intraday decision service using Google Gemini REST API.
 - Uses httpx (already installed) to call Gemini directly â€” no SDK needed
 - Builds a price-action + smart money prompt with real Nifty OHLC data
@@ -583,6 +583,7 @@ async def get_ai_decision(
         result = json.loads(text)
         result["captured_at"] = now.astimezone(IST).isoformat()
         result["symbol"] = symbol
+        result["analysis_status"] = "full"
         result["news_items"] = _merge_unique_news(
             result.get("news_items") if isinstance(result.get("news_items"), list) else [],
             news_ctx.get("items", []),
@@ -603,6 +604,7 @@ async def get_ai_decision(
             logger.warning("Gemini intraday JSON repaired (was truncated). Using partial result.")
             repaired.setdefault("captured_at", now.astimezone(IST).isoformat())
             repaired.setdefault("symbol", symbol)
+            repaired["analysis_status"] = "repaired"
             repaired.setdefault("decision", "WAIT")
             repaired.setdefault("bias_strength", "LOW")
             repaired["news_items"] = _merge_unique_news(
@@ -1027,7 +1029,7 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
     import hashlib
 
     if not settings.gemini_api_key:
-        return _fallback("GEMINI_API_KEY not configured on Render.")
+        return _eod_fallback(symbol, "GEMINI_API_KEY not configured on Render.")
 
     news_ctx = {
         "items": [],
@@ -1106,6 +1108,7 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
         result["captured_at"] = ist_now.isoformat()
         result["session_date"] = str(latest_date)
         result["symbol"] = symbol
+        result["analysis_status"] = "full"
         result["news_tomorrow"] = _merge_unique_news(
             result.get("news_tomorrow") if isinstance(result.get("news_tomorrow"), list) else [],
             news_ctx.get("items", []),
@@ -1141,6 +1144,7 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
             if "latest_date" in locals():
                 repaired["session_date"] = str(latest_date)
             repaired["symbol"] = symbol
+            repaired["analysis_status"] = "repaired"
             repaired["news_tomorrow"] = _merge_unique_news(
                 repaired.get("news_tomorrow") if isinstance(repaired.get("news_tomorrow"), list) else [],
                 news_ctx.get("items", []),
@@ -1181,8 +1185,8 @@ def _eod_fallback(symbol: str, reason: str) -> dict:
         "captured_at": datetime.now(IST).isoformat(),
         "session_date": "",
         "symbol": symbol,
+        "analysis_status": "fallback",
     }
-
 
 # â”€â”€ Upstash Redis cache helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -1242,11 +1246,11 @@ def _fallback(reason: str) -> dict:
         "stop_loss": None,
         "target": None,
         "trade_quality": "RISKY",
-        "missing_confirmation": "AI service unavailable â€” check manually",
+        "missing_confirmation": "AI service unavailable - check manually",
         "news_items": [],
         "news_impact": reason,
         "reasoning": f"AI analysis is temporarily unavailable: {reason}",
         "captured_at": datetime.now(IST).isoformat(),
-        "symbol": "â€”",
+        "symbol": "-",
+        "analysis_status": "fallback",
     }
-

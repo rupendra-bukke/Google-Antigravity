@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+type AnalysisStatus = "full" | "repaired" | "fallback";
+
 interface IntradayData {
     analysis_type?: undefined | "INTRADAY";
+    analysis_status?: AnalysisStatus;
     decision: "BULLISH" | "BEARISH" | "WAIT";
     bias_strength: "HIGH" | "MEDIUM" | "LOW";
     market_structure: string;
@@ -33,6 +36,7 @@ interface IntradayData {
 
 interface EODData {
     analysis_type: "EOD";
+    analysis_status?: AnalysisStatus;
     session_type: string;
     close_position: string;
     next_day_bias: "BULLISH" | "BEARISH" | "WAIT";
@@ -80,6 +84,7 @@ const EOD_REFRESH_SECONDS = 1800;
 
 function makeLocalFallback(symbol: string, reason: string): IntradayData {
     return {
+        analysis_status: "fallback",
         decision: "WAIT",
         bias_strength: "LOW",
         market_structure: "Temporarily unavailable",
@@ -168,6 +173,100 @@ function formatCountdown(totalSeconds: number): string {
         return `${hrs}:${mm}:${ss}`;
     }
     return `${mins}:${ss}`;
+}
+
+type AnalysisBadgeTone = {
+    label: string;
+    color: string;
+    bg: string;
+    border: string;
+};
+
+function includesAny(text: string | null | undefined, fragments: string[]): boolean {
+    const normalized = (text || "").toLowerCase();
+    return fragments.some((fragment) => normalized.includes(fragment));
+}
+
+function looksFallback(payload: AIData): boolean {
+    if (payload.analysis_status === "fallback") return true;
+    if (payload.analysis_type === "EOD") {
+        const eod = payload as EODData;
+        return includesAny(payload.reasoning, ["analysis unavailable", "temporarily unavailable", "not ready yet"])
+            || includesAny(eod.sl_hunt_risk, ["analysis unavailable"]);
+    }
+
+    const intraday = payload as IntradayData;
+    return includesAny(payload.reasoning, ["analysis unavailable", "temporarily unavailable"])
+        || includesAny(intraday.missing_confirmation, ["unavailable"])
+        || includesAny(intraday.market_structure, ["unavailable"]);
+}
+
+function looksPartial(payload: AIData): boolean {
+    if (payload.analysis_status === "repaired") return true;
+    return includesAny(payload.reasoning, ["repaired", "format issue"]);
+}
+
+function getAnalysisStatusBadge(payload: AIData | null): AnalysisBadgeTone | null {
+    if (!payload) return null;
+
+    if (looksPartial(payload)) {
+        return {
+            label: "Partial AI",
+            color: "#fbbf24",
+            bg: "rgba(245,158,11,0.12)",
+            border: "rgba(245,158,11,0.28)",
+        };
+    }
+
+    if (looksFallback(payload)) {
+        return {
+            label: payload.analysis_type === "EOD" ? "Fallback EOD" : "Fallback AI",
+            color: "#fda4af",
+            bg: "rgba(244,63,94,0.10)",
+            border: "rgba(244,63,94,0.28)",
+        };
+    }
+
+    if (payload.analysis_type === "EOD" && payload.eod_cache_only) {
+        return {
+            label: "Cached EOD",
+            color: "#fdba74",
+            bg: "rgba(251,146,60,0.12)",
+            border: "rgba(251,146,60,0.30)",
+        };
+    }
+
+    if (payload.analysis_type !== "EOD" && (payload as IntradayData).checkpoint_mode) {
+        return {
+            label: "Live checkpoint",
+            color: "#93c5fd",
+            bg: "rgba(59,130,246,0.12)",
+            border: "rgba(59,130,246,0.28)",
+        };
+    }
+
+    return {
+        label: "Full AI",
+        color: "#86efac",
+        bg: "rgba(34,197,94,0.10)",
+        border: "rgba(34,197,94,0.28)",
+    };
+}
+
+function getEodSlHuntNote(data: EODData): { label: string; value: string; color: string } {
+    if (includesAny(data.sl_hunt_risk, ["analysis unavailable"])) {
+        return {
+            label: "Tomorrow setup note",
+            value: "Pending reliable AI output",
+            color: "#94a3b8",
+        };
+    }
+
+    return {
+        label: "SL hunt risk tomorrow",
+        value: data.sl_hunt_risk,
+        color: "#f59e0b",
+    };
 }
 
 export default function AIDecision({ symbol }: { symbol: string }) {
@@ -259,6 +358,8 @@ export default function AIDecision({ symbol }: { symbol: string }) {
     const refreshLabel = formatCountdown(countdown);
     const isEOD = data?.analysis_type === "EOD";
     const intraday = !isEOD ? (data as IntradayData | null) : null;
+    const analysisBadge = getAnalysisStatusBadge(data);
+    const refreshCopy = isEOD ? "Auto-refresh at next market open" : `Next refresh: ${refreshLabel}`;
 
     return (
         <div
@@ -293,10 +394,26 @@ export default function AIDecision({ symbol }: { symbol: string }) {
                                 ? `Checkpoint ${intraday.active_checkpoint_time_ist || "--"} -> ${intraday.next_checkpoint_time_ist || "15:30"}`
                                 : "Gemini | News Context"}
                     </span>
+                    {analysisBadge && (
+                        <span
+                            style={{
+                                fontSize: "0.56rem",
+                                padding: "3px 8px",
+                                borderRadius: "999px",
+                                background: analysisBadge.bg,
+                                border: `1px solid ${analysisBadge.border}`,
+                                color: analysisBadge.color,
+                                fontWeight: 700,
+                                letterSpacing: "0.08em",
+                            }}
+                        >
+                            {analysisBadge.label}
+                        </span>
+                    )}
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                    <span style={{ fontSize: "0.58rem", color: "#64748b", fontWeight: 600 }}>Next refresh: {refreshLabel}</span>
+                    <span style={{ fontSize: "0.58rem", color: "#64748b", fontWeight: 600 }}>{refreshCopy}</span>
                     <button
                         onClick={fetchDecision}
                         disabled={isLoading}
@@ -412,6 +529,8 @@ function IntradayView({ data, showReasoning, onToggleReasoning }: { data: Intrad
 function EODView({ data, showReasoning, onToggleReasoning }: { data: EODData; showReasoning: boolean; onToggleReasoning: () => void }) {
     const bias = BIAS_CONFIG[data.next_day_bias] ?? BIAS_CONFIG.WAIT;
     const plan = getOptionPlan(data.next_day_bias);
+    const slHuntNote = getEodSlHuntNote(data);
+    const footerPrefix = data.eod_cache_only ? "Cached EOD based on" : "EOD based on";
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
@@ -430,7 +549,7 @@ function EODView({ data, showReasoning, onToggleReasoning }: { data: EODData; sh
                     <div style={{ flex: 1, minWidth: "220px", display: "grid", gap: "0.5rem" }}>
                         <KV label="Today's session" value={data.session_type} />
                         <KV label="Close position" value={data.close_position} valueColor={data.close_position.includes("Top") ? "#22c55e" : data.close_position.includes("Bottom") ? "#ef4444" : "#f59e0b"} />
-                        <KV label="SL hunt risk tomorrow" value={data.sl_hunt_risk} valueColor="#f59e0b" />
+                        <KV label={slHuntNote.label} value={slHuntNote.value} valueColor={slHuntNote.color} />
                     </div>
                 </div>
             </SectionCard>
@@ -470,15 +589,15 @@ function EODView({ data, showReasoning, onToggleReasoning }: { data: EODData; sh
 
             {data.news_tomorrow.length > 0 && (
                 <>
-                    <SectionTitle step="5" title="Events and News Tomorrow" />
-                    <NewsPanel title="Events to monitor" items={data.news_tomorrow} impact={null} accentColor="#818cf8" />
+                    <SectionTitle step="5" title="Overnight Cues and Headlines" />
+                    <NewsPanel title="Cues to monitor" items={data.news_tomorrow} impact={null} accentColor="#818cf8" />
                 </>
             )}
 
             <SectionTitle step="6" title="Detailed Reasoning" />
-            <ReasoningPanel label="View full EOD reasoning" text={data.reasoning} show={showReasoning} onToggle={onToggleReasoning} />
+            <ReasoningPanel label="View full next-day reasoning" text={data.reasoning} show={showReasoning} onToggle={onToggleReasoning} />
 
-            <span style={{ fontSize: "0.58rem", color: "#475569", textAlign: "right" }}>EOD based on {data.session_date} | Updated: {fmtTime(data.captured_at)} IST</span>
+            <span style={{ fontSize: "0.58rem", color: "#475569", textAlign: "right" }}>{footerPrefix} {data.session_date} | Updated: {fmtTime(data.captured_at)} IST</span>
         </div>
     );
 }

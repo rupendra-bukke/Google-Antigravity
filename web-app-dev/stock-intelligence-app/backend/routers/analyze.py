@@ -744,6 +744,7 @@ def _build_eod_cache_fallback(
         "captured_at": now_ist.isoformat(),
         "session_date": session_date,
         "symbol": symbol,
+        "analysis_status": "fallback",
         "next_refresh_at_ist": next_refresh_at_ist,
         "eod_cache_only": True,
     }
