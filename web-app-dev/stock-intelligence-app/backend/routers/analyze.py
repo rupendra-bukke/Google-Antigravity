@@ -771,6 +771,7 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
     from services.ai_decision import (
         cache_get, cache_set, _fallback,
         EOD_CACHE_KEY_PREFIX,
+        get_eod_analysis,
     )
 
     try:
@@ -891,12 +892,21 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
             except Exception:
                 continue
 
-        return _build_eod_cache_fallback(
-            symbol=sym,
-            now_ist=ist_now,
-            session_date=session_date.strftime("%Y-%m-%d"),
-            next_refresh_at_ist=next_open.isoformat(),
-        )
+        # No cached EOD found — run a fresh Gemini EOD analysis now.
+        # This covers first request after market close when no EOD was
+        # generated during intraday checkpoint windows.
+        try:
+            result = await get_eod_analysis(sym, now)
+            result["next_refresh_at_ist"] = next_open.isoformat()
+            result["eod_cache_only"] = False
+            return result
+        except Exception:
+            return _build_eod_cache_fallback(
+                symbol=sym,
+                now_ist=ist_now,
+                session_date=session_date.strftime("%Y-%m-%d"),
+                next_refresh_at_ist=next_open.isoformat(),
+            )
     except Exception as exc:
         # Never bubble raw 5xx for this endpoint; keep UI stable with fallback payload.
         return _fallback(f"AI decision endpoint failed: {exc}")
