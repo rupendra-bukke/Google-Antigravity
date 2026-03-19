@@ -63,6 +63,10 @@ This document captures the DEV -> PROD release flow for `stock-intelligence-app`
 4. Critical checks
 - Manual checkpoint trigger:
   - `POST /api/v1/checkpoints/trigger?checkpoint_id=0915&symbol=^NSEI`
+- If unattended timeline capture is enabled, also validate the secure cron endpoints locally or on the dev backend:
+  - `GET /api/v1/checkpoints/cron-capture?checkpoint_id=0915&historical=true`
+  - `GET /api/v1/checkpoints/cron-reconcile`
+  - Header required: `X-Checkpoint-Cron-Secret: <CHECKPOINT_CRON_SECRET>`
 - Confirm Redis save/read via `/api/v1/checkpoints/diag`.
 - Confirm AI fallback behavior when data/API is unavailable.
 
@@ -73,11 +77,17 @@ This document captures the DEV -> PROD release flow for `stock-intelligence-app`
   - `UPSTASH_REDIS_REST_TOKEN`
   - `APP_VERSION`
   - `APP_CHANNEL` (optional)
+  - `CHECKPOINT_CRON_SECRET`
 - Frontend env:
   - `BACKEND_URL`
   - `NEXT_PUBLIC_APP_VERSION`
   - `NEXT_PUBLIC_APP_CHANNEL`
-
+- GitHub Actions repo secrets for repo-root workflow `.github/workflows/stock-intelligence-checkpoint-capture.yml`:
+  - `CHECKPOINT_CRON_DEV_BASE_URL` = dev backend root URL
+  - `CHECKPOINT_CRON_DEV_SECRET` = same value as dev backend `CHECKPOINT_CRON_SECRET`
+  - `CHECKPOINT_CRON_PROD_BASE_URL` = prod backend root URL
+  - `CHECKPOINT_CRON_PROD_SECRET` = same value as prod backend `CHECKPOINT_CRON_SECRET`
+- Note: GitHub scheduled workflows run from the default branch, so the unattended intraday schedule becomes active after the workflow reaches `main`. Use `workflow_dispatch` to test against `dev` before prod promotion.
 6. Regression checks to verify before prod
 - Confirm `frontend/src/app/components/CheckpointBoard.tsx` follows the currently selected symbol.
 

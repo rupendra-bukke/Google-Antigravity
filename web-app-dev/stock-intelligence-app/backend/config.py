@@ -41,6 +41,13 @@ class Settings(BaseSettings):
             "RENDER_GIT_BRANCH",
         ),
     )
+    checkpoint_cron_secret: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "CHECKPOINT_CRON_SECRET",
+            "SCHEDULER_SECRET",
+        ),
+    )
 
     @property
     def is_dev(self) -> bool:

@@ -1,41 +1,54 @@
 """FastAPI application entry point with checkpoint scheduler."""
 
-import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from routers.analyze import router as analyze_router
 from routers.checkpoints import (
+    reconcile_missing_checkpoints,
     router as checkpoints_router,
     run_checkpoint_for_all_symbols,
-    reconcile_missing_checkpoints,
 )
+from services.market_data import is_nse_trading_day
 
 IST = timezone(timedelta(hours=5, minutes=30))
-
-# ── APScheduler: fires V2 engine at each market checkpoint (IST, Mon–Fri) ──
-
 scheduler = AsyncIOScheduler(timezone="Asia/Kolkata")
 
 CHECKPOINT_SCHEDULE = [
-    ("0915", 9,  15),
-    ("0930", 9,  30),
-    ("1000", 10,  0),
+    ("0915", 9, 15),
+    ("0930", 9, 30),
+    ("1000", 10, 0),
     ("1130", 11, 30),
-    ("1300", 13,  0),
-    ("1400", 14,  0),
-    ("1500", 15,  0),
+    ("1300", 13, 0),
+    ("1400", 14, 0),
+    ("1500", 15, 0),
 ]
+
+
+async def _run_scheduled_checkpoint(checkpoint_id: str):
+    """Run an intraday checkpoint only on actual NSE trading days."""
+    today_ist = datetime.now(IST).date()
+    if not is_nse_trading_day(today_ist):
+        print(f"[CHECKPOINT] skipped {checkpoint_id} | non-trading day {today_ist}")
+        return
+
+    summary = await run_checkpoint_for_all_symbols(checkpoint_id)
+    print(
+        f"[CHECKPOINT] scheduler {checkpoint_id} | "
+        f"saved={summary.get('saved_symbols')} failed={summary.get('failed_symbols')} "
+        f"skipped={summary.get('skipped')}"
+    )
+
 
 for cp_id, hour, minute in CHECKPOINT_SCHEDULE:
     scheduler.add_job(
-        run_checkpoint_for_all_symbols,
+        _run_scheduled_checkpoint,
         CronTrigger(day_of_week="mon-fri", hour=hour, minute=minute),
         args=[cp_id],
         id=f"checkpoint_{cp_id}",
@@ -43,17 +56,22 @@ for cp_id, hour, minute in CHECKPOINT_SCHEDULE:
     )
 
 
-# ── EOD Analysis trigger at 3:30 PM IST ──────────────────────────────────────
-
 async def _trigger_eod_analysis():
-    """Run end-of-day next-day outlook at market close. Only Nifty 50 to conserve 20 RPD quota."""
+    """Run end-of-day next-day outlook at market close for Nifty 50 only."""
     from services.ai_decision import get_eod_analysis
+
+    today_ist = datetime.now(IST).date()
+    if not is_nse_trading_day(today_ist):
+        print(f"[EOD] skipped | non-trading day {today_ist}")
+        return
+
     now = datetime.now(timezone.utc)
     try:
         result = await get_eod_analysis("^NSEI", now)
-        print(f"[EOD] ✅ EOD analysis for ^NSEI: {result.get('next_day_bias')}")
-    except Exception as e:
-        print(f"[EOD] ❌ Failed: {e}")
+        print(f"[EOD] ok | next_day_bias={result.get('next_day_bias')}")
+    except Exception as exc:
+        print(f"[EOD] failed: {exc}")
+
 
 scheduler.add_job(
     _trigger_eod_analysis,
@@ -72,11 +90,10 @@ async def _run_eod_reconcile():
             f"filled={result.get('filled_checkpoint_ids')} "
             f"failed={result.get('failed_checkpoint_ids')}"
         )
-    except Exception as e:
-        print(f"[EOD-RECON] failed: {e}")
+    except Exception as exc:
+        print(f"[EOD-RECON] failed: {exc}")
 
 
-# Primary EOD reconcile run
 scheduler.add_job(
     _run_eod_reconcile,
     CronTrigger(day_of_week="mon-fri", hour=15, minute=31),
@@ -84,7 +101,6 @@ scheduler.add_job(
     replace_existing=True,
 )
 
-# Retry reconcile run (safety in case first attempt fails)
 scheduler.add_job(
     _run_eod_reconcile,
     CronTrigger(day_of_week="mon-fri", hour=15, minute=36),
@@ -95,19 +111,17 @@ scheduler.add_job(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    env_label = "🛠️  DEV" if settings.is_dev else "🚀  PROD"
-    print(f"\n{'='*55}")
+    env_label = "DEV" if settings.is_dev else "PROD"
+    print(f"\n{'=' * 55}")
     print(f"  Trade-Craft API  |  {env_label}  |  {settings.app_env.upper()}")
-    print(f"{'='*55}\n")
+    print(f"{'=' * 55}\n")
     scheduler.start()
-    print(f"[SCHEDULER] ✅ Started — {len(CHECKPOINT_SCHEDULE)} checkpoints scheduled (IST, Mon–Fri)")
+    print(f"[SCHEDULER] started with {len(CHECKPOINT_SCHEDULE)} checkpoint jobs (IST, Mon-Fri)")
+    print("[SCHEDULER] external checkpoint wake/capture endpoints ready for GitHub Actions")
     yield
     scheduler.shutdown()
-    print("[SCHEDULER] 🛑 Stopped")
+    print("[SCHEDULER] stopped")
 
-
-
-# ── App ────────────────────────────────────────────────────────────────────
 
 app = FastAPI(
     title=settings.app_name,

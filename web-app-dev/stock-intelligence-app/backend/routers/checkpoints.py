@@ -11,7 +11,9 @@ The APScheduler inside main.py calls the trigger automatically at each
 checkpoint time (IST) on weekdays.
 """
 
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
+import hmac
+
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, Header
 from datetime import datetime, timezone, timedelta, time, date as date_cls
 from config import settings
 
@@ -38,6 +40,39 @@ router = APIRouter(prefix="/api/v1/checkpoints", tags=["checkpoints"])
 IST = timezone(timedelta(hours=5, minutes=30))
 
 SYMBOLS = ["^NSEI", "^NSEBANK"]
+
+
+def _require_cron_secret(x_checkpoint_cron_secret: str | None) -> None:
+    expected = (settings.checkpoint_cron_secret or "").strip()
+    provided = (x_checkpoint_cron_secret or "").strip()
+
+    if not expected:
+        raise HTTPException(status_code=503, detail="CHECKPOINT_CRON_SECRET is not configured.")
+    if not provided or not hmac.compare_digest(provided, expected):
+        raise HTTPException(status_code=401, detail="Invalid checkpoint cron secret.")
+
+
+async def _checkpoint_already_saved(date_str: str, checkpoint_id: str) -> bool:
+    for sym in SYMBOLS:
+        if await load_checkpoint(date_str, checkpoint_id, sym) is None:
+            return False
+    return True
+
+
+def _checkpoint_run_summary(date_str: str, checkpoint_id: str, historical: bool) -> dict:
+    return {
+        "date": date_str,
+        "checkpoint_id": checkpoint_id,
+        "historical": historical,
+        "saved_symbols": [],
+        "failed_symbols": [],
+        "skipped": False,
+        "reason": None,
+    }
+
+
+def _parse_target_day(date_str: str) -> date_cls:
+    return datetime.strptime(date_str, "%Y-%m-%d").date()
 
 
 def _today_ist() -> str:
@@ -259,8 +294,14 @@ async def reconcile_missing_checkpoints(date_str: str | None = None) -> dict:
 
     for cp_id in sorted(missing_union):
         try:
-            await run_checkpoint_for_all_symbols(cp_id, date_str=target_date, use_historical=True)
-            filled_ids.append(cp_id)
+            summary = await run_checkpoint_for_all_symbols(cp_id, date_str=target_date, use_historical=True)
+            if summary.get("failed_symbols"):
+                failed_ids.append(cp_id)
+                await log_debug(
+                    f"EOD reconcile partial failure for {target_date} {cp_id}: {summary.get('failed_symbols')}"
+                )
+            else:
+                filled_ids.append(cp_id)
             await asyncio.sleep(1)
         except Exception as e:
             LAST_ERROR = str(e)
@@ -307,6 +348,96 @@ async def reconcile_checkpoints(date: str = Query(default=None)):
     return {"status": "ok", **result}
 
 
+@router.get("/cron-capture")
+async def cron_capture_checkpoint(
+    checkpoint_id: str = Query(..., description="e.g. 0915, 0930, 1000"),
+    date: str = Query(default=None, description="Optional YYYY-MM-DD override"),
+    historical: bool = Query(default=True, description="Capture exact historical slice up to checkpoint time."),
+    force: bool = Query(default=False, description="Recompute even if all symbols are already saved."),
+    x_checkpoint_cron_secret: str | None = Header(default=None, alias="X-Checkpoint-Cron-Secret"),
+):
+    """Secure endpoint for external schedulers (e.g. GitHub Actions)."""
+    _require_cron_secret(x_checkpoint_cron_secret)
+
+    valid_ids = {cp["id"] for cp in CHECKPOINTS}
+    if checkpoint_id not in valid_ids:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid checkpoint_id. Valid: {sorted(valid_ids)}",
+        )
+
+    target_date = date or _today_ist()
+    try:
+        target_day = _parse_target_day(target_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date. Use YYYY-MM-DD.")
+
+    if not _is_nse_trading_day(target_day):
+        return {
+            "status": "skipped",
+            "reason": "non_trading_day",
+            "date": target_date,
+            "checkpoint_id": checkpoint_id,
+            "historical": historical,
+            "symbols": SYMBOLS,
+        }
+
+    if not force and await _checkpoint_already_saved(target_date, checkpoint_id):
+        return {
+            "status": "skipped",
+            "reason": "already_captured",
+            "date": target_date,
+            "checkpoint_id": checkpoint_id,
+            "historical": historical,
+            "symbols": SYMBOLS,
+        }
+
+    summary = await run_checkpoint_for_all_symbols(
+        checkpoint_id,
+        date_str=target_date,
+        use_historical=historical,
+    )
+    if summary.get("skipped"):
+        return {
+            "status": "skipped",
+            **summary,
+            "symbols": SYMBOLS,
+        }
+    if summary.get("failed_symbols"):
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "partial_failure",
+                **summary,
+            },
+        )
+
+    return {
+        "status": "captured",
+        **summary,
+    }
+
+
+@router.get("/cron-reconcile")
+async def cron_reconcile_checkpoints(
+    date: str = Query(default=None, description="Optional YYYY-MM-DD override"),
+    x_checkpoint_cron_secret: str | None = Header(default=None, alias="X-Checkpoint-Cron-Secret"),
+):
+    """Secure reconcile endpoint for external schedulers."""
+    _require_cron_secret(x_checkpoint_cron_secret)
+
+    result = await reconcile_missing_checkpoints(date_str=date)
+    if result.get("failed_checkpoint_ids"):
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "partial_failure",
+                **result,
+            },
+        )
+    return {"status": "ok", **result}
+
+
 async def run_catchup_sequential(checkpoint_ids: list[str]):
     """Runs missing checkpoints using historical data at each slot's time."""
     import asyncio
@@ -347,6 +478,9 @@ async def trigger_checkpoint(
 
     now_utc = datetime.now(timezone.utc)
     date_str = _today_ist()
+
+    if not _is_nse_trading_day(datetime.now(IST).date()):
+        raise HTTPException(status_code=409, detail="Cannot trigger checkpoints on a non-trading day.")
 
     try:
         frames = await fetch_multi_timeframe(symbol)
@@ -407,7 +541,8 @@ async def run_checkpoint_for_all_symbols(
 ):
     """
     Internal function called by APScheduler (use_historical=False)
-    or catch-up (use_historical=True).
+    or catch-up / external schedulers (use_historical=True).
+    Returns a summary so unattended schedulers can detect partial failures.
     """
     import traceback
 
@@ -415,6 +550,20 @@ async def run_checkpoint_for_all_symbols(
 
     now_utc = datetime.now(timezone.utc)
     date_str = date_str or _today_ist()
+    summary = _checkpoint_run_summary(date_str, checkpoint_id, use_historical)
+
+    try:
+        target_day = _parse_target_day(date_str)
+    except ValueError:
+        summary["skipped"] = True
+        summary["reason"] = "invalid_date_format"
+        return summary
+
+    if not _is_nse_trading_day(target_day):
+        summary["skipped"] = True
+        summary["reason"] = "non_trading_day"
+        await log_debug(f"CHECKPOINT skipped {checkpoint_id} on non-trading day {date_str}")
+        return summary
 
     for sym in SYMBOLS:
         try:
@@ -443,10 +592,17 @@ async def run_checkpoint_for_all_symbols(
                 "forecast": result.get("forecast"),
                 "steps_detail": result.get("steps_detail"),
             }
-            await save_checkpoint(date_str, checkpoint_id, sym, payload)
+            saved = await save_checkpoint(date_str, checkpoint_id, sym, payload)
+            if not saved:
+                raise RuntimeError("Redis save failed")
+
+            summary["saved_symbols"].append(sym)
             print(f"[CHECKPOINT] ok {checkpoint_id} | {sym} | {payload['scalp_signal']}")
         except Exception as e:
             tb = traceback.format_exc()
             LAST_ERROR = f"{checkpoint_id}|{sym}: {tb[-300:]}"
+            summary["failed_symbols"].append(sym)
             await log_debug(f"CHECKPOINT CRASH {checkpoint_id}|{sym}: {tb}")
             print(f"[CHECKPOINT] error {checkpoint_id} | {sym} | Error: {e}")
+
+    return summary

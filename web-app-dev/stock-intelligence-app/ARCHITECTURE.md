@@ -61,6 +61,9 @@ Primary endpoints:
 Checkpoint endpoints:
 - `GET /checkpoints`
 - `POST /checkpoints/trigger`
+- `POST /checkpoints/reconcile`
+- `GET /checkpoints/cron-capture`
+- `GET /checkpoints/cron-reconcile`
 - `GET /checkpoints/diag`
 
 System endpoint:
@@ -101,8 +104,11 @@ APScheduler checkpoints (IST, Mon-Fri):
 - 09:15, 09:30, 10:00, 11:30, 13:00, 14:00, 15:00
 
 Behavior:
-- Scheduled jobs run advanced analysis and store snapshot payloads.
-- If jobs are missed (e.g., free-tier sleep), catch-up runs historical-at-time reconstruction via:
+- In-process APScheduler still runs while the Render backend is awake.
+- Repo-root GitHub Actions workflow `.github/workflows/stock-intelligence-checkpoint-capture.yml` wakes the backend and calls secure cron endpoints so timeline snapshots can be stored even when no browser is open.
+- Scheduled external captures use historical slice mode, so a slightly delayed cron still saves the exact 09:15 / 09:30 / 10:00 style checkpoint view.
+- Catch-up and external cron paths both skip non-trading days to avoid saving stale holiday data.
+- If jobs are missed, catch-up runs historical-at-time reconstruction via:
   - `fetch_multi_timeframe_at_time(...)`
 
 Checkpoint storage:

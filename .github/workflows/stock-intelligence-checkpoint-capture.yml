@@ -1,0 +1,201 @@
+name: Stock Intelligence Checkpoint Capture
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: Which backend to call
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - prod
+      mode:
+        description: Capture a checkpoint or run reconcile
+        required: true
+        default: capture
+        type: choice
+        options:
+          - capture
+          - reconcile
+      checkpoint_id:
+        description: Checkpoint id for capture mode
+        required: false
+        default: "0915"
+      date:
+        description: Optional YYYY-MM-DD override
+        required: false
+        default: ""
+      historical:
+        description: Use historical slice mode
+        required: true
+        default: true
+        type: boolean
+      force:
+        description: Recompute even if already saved
+        required: true
+        default: false
+        type: boolean
+  schedule:
+    - cron: "47 3 * * 1-5"
+    - cron: "2 4 * * 1-5"
+    - cron: "32 4 * * 1-5"
+    - cron: "2 6 * * 1-5"
+    - cron: "32 7 * * 1-5"
+    - cron: "32 8 * * 1-5"
+    - cron: "32 9 * * 1-5"
+    - cron: "7 10 * * 1-5"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stock-intelligence-checkpoint-capture
+  cancel-in-progress: false
+
+jobs:
+  checkpoint-capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Resolve request
+        id: resolve
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${EVENT_NAME}" == "schedule" ]]; then
+            target_env="prod"
+            mode="capture"
+            checkpoint_id=""
+            date_override=""
+            historical="true"
+            force="false"
+
+            case "${EVENT_SCHEDULE}" in
+              "47 3 * * 1-5") checkpoint_id="0915" ;;
+              "2 4 * * 1-5") checkpoint_id="0930" ;;
+              "32 4 * * 1-5") checkpoint_id="1000" ;;
+              "2 6 * * 1-5") checkpoint_id="1130" ;;
+              "32 7 * * 1-5") checkpoint_id="1300" ;;
+              "32 8 * * 1-5") checkpoint_id="1400" ;;
+              "32 9 * * 1-5") checkpoint_id="1500" ;;
+              "7 10 * * 1-5") mode="reconcile" ;;
+              *)
+                echo "Unsupported schedule: ${EVENT_SCHEDULE}"
+                exit 1
+                ;;
+            esac
+          else
+            target_env="${{ inputs.target_env }}"
+            mode="${{ inputs.mode }}"
+            checkpoint_id="${{ inputs.checkpoint_id }}"
+            date_override="${{ inputs.date }}"
+            historical="${{ inputs.historical }}"
+            force="${{ inputs.force }}"
+          fi
+
+          echo "target_env=${target_env}" >> "$GITHUB_OUTPUT"
+          echo "mode=${mode}" >> "$GITHUB_OUTPUT"
+          echo "checkpoint_id=${checkpoint_id}" >> "$GITHUB_OUTPUT"
+          echo "date_override=${date_override}" >> "$GITHUB_OUTPUT"
+          echo "historical=${historical}" >> "$GITHUB_OUTPUT"
+          echo "force=${force}" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve backend secrets
+        shell: bash
+        env:
+          DEV_BASE_URL: ${{ secrets.CHECKPOINT_CRON_DEV_BASE_URL }}
+          DEV_SECRET: ${{ secrets.CHECKPOINT_CRON_DEV_SECRET }}
+          PROD_BASE_URL: ${{ secrets.CHECKPOINT_CRON_PROD_BASE_URL }}
+          PROD_SECRET: ${{ secrets.CHECKPOINT_CRON_PROD_SECRET }}
+        run: |
+          set -euo pipefail
+
+          target_env="${{ steps.resolve.outputs.target_env }}"
+          if [[ "$target_env" == "prod" ]]; then
+            base_url="$PROD_BASE_URL"
+            cron_secret="$PROD_SECRET"
+          else
+            base_url="$DEV_BASE_URL"
+            cron_secret="$DEV_SECRET"
+          fi
+
+          base_url="${base_url%/}"
+          if [[ -z "$base_url" || -z "$cron_secret" ]]; then
+            echo "Missing backend URL or cron secret for target_env=$target_env"
+            exit 1
+          fi
+
+          echo "::add-mask::$cron_secret"
+          echo "BASE_URL=$base_url" >> "$GITHUB_ENV"
+          echo "CRON_SECRET=$cron_secret" >> "$GITHUB_ENV"
+
+      - name: Wake backend
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          health_url="${BASE_URL}/health"
+          for attempt in {1..10}; do
+            status=$(curl --silent --show-error --output health.json --write-out "%{http_code}" --max-time 30 "$health_url" || true)
+            if [[ "$status" == "200" ]]; then
+              echo "Backend is awake on attempt $attempt"
+              cat health.json
+              exit 0
+            fi
+
+            echo "Wake attempt $attempt/10 returned ${status:-curl_error}; waiting 20s"
+            sleep 20
+          done
+
+          echo "Backend did not become healthy after repeated wake attempts."
+          exit 1
+
+      - name: Call checkpoint endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mode="${{ steps.resolve.outputs.mode }}"
+          checkpoint_id="${{ steps.resolve.outputs.checkpoint_id }}"
+          date_override="${{ steps.resolve.outputs.date_override }}"
+          historical="${{ steps.resolve.outputs.historical }}"
+          force="${{ steps.resolve.outputs.force }}"
+
+          if [[ "$mode" == "capture" ]]; then
+            if [[ -z "$checkpoint_id" ]]; then
+              echo "checkpoint_id is required for capture mode"
+              exit 1
+            fi
+            url="${BASE_URL}/api/v1/checkpoints/cron-capture?checkpoint_id=${checkpoint_id}&historical=${historical}&force=${force}"
+          else
+            url="${BASE_URL}/api/v1/checkpoints/cron-reconcile"
+          fi
+
+          if [[ -n "$date_override" ]]; then
+            separator="?"
+            if [[ "$url" == *"?"* ]]; then
+              separator="&"
+            fi
+            url="${url}${separator}date=${date_override}"
+          fi
+
+          echo "Calling ${mode} on ${{ steps.resolve.outputs.target_env }} backend"
+          echo "$url"
+
+          status=$(curl --silent --show-error --output response.json --write-out "%{http_code}" \
+            --header "X-Checkpoint-Cron-Secret: ${CRON_SECRET}" \
+            "$url")
+
+          cat response.json
+
+          if [[ "$status" -ge 400 ]]; then
+            echo "Checkpoint request failed with status $status"
+            exit 1
+          fi

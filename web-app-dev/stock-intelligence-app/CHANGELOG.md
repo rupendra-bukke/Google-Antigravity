@@ -11,9 +11,13 @@ Version format:
 
 ## Unreleased
 
+### Added
+- Secure checkpoint cron endpoints plus a repo-root GitHub Actions workflow now support unattended intraday timeline capture and end-of-day reconcile, even when no browser is open.
+
 ### Fixed
 - Checkpoint board now follows the selected dashboard index instead of staying hardcoded to Nifty 50.
 - Shared NSE trading-day logic now keeps EOD date selection and checkpoint TTL holiday-aware even when `exchange_calendars` is not installed.
+- Checkpoint capture and scheduler paths now skip non-trading days instead of risking stale holiday saves.
 
 ### Changed
 - Active docs refreshed to match the deployed data-source strategy, live expiry APIs, selected-symbol timeline behavior, and latest production release reference.
