@@ -23,6 +23,7 @@ Version format:
 - Active docs refreshed to match the deployed data-source strategy, live expiry APIs, selected-symbol timeline behavior, and latest production release reference.
 - AI panel now shows clearer payload-state cues for live checkpoint, cached EOD, partial AI, and fallback output.
 - EOD mode now uses overnight-cues wording, softer fallback copy, and next-market-open refresh messaging.
+- Workflow docs now record the live Render/GitHub checkpoint-automation setup, successful prod validation flow, and later secret-rotation guidance.
 
 ## [v2026.03.13-01] - 2026-03-13
 

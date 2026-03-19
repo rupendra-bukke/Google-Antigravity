@@ -73,6 +73,17 @@ Set env vars:
 - Both envs: `NEXT_PUBLIC_APP_VERSION = vYYYY.MM.DD-NN` (bump every release)
 - Optional (for short git id on UI): `NEXT_PUBLIC_GIT_SHA = <short-sha>`
 
+For unattended timeline checkpoint automation:
+- Render dev service `stock-intelligence-api-dev` needs `CHECKPOINT_CRON_SECRET`
+- Render prod service `stock-intelligence-api` needs `CHECKPOINT_CRON_SECRET`
+- GitHub repository secrets needed by `.github/workflows/stock-intelligence-checkpoint-capture.yml`:
+  - `CHECKPOINT_CRON_DEV_BASE_URL`
+  - `CHECKPOINT_CRON_DEV_SECRET`
+  - `CHECKPOINT_CRON_PROD_BASE_URL`
+  - `CHECKPOINT_CRON_PROD_SECRET`
+- Base URL secrets must use backend root URLs only, not `/health` or `/api/v1/...`
+- If a secret is ever exposed, rotate the value later but keep the same secret names
+
 Current app URLs:
 - Dev (Vercel Preview): `https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/`
 - Prod (Vercel Production): `https://trade-craft-rb.vercel.app/`

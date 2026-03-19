@@ -110,6 +110,10 @@ Behavior:
 - Catch-up and external cron paths both skip non-trading days to avoid saving stale holiday data.
 - If jobs are missed, catch-up runs historical-at-time reconstruction via:
   - `fetch_multi_timeframe_at_time(...)`
+- Current operational setup:
+  - Render services use `CHECKPOINT_CRON_SECRET`
+  - GitHub repository secrets provide dev/prod base URLs and matching secrets
+  - Manual prod validation succeeded with a `0915` capture for `2026-03-19`
 
 Checkpoint storage:
 - Upstash Redis through `backend/services/checkpoint_store.py`

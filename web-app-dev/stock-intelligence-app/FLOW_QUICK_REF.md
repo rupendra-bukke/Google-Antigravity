@@ -7,7 +7,29 @@ Project path:
 
 - Dev (Vercel Preview): `https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/`
 - Prod (Vercel Production): `https://trade-craft-rb.vercel.app/`
-- Current prod release: `v2026.03.13-01` (`main` merge commit: `19761ee`)
+- Current prod release: `v2026.03.13-01` (`main` head: `6a361ec`)
+
+## Checkpoint Automation
+
+- Repo-root workflow: `.github/workflows/stock-intelligence-checkpoint-capture.yml`
+- Render env key on both services: `CHECKPOINT_CRON_SECRET`
+- GitHub repository secrets required:
+  - `CHECKPOINT_CRON_DEV_BASE_URL`
+  - `CHECKPOINT_CRON_DEV_SECRET`
+  - `CHECKPOINT_CRON_PROD_BASE_URL`
+  - `CHECKPOINT_CRON_PROD_SECRET`
+- Base URL secrets must use backend root URLs only, for example:
+  - `https://stock-intelligence-api-dev.onrender.com`
+  - `https://stock-intelligence-api.onrender.com`
+- Manual prod validation reference:
+  - branch `main`
+  - `target_env=prod`
+  - `mode=capture`
+  - `checkpoint_id=0915`
+  - `date=2026-03-19`
+  - `historical=true`
+  - `force=true`
+- If secrets are ever exposed, change only the secret values later. Keep the same secret names.
 
 ## Daily Dev (build + preview)
 

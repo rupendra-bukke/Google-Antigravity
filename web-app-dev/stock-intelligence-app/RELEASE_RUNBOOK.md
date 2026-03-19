@@ -88,6 +88,33 @@ This document captures the DEV -> PROD release flow for `stock-intelligence-app`
   - `CHECKPOINT_CRON_PROD_BASE_URL` = prod backend root URL
   - `CHECKPOINT_CRON_PROD_SECRET` = same value as prod backend `CHECKPOINT_CRON_SECRET`
 - Note: GitHub scheduled workflows run from the default branch, so the unattended intraday schedule becomes active after the workflow reaches `main`. Use `workflow_dispatch` to test against `dev` before prod promotion.
+
+5.1 Current unattended checkpoint automation reference
+- Workflow file: repo-root `.github/workflows/stock-intelligence-checkpoint-capture.yml`
+- GitHub Actions secrets must be added under `Repository secrets`, not `Environment secrets`.
+- Current Render env naming stays the same in both services:
+  - `stock-intelligence-api-dev` -> `CHECKPOINT_CRON_SECRET`
+  - `stock-intelligence-api` -> `CHECKPOINT_CRON_SECRET`
+- Current GitHub repository secrets:
+  - `CHECKPOINT_CRON_DEV_BASE_URL`
+  - `CHECKPOINT_CRON_DEV_SECRET`
+  - `CHECKPOINT_CRON_PROD_BASE_URL`
+  - `CHECKPOINT_CRON_PROD_SECRET`
+- Base URL values must be backend root URLs only:
+  - example dev: `https://stock-intelligence-api-dev.onrender.com`
+  - example prod: `https://stock-intelligence-api.onrender.com`
+  - do not append `/health` or `/api/v1/...`
+- Manual validation values used successfully for prod:
+  - branch: `main`
+  - `target_env=prod`
+  - `mode=capture`
+  - `checkpoint_id=0915`
+  - `date=2026-03-19`
+  - `historical=true`
+  - `force=true`
+- If a secret value is ever exposed in chat or screenshots, rotate only the secret value later. Do not rename:
+  - Render key `CHECKPOINT_CRON_SECRET`
+  - GitHub keys `CHECKPOINT_CRON_DEV_SECRET` and `CHECKPOINT_CRON_PROD_SECRET`
 6. Regression checks to verify before prod
 - Confirm `frontend/src/app/components/CheckpointBoard.tsx` follows the currently selected symbol.
 
