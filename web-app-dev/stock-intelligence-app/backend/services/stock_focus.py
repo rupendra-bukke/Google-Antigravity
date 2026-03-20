@@ -10,7 +10,7 @@ import pandas as pd
 import yfinance as yf
 
 from services.ai_decision import IST, _collect_live_market_news, cache_get, cache_set, logger
-from services.market_data import is_indian_market_open
+from services.market_data import fetch_multi_timeframe, is_indian_market_open
 
 STOCK_LIVE_CACHE_KEY_PREFIX = "stock_focus_live:"
 STOCK_EOD_CACHE_KEY_PREFIX = "stock_focus_eod:"
@@ -449,11 +449,25 @@ def _fallback_payload(symbol: str, label: str, reason: str, captured_at: datetim
     }
 
 
-def _fetch_focus_frames(symbol: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+async def _fetch_focus_frames(symbol: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    intraday_df = pd.DataFrame()
+    try:
+        frames = await fetch_multi_timeframe(symbol, include_1m=False)
+        intraday_df = _normalize_intraday_index(frames.get("5m", pd.DataFrame()))
+        if intraday_df.empty:
+            intraday_df = _normalize_intraday_index(frames.get("15m", pd.DataFrame()))
+    except Exception:
+        intraday_df = pd.DataFrame()
+
     ticker = yf.Ticker(symbol)
-    intraday_df = ticker.history(period="5d", interval="5m", auto_adjust=False, actions=False, prepost=False)
-    daily_df = ticker.history(period="3mo", interval="1d", auto_adjust=False, actions=False, prepost=False)
-    return _normalize_intraday_index(intraday_df), _normalize_daily_frame(daily_df)
+    if intraday_df.empty:
+        intraday_df = _normalize_intraday_index(
+            ticker.history(period="5d", interval="5m", auto_adjust=False, actions=False, prepost=False)
+        )
+    daily_df = _normalize_daily_frame(
+        ticker.history(period="3mo", interval="1d", auto_adjust=False, actions=False, prepost=False)
+    )
+    return intraday_df, daily_df
 
 
 def _build_live_payload(
@@ -631,7 +645,7 @@ async def get_stock_focus_outlook(symbol: str, label: str, now: datetime) -> dic
             pass
 
     try:
-        intraday_df, daily_df = _fetch_focus_frames(symbol)
+        intraday_df, daily_df = await _fetch_focus_frames(symbol)
         if intraday_df.empty:
             return _fallback_payload(symbol, label, "No intraday data available.", now, market_open)
 
@@ -646,4 +660,5 @@ async def get_stock_focus_outlook(symbol: str, label: str, now: datetime) -> dic
     except Exception as exc:
         logger.error("Market focus outlook error for %s: %s", symbol, exc)
         return _fallback_payload(symbol, label, str(exc)[:120], now, market_open)
+
 

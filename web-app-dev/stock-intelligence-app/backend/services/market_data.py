@@ -59,6 +59,19 @@ TV_N_BARS: dict[str, int] = {
     "1m": 500, "5m": 200, "15m": 100, "1h": 50,
 }
 
+def _resolve_tv_info(symbol: str) -> tuple[str, str] | None:
+    if not symbol:
+        return None
+
+    if symbol in TV_SYMBOL_MAP:
+        return TV_SYMBOL_MAP[symbol]
+
+    upper_symbol = symbol.upper().strip()
+    if upper_symbol.endswith(".NS") and len(upper_symbol) > 3:
+        return upper_symbol[:-3], "NSE"
+    if upper_symbol.endswith(".BO") and len(upper_symbol) > 3:
+        return upper_symbol[:-3], "BSE"
+    return None
 FRAME_MAX_BARS: dict[str, int] = {
     "1m": 320,
     "3m": 240,
@@ -130,7 +143,7 @@ async def fetch_intraday(
     falls back to yfinance if tvDatafeed is unavailable or returns no data.
     """
     # ── 1. Try TradingView ────────────────────────────────────────
-    if (tv_info := TV_SYMBOL_MAP.get(symbol)) and interval in TV_INTERVAL_ATTR:
+    if (tv_info := _resolve_tv_info(symbol)) and interval in TV_INTERVAL_ATTR:
         tv_symbol, tv_exchange = tv_info
         n_bars = TV_N_BARS.get(interval, 100)
         loop = asyncio.get_event_loop()
@@ -558,3 +571,6 @@ def get_market_levels(df_daily_or_15m: pd.DataFrame) -> dict:
         levels["first_15m_low"] = round(float(today_data["Low"].iloc[0]), 2)
 
     return levels
+
+
+
