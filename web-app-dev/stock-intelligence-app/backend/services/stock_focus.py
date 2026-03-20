@@ -445,7 +445,7 @@ def _fallback_payload(symbol: str, label: str, reason: str, captured_at: datetim
         "captured_at": stamp,
         "analysis_status": "fallback",
         "free_tier_mode": True,
-        "source": "yfinance + public RSS",
+        "source": "TradingView/yfinance + public RSS",
     }
 
 
@@ -541,7 +541,7 @@ def _build_live_payload(
         "captured_at": now.astimezone(IST).isoformat(),
         "analysis_status": "full",
         "free_tier_mode": True,
-        "source": "yfinance + public RSS",
+        "source": "TradingView/yfinance + public RSS",
     }
 
 
@@ -623,12 +623,17 @@ def _build_eod_payload(
         "captured_at": now.astimezone(IST).isoformat(),
         "analysis_status": "full",
         "free_tier_mode": True,
-        "source": "yfinance + public RSS",
+        "source": "TradingView/yfinance + public RSS",
         "net_change_pct": round(float(net_change_pct), 2) if net_change_pct is not None else None,
     }
 
 
-async def get_stock_focus_outlook(symbol: str, label: str, now: datetime) -> dict:
+async def get_stock_focus_outlook(
+    symbol: str,
+    label: str,
+    now: datetime,
+    force_refresh: bool = False,
+) -> dict:
     market_open, _ = is_indian_market_open(now)
     bucket = now.astimezone(IST).strftime("%Y%m%d%H") + f"{now.minute // 10}"
     prefix = STOCK_LIVE_CACHE_KEY_PREFIX if market_open else STOCK_EOD_CACHE_KEY_PREFIX
@@ -636,7 +641,7 @@ async def get_stock_focus_outlook(symbol: str, label: str, now: datetime) -> dic
     cache_key = f"{prefix}{bucket}:{hashlib.md5(symbol.encode()).hexdigest()}"
 
     cached = cache_get(cache_key)
-    if cached:
+    if cached and not force_refresh:
         try:
             payload = json.loads(cached)
             if isinstance(payload, dict):
@@ -660,5 +665,3 @@ async def get_stock_focus_outlook(symbol: str, label: str, now: datetime) -> dic
     except Exception as exc:
         logger.error("Market focus outlook error for %s: %s", symbol, exc)
         return _fallback_payload(symbol, label, str(exc)[:120], now, market_open)
-
-

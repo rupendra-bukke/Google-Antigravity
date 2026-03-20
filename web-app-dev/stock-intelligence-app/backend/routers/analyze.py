@@ -917,12 +917,15 @@ async def market_focus_options():
     return {
         "items": MARKET_FOCUS_OPTIONS,
         "default_symbol": MARKET_FOCUS_OPTIONS[0]["symbol"],
-        "note": "Free-tier-safe focus view using yfinance and public RSS only.",
+        "note": "Free-tier-safe focus view using TradingView/yfinance + public RSS. Auto-refresh stays cached; Refresh forces a fresh check.",
     }
 
 
 @router.get("/market-focus")
-async def market_focus(symbol: str = Query(default="^NSEI")):
+async def market_focus(
+    symbol: str = Query(default="^NSEI"),
+    refresh: bool = Query(default=False, description="Force a fresh market-focus fetch"),
+):
     asset = MARKET_FOCUS_BY_SYMBOL.get(symbol)
     if not asset:
         allowed = ", ".join(item["symbol"] for item in MARKET_FOCUS_OPTIONS)
@@ -933,9 +936,11 @@ async def market_focus(symbol: str = Query(default="^NSEI")):
         symbol=asset["symbol"],
         label=asset["label"],
         now=now,
+        force_refresh=refresh,
     )
     payload["asset_kind"] = asset["kind"]
     payload["options_count"] = len(MARKET_FOCUS_OPTIONS)
+    payload["served_at"] = now.astimezone(IST).isoformat()
     return payload
 
 @router.get("/expiry-calendar")
@@ -1038,9 +1043,3 @@ async def expiry_zero_hero_endpoint(index: str = Query(..., description="NIFTY|B
     # Keep one plan per expiry day; manual refresh can still regenerate after cache TTL.
     cache_set(cache_key, json.dumps(result), 1800)
     return result
-
-
-
-
-
-

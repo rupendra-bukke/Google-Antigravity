@@ -49,6 +49,7 @@ interface FocusResponse {
     global_news_items: string[];
     news_tomorrow: string[];
     captured_at: string;
+    served_at?: string;
     analysis_status: "full" | "fallback";
     free_tier_mode: boolean;
     source: string;
@@ -139,14 +140,18 @@ export default function WatchlistPage() {
         setSelectedSymbol((current) => current || json.default_symbol || json.items?.[0]?.symbol || "^NSEI");
     }, []);
 
-    const fetchFocus = useCallback(async (symbol: string, silent = false) => {
+    const fetchFocus = useCallback(async (symbol: string, silent = false, forceRefresh = false) => {
         if (!symbol) return;
         if (!silent) setLoading(true);
         setRefreshing(true);
         setError(null);
 
         try {
-            const res = await fetch(`/api/v1/market-focus?symbol=${encodeURIComponent(symbol)}`, {
+            const params = new URLSearchParams({ symbol });
+            if (forceRefresh) {
+                params.set("refresh", "true");
+            }
+            const res = await fetch(`/api/v1/market-focus?${params.toString()}`, {
                 cache: "no-store",
             });
             if (!res.ok) {
@@ -174,7 +179,7 @@ export default function WatchlistPage() {
 
     useEffect(() => {
         if (!selectedSymbol) return;
-        fetchFocus(selectedSymbol);
+        fetchFocus(selectedSymbol, false, true);
     }, [selectedSymbol, fetchFocus]);
 
     useEffect(() => {
@@ -182,7 +187,7 @@ export default function WatchlistPage() {
         const refreshMs = data?.market_open ? LIVE_REFRESH_MS : EOD_REFRESH_MS;
         const timer = setInterval(() => {
             if (typeof document !== "undefined" && document.hidden) return;
-            fetchFocus(selectedSymbol, true);
+            fetchFocus(selectedSymbol, true, false);
         }, refreshMs);
         return () => clearInterval(timer);
     }, [selectedSymbol, data?.market_open, fetchFocus]);
@@ -203,7 +208,7 @@ export default function WatchlistPage() {
                     </p>
                 </div>
                 <button
-                    onClick={() => selectedSymbol && fetchFocus(selectedSymbol, true)}
+                    onClick={() => selectedSymbol && fetchFocus(selectedSymbol, true, true)}
                     disabled={refreshing || !selectedSymbol}
                     className="px-3 py-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 text-brand-300 text-xs font-bold"
                 >
@@ -219,7 +224,7 @@ export default function WatchlistPage() {
                     </div>
                     <div className="text-right">
                         <p className="text-[0.62rem] uppercase tracking-[0.18em] text-gray-500 font-extrabold">Free-Tier Mode</p>
-                        <p className="text-xs text-emerald-300 mt-1">{note || "yfinance + public RSS, with cached refresh windows."}</p>
+                        <p className="text-xs text-emerald-300 mt-1">{note || "TradingView/yfinance + public RSS, with cached auto-refresh and hard refresh on button."}</p>
                     </div>
                 </div>
 
@@ -288,7 +293,8 @@ export default function WatchlistPage() {
                             <div className="text-right">
                                 <p className="text-[0.62rem] uppercase tracking-[0.18em] text-gray-500 font-extrabold">Last Price</p>
                                 <p className="text-3xl font-black text-white mt-1">{fmtPrice(data.price)}</p>
-                                <p className="text-[11px] text-gray-500 mt-2">Updated {fmtStamp(data.captured_at)} IST</p>
+                                <p className="text-[11px] text-gray-500 mt-2">Snapshot {fmtStamp(data.captured_at)} IST</p>
+                                <p className="text-[11px] text-gray-500 mt-1">Checked {fmtStamp(data.served_at || data.captured_at)} IST</p>
                             </div>
                         </div>
 
@@ -372,7 +378,7 @@ export default function WatchlistPage() {
                             <div>
                                 <p className="text-[0.65rem] uppercase tracking-[0.18em] text-brand-300 font-extrabold">Delivery Note</p>
                                 <p className="text-sm text-gray-300 mt-2 max-w-3xl">
-                                    This page is intentionally rule-based and cached. It uses public RSS headlines plus market-price structure, so it gives a useful low-cost bias without adding live Gemini pressure to your free-tier setup.
+                                    This page is intentionally rule-based and cache-aware. It uses TradingView/yfinance market structure plus public RSS, so it stays free-tier friendly. Auto-refresh reuses light cached windows, and the Refresh button forces a fresh check.
                                 </p>
                             </div>
                             <div className="text-right">
@@ -465,4 +471,3 @@ function LevelBlock({ title, levels, tone }: { title: string; levels: string[]; 
         </div>
     );
 }
-
