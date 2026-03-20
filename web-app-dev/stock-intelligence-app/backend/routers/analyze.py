@@ -32,6 +32,7 @@ from services.market_data import (
 from services.decision import make_decision
 from services.decision_v2 import run_advanced_analysis
 from services.ai_decision import get_ai_decision, cache_get, cache_set
+from services.stock_focus import get_stock_focus_outlook
 from config import settings
 
 router = APIRouter(prefix="/api/v1", tags=["analyze"])
@@ -95,6 +96,13 @@ WATCHLIST_LABELS = {
     "^CNXFINSERVICE": "FINNIFTY",
     "^BSESN": "SENSEX",
 }
+MARKET_FOCUS_OPTIONS = [
+    {"symbol": "^NSEI", "label": "NIFTY 50", "kind": "index"},
+    {"symbol": "^NSEBANK", "label": "BANK NIFTY", "kind": "index"},
+    {"symbol": "^BSESN", "label": "SENSEX", "kind": "index"},
+    {"symbol": "JPPOWER.NS", "label": "JAIPRAKASH POWER", "kind": "stock"},
+]
+MARKET_FOCUS_BY_SYMBOL = {item["symbol"]: item for item in MARKET_FOCUS_OPTIONS}
 ANALYZE_CACHE_KEY_PREFIX = "analyze_v2:"
 ANALYZE_CACHE_TTL_SECONDS = 90
 
@@ -903,6 +911,33 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
         return _fallback(f"AI decision endpoint failed: {exc}")
 
 
+
+@router.get("/market-focus-options")
+async def market_focus_options():
+    return {
+        "items": MARKET_FOCUS_OPTIONS,
+        "default_symbol": MARKET_FOCUS_OPTIONS[0]["symbol"],
+        "note": "Free-tier-safe focus view using yfinance and public RSS only.",
+    }
+
+
+@router.get("/market-focus")
+async def market_focus(symbol: str = Query(default="^NSEI")):
+    asset = MARKET_FOCUS_BY_SYMBOL.get(symbol)
+    if not asset:
+        allowed = ", ".join(item["symbol"] for item in MARKET_FOCUS_OPTIONS)
+        raise HTTPException(status_code=400, detail=f"Invalid symbol. Allowed: {allowed}")
+
+    now = datetime.now(timezone.utc)
+    payload = await get_stock_focus_outlook(
+        symbol=asset["symbol"],
+        label=asset["label"],
+        now=now,
+    )
+    payload["asset_kind"] = asset["kind"]
+    payload["options_count"] = len(MARKET_FOCUS_OPTIONS)
+    return payload
+
 @router.get("/expiry-calendar")
 async def expiry_calendar(refresh: bool = Query(False, description="Force refresh from exchange APIs")):
     try:
@@ -1003,3 +1038,9 @@ async def expiry_zero_hero_endpoint(index: str = Query(..., description="NIFTY|B
     # Keep one plan per expiry day; manual refresh can still regenerate after cache TTL.
     cache_set(cache_key, json.dumps(result), 1800)
     return result
+
+
+
+
+
+
