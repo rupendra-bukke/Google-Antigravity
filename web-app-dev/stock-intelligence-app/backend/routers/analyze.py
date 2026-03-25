@@ -34,6 +34,7 @@ from services.decision_v2 import run_advanced_analysis
 from services.ai_decision import (
     EOD_CACHE_KEY_PREFIX,
     EOD_CACHE_TTL,
+    _build_rule_based_eod_fallback,
     _fallback,
     cache_get,
     cache_set,
@@ -1015,6 +1016,7 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
         if prev_session != session_date:
             session_dates.append(prev_session)
 
+        fallback_eod: dict | None = None
         for d in session_dates:
             data = _load_cached_eod_payload(d, sym)
             if data is None:
@@ -1024,7 +1026,40 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
             data.setdefault("symbol", sym)
             data["next_refresh_at_ist"] = next_open.isoformat()
             data["eod_cache_only"] = True
-            return data
+
+            if str(data.get("analysis_status", "")).lower() != "fallback":
+                return data
+            if fallback_eod is None:
+                fallback_eod = data
+
+        if fallback_eod is not None:
+            # Self-heal legacy cached fallback payloads that still show Unavailable/Unknown.
+            if (
+                str(fallback_eod.get("session_type", "")).lower() == "unavailable"
+                or str(fallback_eod.get("close_position", "")).lower() == "unknown"
+            ):
+                repaired = await _build_rule_based_eod_fallback(
+                    symbol=sym,
+                    now=now,
+                    reason="Upgrading legacy fallback EOD snapshot for display stability.",
+                )
+                repaired.setdefault("analysis_type", "EOD")
+                repaired.setdefault("session_date", fallback_eod.get("session_date") or session_date.strftime("%Y-%m-%d"))
+                repaired["symbol"] = sym
+                repaired["next_refresh_at_ist"] = next_open.isoformat()
+                repaired["eod_cache_only"] = True
+
+                try:
+                    import hashlib
+
+                    target_date = str(repaired.get("session_date") or session_date.strftime("%Y-%m-%d"))
+                    cache_key = f"{EOD_CACHE_KEY_PREFIX}{target_date}:{hashlib.md5(sym.encode()).hexdigest()}"
+                    cache_set(cache_key, json.dumps(repaired), EOD_CACHE_TTL)
+                except Exception:
+                    pass
+
+                return repaired
+            return fallback_eod
 
         retry_at = next_open
         if _is_nse_trading_day(ist_now.date()) and ist_now.time() >= dt_time(15, 30):

@@ -418,111 +418,108 @@ export default function AIDecision({ symbol }: { symbol: string }) {
                 backdropFilter: "blur(12px)",
             }}
         >
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "0.95rem", gap: "0.9rem", flexWrap: "wrap" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem", flex: 1, minWidth: "280px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "0.66rem", fontWeight: 800, color: isEOD ? "#fb923c" : "#818cf8", textTransform: "uppercase", letterSpacing: "0.16em" }}>
-                            {isEOD ? "Next Day Outlook" : "AI Price Action Analysis"}
-                        </span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.8rem", gap: "0.75rem", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "0.66rem", fontWeight: 800, color: isEOD ? "#fb923c" : "#818cf8", textTransform: "uppercase", letterSpacing: "0.16em" }}>
+                        {isEOD ? "Next Day Outlook" : "AI Price Action Analysis"}
+                    </span>
+                    <span
+                        style={{
+                            fontSize: "0.56rem",
+                            padding: "3px 8px",
+                            borderRadius: "6px",
+                            background: isEOD ? "rgba(251,146,60,0.1)" : "rgba(99,102,241,0.1)",
+                            border: `1px solid ${isEOD ? "rgba(251,146,60,0.24)" : "rgba(99,102,241,0.24)"}`,
+                            color: isEOD ? "#fb923c" : "#818cf8",
+                            fontWeight: 700,
+                            letterSpacing: "0.08em",
+                        }}
+                    >
+                        {snapshotChip}
+                    </span>
+                    {analysisBadge && (
                         <span
                             style={{
                                 fontSize: "0.56rem",
                                 padding: "3px 8px",
-                                borderRadius: "6px",
-                                background: isEOD ? "rgba(251,146,60,0.1)" : "rgba(99,102,241,0.1)",
-                                border: `1px solid ${isEOD ? "rgba(251,146,60,0.24)" : "rgba(99,102,241,0.24)"}`,
-                                color: isEOD ? "#fb923c" : "#818cf8",
+                                borderRadius: "999px",
+                                background: analysisBadge.bg,
+                                border: `1px solid ${analysisBadge.border}`,
+                                color: analysisBadge.color,
                                 fontWeight: 700,
                                 letterSpacing: "0.08em",
                             }}
                         >
-                            {snapshotChip}
+                            {analysisBadge.label}
                         </span>
-                        {analysisBadge && (
-                            <span
-                                style={{
-                                    fontSize: "0.56rem",
-                                    padding: "3px 8px",
-                                    borderRadius: "999px",
-                                    background: analysisBadge.bg,
-                                    border: `1px solid ${analysisBadge.border}`,
-                                    color: analysisBadge.color,
-                                    fontWeight: 700,
-                                    letterSpacing: "0.08em",
-                                }}
-                            >
-                                {analysisBadge.label}
-                            </span>
-                        )}
-                    </div>
-
-                    <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
-                        {SNAPSHOT_CHECKPOINTS.map((chip) => {
-                            const state = getSnapshotChipState(chip.id, shownId, pendingId);
-                            const tone = state === "active"
-                                ? chip.id === "1530"
-                                    ? { fg: "#fdba74", bg: "rgba(251,146,60,0.12)", border: "rgba(251,146,60,0.34)" }
-                                    : { fg: "#93c5fd", bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.30)" }
-                                : state === "pending"
-                                    ? { fg: "#fbbf24", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.28)" }
-                                    : state === "done"
-                                        ? { fg: "#cbd5e1", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.18)" }
-                                        : { fg: "#64748b", bg: "rgba(15,23,42,0.28)", border: "rgba(71,85,105,0.18)" };
-                            const stateLabel = state === "active"
-                                ? "SHOWING"
-                                : state === "pending"
-                                    ? "NEXT"
-                                    : state === "done"
-                                        ? "DONE"
-                                        : "UPCOMING";
-
-                            return (
-                                <div
-                                    key={chip.id}
-                                    style={{
-                                        minWidth: "132px",
-                                        padding: "0.65rem 0.75rem",
-                                        borderRadius: "14px",
-                                        background: tone.bg,
-                                        border: `1px solid ${tone.border}`,
-                                        boxShadow: state === "active" ? `0 0 0 1px ${tone.border}` : "none",
-                                    }}
-                                >
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
-                                        <span style={{ fontSize: "0.56rem", color: tone.fg, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-                                            {chip.label}
-                                        </span>
-                                        <span style={{ fontSize: "0.5rem", color: tone.fg, fontWeight: 800, letterSpacing: "0.10em" }}>
-                                            {stateLabel}
-                                        </span>
-                                    </div>
-                                    <div style={{ marginTop: "0.45rem", fontSize: "0.88rem", color: state === "idle" ? "#94a3b8" : "#f8fafc", fontWeight: 800 }}>
-                                        {chip.time}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                    )}
                 </div>
 
-                <button
-                    onClick={fetchDecision}
-                    disabled={isLoading}
-                    style={{
-                        fontSize: "0.62rem",
-                        padding: "5px 11px",
-                        borderRadius: "8px",
-                        background: "rgba(99,102,241,0.12)",
-                        border: "1px solid rgba(99,102,241,0.24)",
-                        color: "#818cf8",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                    }}
-                >
-                    {isLoading ? "Loading..." : "Refresh"}
-                </button>
-            </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    {SNAPSHOT_CHECKPOINTS.map((chip) => {
+                        const state = getSnapshotChipState(chip.id, shownId, pendingId);
+                        const tone = state === "active"
+                            ? chip.id === "1530"
+                                ? { fg: "#fdba74", bg: "rgba(251,146,60,0.14)", border: "rgba(251,146,60,0.36)" }
+                                : { fg: "#93c5fd", bg: "rgba(59,130,246,0.14)", border: "rgba(59,130,246,0.34)" }
+                            : state === "pending"
+                                ? { fg: "#fbbf24", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.28)" }
+                                : state === "done"
+                                    ? { fg: "#cbd5e1", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.18)" }
+                                    : { fg: "#64748b", bg: "rgba(15,23,42,0.28)", border: "rgba(71,85,105,0.18)" };
+                        const stateLabel = state === "active"
+                            ? "NOW"
+                            : state === "pending"
+                                ? "NEXT"
+                                : state === "done"
+                                    ? "DONE"
+                                    : "LATER";
 
+                        return (
+                            <div
+                                key={chip.id}
+                                style={{
+                                    minWidth: "96px",
+                                    padding: "0.40rem 0.52rem",
+                                    borderRadius: "10px",
+                                    background: tone.bg,
+                                    border: `1px solid ${tone.border}`,
+                                    boxShadow: state === "active" ? `0 0 0 1px ${tone.border}` : "none",
+                                }}
+                            >
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.35rem" }}>
+                                    <span style={{ fontSize: "0.49rem", color: tone.fg, fontWeight: 800, letterSpacing: "0.10em", textTransform: "uppercase" }}>
+                                        {chip.label}
+                                    </span>
+                                    <span style={{ fontSize: "0.47rem", color: tone.fg, fontWeight: 800, letterSpacing: "0.10em" }}>
+                                        {stateLabel}
+                                    </span>
+                                </div>
+                                <div style={{ marginTop: "0.22rem", fontSize: "0.82rem", color: state === "idle" ? "#94a3b8" : "#f8fafc", fontWeight: 800 }}>
+                                    {chip.time}
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    <button
+                        onClick={fetchDecision}
+                        disabled={isLoading}
+                        style={{
+                            fontSize: "0.62rem",
+                            padding: "5px 11px",
+                            borderRadius: "8px",
+                            background: "rgba(99,102,241,0.12)",
+                            border: "1px solid rgba(99,102,241,0.24)",
+                            color: "#818cf8",
+                            cursor: "pointer",
+                            fontWeight: 700,
+                        }}
+                    >
+                        {isLoading ? "Loading..." : "Refresh"}
+                    </button>
+                </div>
+            </div>
             {!isEOD && (
                 <div style={{ marginBottom: "0.9rem", padding: "0.65rem 0.8rem", borderRadius: "10px", background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.18)", fontSize: "0.68rem", color: "#93c5fd", lineHeight: 1.5 }}>
                     News impact can include global macro/geopolitical context. Treat this as decision support and verify critical headlines separately.

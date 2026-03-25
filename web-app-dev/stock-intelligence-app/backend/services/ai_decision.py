@@ -1019,6 +1019,160 @@ async def get_expiry_zero_hero_ai(
         )
 
 
+def _classify_eod_session(net_pct: float, close_pct: float) -> tuple[str, str, str, str]:
+    if close_pct >= 67:
+        close_position = "Top of Range"
+    elif close_pct <= 33:
+        close_position = "Bottom of Range"
+    else:
+        close_position = "Middle of Range"
+
+    if net_pct >= 1.2:
+        session_type = "Bullish Trend Day"
+    elif net_pct <= -1.2:
+        session_type = "Bearish Trend Day"
+    elif net_pct >= 0.4 and close_pct >= 67:
+        session_type = "Bullish Closing Day"
+    elif net_pct <= -0.4 and close_pct <= 33:
+        session_type = "Bearish Closing Day"
+    else:
+        session_type = "Range Day"
+
+    if net_pct >= 0.7 and close_pct >= 58:
+        next_day_bias = "BULLISH"
+    elif net_pct <= -0.7 and close_pct <= 42:
+        next_day_bias = "BEARISH"
+    else:
+        next_day_bias = "WAIT"
+
+    abs_move = abs(net_pct)
+    if abs_move >= 1.5:
+        bias_strength = "HIGH"
+    elif abs_move >= 0.7:
+        bias_strength = "MEDIUM"
+    else:
+        bias_strength = "LOW"
+
+    return session_type, close_position, next_day_bias, bias_strength
+
+
+def _format_level_list(values: list[float], reverse: bool = False, limit: int = 3) -> list[str]:
+    seen: set[int] = set()
+    out: list[str] = []
+    for v in sorted(values, reverse=reverse):
+        key = int(round(v))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(f"{v:,.2f}")
+        if len(out) >= limit:
+            break
+    return out
+
+
+async def _build_rule_based_eod_fallback(
+    symbol: str,
+    now: datetime,
+    reason: str,
+    news_ctx: dict | None = None,
+) -> dict:
+    """
+    Build a deterministic EOD payload from market data when Gemini output
+    is unavailable. This keeps UI values useful instead of Unknown/Unavailable.
+    """
+    ist_now = now.astimezone(IST)
+    safe_news = news_ctx if isinstance(news_ctx, dict) else {}
+    news_items = safe_news.get("items") if isinstance(safe_news.get("items"), list) else []
+
+    try:
+        import yfinance as yf
+
+        ticker = yf.Ticker(symbol)
+        intraday = ticker.history(period="7d", interval="5m", auto_adjust=False, actions=False, prepost=False)
+        if intraday is None or intraday.empty:
+            raise ValueError("No intraday market data available for rule fallback.")
+
+        if intraday.index.tz is None:
+            intraday.index = intraday.index.tz_localize("UTC").tz_convert(IST)
+        else:
+            intraday.index = intraday.index.tz_convert(IST)
+
+        latest_date = intraday.index.date[-1]
+        day_df = intraday[intraday.index.date == latest_date]
+        if day_df.empty:
+            raise ValueError("Could not isolate the latest session for rule fallback.")
+
+        open_p = float(day_df["Open"].iloc[0])
+        close_p = float(day_df["Close"].iloc[-1])
+        high_p = float(day_df["High"].max())
+        low_p = float(day_df["Low"].min())
+        day_range = max(high_p - low_p, max(close_p * 0.002, 1.0))
+        net_pct = ((close_p - open_p) / open_p * 100.0) if open_p else 0.0
+        close_pct = ((close_p - low_p) / day_range * 100.0) if day_range > 0 else 50.0
+
+        session_type, close_position, next_day_bias, bias_strength = _classify_eod_session(net_pct, close_pct)
+
+        daily_df = ticker.history(period="2mo", interval="1d", auto_adjust=False, actions=False)
+        highs = [high_p]
+        lows = [low_p]
+        if daily_df is not None and not daily_df.empty:
+            recent = daily_df.tail(15)
+            highs.extend([float(recent["High"].max()), float(recent["High"].tail(5).max())])
+            lows.extend([float(recent["Low"].min()), float(recent["Low"].tail(5).min())])
+
+        key_resistance = _format_level_list(highs, reverse=True)
+        key_support = _format_level_list(lows, reverse=False)
+
+        if next_day_bias == "BULLISH":
+            next_day_entry_zone = f"{(close_p - day_range * 0.20):,.2f} - {(close_p - day_range * 0.05):,.2f}"
+            next_day_stop_loss = f"{(low_p - day_range * 0.08):,.2f}"
+            next_day_target = f"{(close_p + day_range * 0.80):,.2f}"
+            sl_hunt_risk = "Watch for early sweep below support before upside continuation."
+        elif next_day_bias == "BEARISH":
+            next_day_entry_zone = f"{(close_p + day_range * 0.05):,.2f} - {(close_p + day_range * 0.20):,.2f}"
+            next_day_stop_loss = f"{(high_p + day_range * 0.08):,.2f}"
+            next_day_target = f"{(close_p - day_range * 0.80):,.2f}"
+            sl_hunt_risk = "Watch for early sweep above resistance before downside continuation."
+        else:
+            next_day_entry_zone = None
+            next_day_stop_loss = None
+            next_day_target = None
+            sl_hunt_risk = "Range structure; wait for opening breakout confirmation."
+
+        return {
+            "analysis_type": "EOD",
+            "session_type": session_type,
+            "close_position": close_position,
+            "next_day_bias": next_day_bias,
+            "bias_strength": bias_strength,
+            "key_resistance": key_resistance,
+            "key_support": key_support,
+            "sl_hunt_risk": sl_hunt_risk,
+            "next_day_entry_zone": next_day_entry_zone,
+            "next_day_stop_loss": next_day_stop_loss,
+            "next_day_target": next_day_target,
+            "alert_levels": [
+                f"Above {high_p:,.2f} confirms upside breakout",
+                f"Below {low_p:,.2f} confirms downside breakdown",
+            ],
+            "news_tomorrow": _merge_unique_news([], news_items, limit=6),
+            "reasoning": (
+                "Rule-based EOD fallback used because AI output was unavailable. "
+                f"Reason: {reason[:90]}"
+            ),
+            "captured_at": ist_now.isoformat(),
+            "session_date": str(latest_date),
+            "symbol": symbol,
+            "analysis_status": "fallback",
+            "fallback_source": "rule_based",
+            "live_news_fetched_at": safe_news.get("fetched_at"),
+            "news_source_count": int(safe_news.get("source_count", 0) or 0),
+        }
+    except Exception as exc:
+        logger.warning("Rule-based EOD fallback failed for %s: %s", symbol, exc)
+        return _eod_fallback(symbol, reason)
+
+
 async def get_eod_analysis(symbol: str, now: datetime) -> dict:
     """
     Run end-of-day / next-trading-day outlook analysis.
@@ -1027,9 +1181,6 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
     """
     from config import settings
     import hashlib
-
-    if not settings.gemini_api_key:
-        return _eod_fallback(symbol, "GEMINI_API_KEY not configured on Render.")
 
     news_ctx = {
         "items": [],
@@ -1051,13 +1202,30 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
         except Exception:
             pass
 
-    # Fetch recent market data â€” get 5 days of 5m data for full day view
+    if not settings.gemini_api_key:
+        fallback_payload = await _build_rule_based_eod_fallback(
+            symbol=symbol,
+            now=now,
+            reason="GEMINI_API_KEY not configured on Render.",
+            news_ctx=news_ctx,
+        )
+        cache_set(cache_key, json.dumps(fallback_payload), EOD_CACHE_TTL)
+        return fallback_payload
+
+    # Fetch recent market data - get 5 days of 5m data for full day view
     try:
         import yfinance as yf
         ticker = yf.Ticker(symbol)
         df = ticker.history(period="5d", interval="5m")
         if df.empty:
-            return _eod_fallback(symbol, "No market data available for EOD analysis.")
+            fallback_payload = await _build_rule_based_eod_fallback(
+                symbol=symbol,
+                now=now,
+                reason="No market data available for EOD analysis.",
+                news_ctx=news_ctx,
+            )
+            cache_set(cache_key, json.dumps(fallback_payload), EOD_CACHE_TTL)
+            return fallback_payload
 
         # Convert to IST
         df.index = df.index.tz_convert(IST)
@@ -1067,16 +1235,22 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
         day_df = df[df.index.date == latest_date]
 
         if day_df.empty:
-            return _eod_fallback(symbol, "Could not isolate last trading day data.")
+            fallback_payload = await _build_rule_based_eod_fallback(
+                symbol=symbol,
+                now=now,
+                reason="Could not isolate last trading day data.",
+                news_ctx=news_ctx,
+            )
+            cache_set(cache_key, json.dumps(fallback_payload), EOD_CACHE_TTL)
+            return fallback_payload
 
         # Build market data block
-        open_p  = float(day_df["Open"].iloc[0])
+        open_p = float(day_df["Open"].iloc[0])
         close_p = float(day_df["Close"].iloc[-1])
-        high_p  = float(day_df["High"].max())
-        low_p   = float(day_df["Low"].min())
+        high_p = float(day_df["High"].max())
+        low_p = float(day_df["Low"].min())
         day_range = high_p - low_p
         close_pct = ((close_p - low_p) / day_range * 100) if day_range > 0 else 50
-
         market_block = (
             f"Symbol       : {symbol}\n"
             f"Session Date : {latest_date.strftime('%d-%b-%Y')}\n"
@@ -1093,7 +1267,10 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
         last5 = day_df.tail(5)[["Open", "High", "Low", "Close"]]
         market_block += "\nLast 5 candles (5m, end of session):\n"
         for idx, row in last5.iterrows():
-            market_block += f"  {idx.strftime('%H:%M')} | {row['Open']:.0f} | {row['High']:.0f} | {row['Low']:.0f} | {row['Close']:.0f}\n"
+            market_block += (
+                f"  {idx.strftime('%H:%M')} | {row['Open']:.0f} | {row['High']:.0f} | "
+                f"{row['Low']:.0f} | {row['Close']:.0f}\n"
+            )
 
         news_ctx = await _collect_live_market_news(now)
         prompt = EOD_NEXT_DAY_PROMPT.format(
@@ -1122,19 +1299,19 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
         return result
 
     except json.JSONDecodeError as e:
-        raw_snippet = raw_text[:400] if 'raw_text' in dir() else '?'
-        extracted = _extract_json(raw_snippet) if raw_snippet != '?' else '?'
+        raw_snippet = raw_text[:400] if "raw_text" in dir() else "?"
+        extracted = _extract_json(raw_snippet) if raw_snippet != "?" else "?"
         repaired = _repair_json(extracted)
         if repaired:
             logger.warning("Gemini EOD JSON repaired (was truncated). Using partial result.")
             repaired.setdefault("analysis_type", "EOD")
-            repaired.setdefault("session_type", "Unavailable")
-            repaired.setdefault("close_position", "Unknown")
+            repaired.setdefault("session_type", "Range Day")
+            repaired.setdefault("close_position", "Middle of Range")
             repaired.setdefault("next_day_bias", "WAIT")
             repaired.setdefault("bias_strength", "LOW")
             repaired.setdefault("key_resistance", [])
             repaired.setdefault("key_support", [])
-            repaired.setdefault("sl_hunt_risk", "Analysis unavailable")
+            repaired.setdefault("sl_hunt_risk", "Watch opening range for liquidity sweep.")
             repaired.setdefault("next_day_entry_zone", None)
             repaired.setdefault("next_day_stop_loss", None)
             repaired.setdefault("next_day_target", None)
@@ -1154,16 +1331,43 @@ async def get_eod_analysis(symbol: str, now: datetime) -> dict:
             repaired["news_source_count"] = int(news_ctx.get("source_count", 0) or 0)
             cache_set(cache_key, json.dumps(repaired), EOD_CACHE_TTL)
             return repaired
-        logger.error("EOD non-JSON | raw[:400]: %.400s | extracted[:300]: %.300s | error: %s",
-                     raw_snippet, extracted, e)
-        return _eod_fallback(symbol, "Temporary AI formatting issue. Auto-retry on next refresh.")
+
+        logger.error(
+            "EOD non-JSON | raw[:400]: %.400s | extracted[:300]: %.300s | error: %s",
+            raw_snippet,
+            extracted,
+            e,
+        )
+        fallback_payload = await _build_rule_based_eod_fallback(
+            symbol=symbol,
+            now=now,
+            reason="Temporary AI formatting issue. Using rule-based fallback.",
+            news_ctx=news_ctx,
+        )
+        cache_set(cache_key, json.dumps(fallback_payload), EOD_CACHE_TTL)
+        return fallback_payload
     except httpx.HTTPStatusError as e:
         body = e.response.text[:300]
         logger.error("EOD Gemini HTTP error %s: %s", e.response.status_code, body)
-        return _eod_fallback(symbol, f"Gemini API error {e.response.status_code}: {body}")
+        fallback_payload = await _build_rule_based_eod_fallback(
+            symbol=symbol,
+            now=now,
+            reason=f"Gemini API error {e.response.status_code}",
+            news_ctx=news_ctx,
+        )
+        cache_set(cache_key, json.dumps(fallback_payload), EOD_CACHE_TTL)
+        return fallback_payload
     except Exception as e:
         logger.error("EOD analysis error: %s", e)
-        return _eod_fallback(symbol, str(e))
+        fallback_payload = await _build_rule_based_eod_fallback(
+            symbol=symbol,
+            now=now,
+            reason=str(e),
+            news_ctx=news_ctx,
+        )
+        cache_set(cache_key, json.dumps(fallback_payload), EOD_CACHE_TTL)
+        return fallback_payload
+
 
 
 def _eod_fallback(symbol: str, reason: str) -> dict:
