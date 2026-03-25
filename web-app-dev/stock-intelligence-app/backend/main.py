@@ -9,7 +9,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from routers.analyze import router as analyze_router
+from routers.analyze import (
+    router as analyze_router,
+    run_ai_snapshot_for_all_symbols,
+    run_eod_ai_for_all_symbols,
+)
 from routers.checkpoints import (
     reconcile_missing_checkpoints,
     router as checkpoints_router,
@@ -28,6 +32,11 @@ CHECKPOINT_SCHEDULE = [
     ("1300", 13, 0),
     ("1400", 14, 0),
     ("1500", 15, 0),
+]
+
+AI_SNAPSHOT_SCHEDULE = [
+    ("1000", 10, 0),
+    ("1430", 14, 30),
 ]
 
 
@@ -56,19 +65,43 @@ for cp_id, hour, minute in CHECKPOINT_SCHEDULE:
     )
 
 
-async def _trigger_eod_analysis():
-    """Run end-of-day next-day outlook at market close for Nifty 50 only."""
-    from services.ai_decision import get_eod_analysis
+async def _run_scheduled_ai_snapshot(snapshot_id: str):
+    """Generate saved intraday AI snapshots only at planned times."""
+    today_ist = datetime.now(IST).date()
+    if not is_nse_trading_day(today_ist):
+        print(f"[AI-SNAPSHOT] skipped {snapshot_id} | non-trading day {today_ist}")
+        return
 
+    summary = await run_ai_snapshot_for_all_symbols(snapshot_id)
+    print(
+        f"[AI-SNAPSHOT] scheduler {snapshot_id} | "
+        f"saved={summary.get('saved_symbols')} fallback={summary.get('fallback_symbols')}"
+    )
+
+
+for snapshot_id, hour, minute in AI_SNAPSHOT_SCHEDULE:
+    scheduler.add_job(
+        _run_scheduled_ai_snapshot,
+        CronTrigger(day_of_week="mon-fri", hour=hour, minute=minute),
+        args=[snapshot_id],
+        id=f"ai_snapshot_{snapshot_id}",
+        replace_existing=True,
+    )
+
+
+async def _trigger_eod_analysis():
+    """Run saved end-of-day next-day outlook at market close for dashboard symbols."""
     today_ist = datetime.now(IST).date()
     if not is_nse_trading_day(today_ist):
         print(f"[EOD] skipped | non-trading day {today_ist}")
         return
 
-    now = datetime.now(timezone.utc)
     try:
-        result = await get_eod_analysis("^NSEI", now)
-        print(f"[EOD] ok | next_day_bias={result.get('next_day_bias')}")
+        summary = await run_eod_ai_for_all_symbols()
+        print(
+            f"[EOD] ok | saved={summary.get('saved_symbols')} "
+            f"fallback={summary.get('fallback_symbols')}"
+        )
     except Exception as exc:
         print(f"[EOD] failed: {exc}")
 
@@ -117,6 +150,7 @@ async def lifespan(app: FastAPI):
     print(f"{'=' * 55}\n")
     scheduler.start()
     print(f"[SCHEDULER] started with {len(CHECKPOINT_SCHEDULE)} checkpoint jobs (IST, Mon-Fri)")
+    print(f"[SCHEDULER] started with {len(AI_SNAPSHOT_SCHEDULE)} saved AI snapshot jobs (IST, Mon-Fri)")
     print("[SCHEDULER] external checkpoint wake/capture endpoints ready for GitHub Actions")
     yield
     scheduler.shutdown()

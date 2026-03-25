@@ -25,6 +25,9 @@ interface IntradayData {
     captured_at: string;
     symbol: string;
     checkpoint_mode?: boolean;
+    snapshot_mode?: boolean;
+    snapshot_label?: string | null;
+    snapshot_stale?: boolean;
     active_checkpoint?: string | null;
     active_checkpoint_time_ist?: string | null;
     next_checkpoint?: string | null;
@@ -229,7 +232,7 @@ function getAnalysisStatusBadge(payload: AIData | null): AnalysisBadgeTone | nul
 
     if (payload.analysis_type === "EOD" && payload.eod_cache_only) {
         return {
-            label: "Cached EOD",
+            label: "Saved EOD",
             color: "#fdba74",
             bg: "rgba(251,146,60,0.12)",
             border: "rgba(251,146,60,0.30)",
@@ -237,8 +240,9 @@ function getAnalysisStatusBadge(payload: AIData | null): AnalysisBadgeTone | nul
     }
 
     if (payload.analysis_type !== "EOD" && (payload as IntradayData).checkpoint_mode) {
+        const intraday = payload as IntradayData;
         return {
-            label: "Live checkpoint",
+            label: intraday.snapshot_stale ? "Saved AI (pending)" : "Saved AI",
             color: "#93c5fd",
             bg: "rgba(59,130,246,0.12)",
             border: "rgba(59,130,246,0.28)",
@@ -359,7 +363,16 @@ export default function AIDecision({ symbol }: { symbol: string }) {
     const isEOD = data?.analysis_type === "EOD";
     const intraday = !isEOD ? (data as IntradayData | null) : null;
     const analysisBadge = getAnalysisStatusBadge(data);
-    const refreshCopy = isEOD ? "Auto-refresh at next market open" : `Next refresh: ${refreshLabel}`;
+    const snapshotChip = isEOD
+        ? `Based on ${(data as EODData)?.session_date || "last session"}`
+        : intraday?.snapshot_label
+            ? intraday.snapshot_stale
+                ? `${intraday.snapshot_label} | update pending`
+                : intraday.snapshot_label
+            : intraday?.checkpoint_mode
+                ? `Saved snapshot ${intraday.active_checkpoint_time_ist || "--"}`
+                : "Saved AI | News Context";
+    const refreshCopy = `Next scheduled update: ${refreshLabel}`;
 
     return (
         <div
@@ -388,11 +401,7 @@ export default function AIDecision({ symbol }: { symbol: string }) {
                             letterSpacing: "0.08em",
                         }}
                     >
-                        {isEOD
-                            ? `Based on ${(data as EODData)?.session_date || "last session"}`
-                            : intraday?.checkpoint_mode
-                                ? `Checkpoint ${intraday.active_checkpoint_time_ist || "--"} -> ${intraday.next_checkpoint_time_ist || "15:30"}`
-                                : "Gemini | News Context"}
+                        {snapshotChip}
                     </span>
                     {analysisBadge && (
                         <span
@@ -438,7 +447,9 @@ export default function AIDecision({ symbol }: { symbol: string }) {
                     News impact can include global macro/geopolitical context. Treat this as decision support and verify critical headlines separately.
                     {intraday?.checkpoint_mode && (
                         <div style={{ marginTop: "0.35rem", fontSize: "0.62rem", color: "#bfdbfe", fontWeight: 700 }}>
-                            Live checkpoint mode active. This decision is held until {intraday.next_checkpoint_time_ist || "15:30"} IST.
+                            {intraday.snapshot_stale
+                                ? "Showing the last saved AI snapshot while the next scheduled update is pending."
+                                : `Showing the saved AI snapshot captured at ${intraday.active_checkpoint_time_ist || "--"} IST.`}
                         </div>
                     )}
                 </div>
@@ -446,7 +457,7 @@ export default function AIDecision({ symbol }: { symbol: string }) {
 
             {isLoading && !data && (
                 <div style={{ textAlign: "center", padding: "1.8rem", color: "#64748b", fontSize: "0.82rem", fontWeight: 600 }}>
-                    {isEOD ? "Building next-day outlook..." : "Analyzing price action + macro news context..."}
+                    {isEOD ? "Loading saved next-day outlook..." : "Loading saved AI market snapshot..."}
                 </div>
             )}
 
@@ -520,7 +531,7 @@ function IntradayView({ data, showReasoning, onToggleReasoning }: { data: Intrad
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.6rem" }}>
                 <QualityBar cfg={quality} />
-                <span style={{ fontSize: "0.58rem", color: "#475569" }}>Updated: {fmtTime(data.captured_at)} IST</span>
+                <span style={{ fontSize: "0.58rem", color: "#475569" }}>Saved at: {fmtTime(data.captured_at)} IST</span>
             </div>
         </div>
     );

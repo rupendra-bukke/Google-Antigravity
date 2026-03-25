@@ -31,7 +31,15 @@ from services.market_data import (
 )
 from services.decision import make_decision
 from services.decision_v2 import run_advanced_analysis
-from services.ai_decision import get_ai_decision, cache_get, cache_set
+from services.ai_decision import (
+    EOD_CACHE_KEY_PREFIX,
+    EOD_CACHE_TTL,
+    _fallback,
+    cache_get,
+    cache_set,
+    get_ai_decision,
+    get_eod_analysis,
+)
 from services.stock_focus import get_stock_focus_outlook
 from config import settings
 
@@ -629,67 +637,244 @@ async def advanced_analyze(symbol: str = Query(default=None)):
 
 # -- AI Price Action Decision Endpoint --
 
-# Live intraday AI checkpoints (IST). Output is generated once per checkpoint and
-# reused until the next checkpoint to keep decisions stable during the window.
-LIVE_AI_CHECKPOINTS = [
-    {"id": "0915", "time": "09:15", "hhmm": 915},
-    {"id": "1000", "time": "10:00", "hhmm": 1000},
-    {"id": "1200", "time": "12:00", "hhmm": 1200},
-    {"id": "1430", "time": "14:30", "hhmm": 1430},
-    {"id": "1500", "time": "15:00", "hhmm": 1500},
+AI_DECISION_SYMBOLS = ["^NSEI", "^NSEBANK", "^BSESN"]
+AI_SNAPSHOT_WINDOWS = [
+    {"id": "1000", "time": "10:00", "hhmm": 1000, "label": "Morning"},
+    {"id": "1430", "time": "14:30", "hhmm": 1430, "label": "Afternoon"},
 ]
-INTRADAY_CHECKPOINT_CACHE_PREFIX = "ai_decision_cp:"
+AI_SNAPSHOT_CACHE_PREFIX = "ai_decision_snapshot:"
+AI_SNAPSHOT_CACHE_TTL_SECONDS = 172800
+AI_PENDING_RETRY_SECONDS = 120
+EOD_PENDING_RETRY_SECONDS = 300
 
 
-def _resolve_live_ai_window(ist_now: datetime) -> tuple[dict | None, dict | None]:
-    hhmm = ist_now.hour * 100 + ist_now.minute
-
-    active = None
-    for cp in reversed(LIVE_AI_CHECKPOINTS):
-        if hhmm >= cp["hhmm"]:
-            active = cp
-            break
-
-    if active is None:
-        return None, LIVE_AI_CHECKPOINTS[0]
-
-    idx = next((i for i, cp in enumerate(LIVE_AI_CHECKPOINTS) if cp["id"] == active["id"]), -1)
-    if idx == -1 or idx + 1 >= len(LIVE_AI_CHECKPOINTS):
-        return active, None
-    return active, LIVE_AI_CHECKPOINTS[idx + 1]
-
-
-def _window_valid_until_ist(ist_now: datetime, next_cp: dict | None) -> datetime:
-    if next_cp is not None:
-        return ist_now.replace(
-            hour=int(next_cp["hhmm"] // 100),
-            minute=int(next_cp["hhmm"] % 100),
-            second=0,
-            microsecond=0,
-        )
-    # Last checkpoint remains valid until market close.
-    return ist_now.replace(hour=15, minute=30, second=0, microsecond=0)
-
-
-def _window_ttl_seconds(ist_now: datetime, next_cp: dict | None) -> int:
-    valid_until = _window_valid_until_ist(ist_now, next_cp)
-    # Keep a small grace so data does not disappear at boundary due clock skew.
-    ttl = int((valid_until - ist_now).total_seconds()) + 90
-    return max(ttl, 90)
-
-
-def _intraday_checkpoint_cache_key(symbol: str, date_str: str, checkpoint_id: str) -> str:
+def _ai_snapshot_cache_key(symbol: str, date_str: str, snapshot_id: str) -> str:
     import hashlib
 
     return (
-        f"{INTRADAY_CHECKPOINT_CACHE_PREFIX}{date_str}:{checkpoint_id}:"
+        f"{AI_SNAPSHOT_CACHE_PREFIX}{date_str}:{snapshot_id}:"
         f"{hashlib.md5(symbol.encode()).hexdigest()}"
     )
 
 
+def _ai_snapshot_slot(snapshot_id: str) -> dict | None:
+    return next((slot for slot in AI_SNAPSHOT_WINDOWS if slot["id"] == snapshot_id), None)
+
+
+def _resolve_ai_snapshot_window(ist_now: datetime) -> tuple[dict | None, dict | None]:
+    hhmm = ist_now.hour * 100 + ist_now.minute
+
+    active = None
+    for slot in reversed(AI_SNAPSHOT_WINDOWS):
+        if hhmm >= slot["hhmm"]:
+            active = slot
+            break
+
+    if active is None:
+        return None, AI_SNAPSHOT_WINDOWS[0]
+
+    idx = next((i for i, slot in enumerate(AI_SNAPSHOT_WINDOWS) if slot["id"] == active["id"]), -1)
+    if idx == -1 or idx + 1 >= len(AI_SNAPSHOT_WINDOWS):
+        return active, None
+    return active, AI_SNAPSHOT_WINDOWS[idx + 1]
+
+
+def _snapshot_valid_until_ist(ist_now: datetime, next_slot: dict | None) -> datetime:
+    if next_slot is not None:
+        return ist_now.replace(
+            hour=int(next_slot["hhmm"] // 100),
+            minute=int(next_slot["hhmm"] % 100),
+            second=0,
+            microsecond=0,
+        )
+    return ist_now.replace(hour=15, minute=30, second=0, microsecond=0)
+
+
+def _scheduled_retry_ist(ist_now: datetime, seconds: int, clamp_to: datetime | None = None) -> datetime:
+    retry_at = ist_now + timedelta(seconds=seconds)
+    if clamp_to is not None and retry_at > clamp_to:
+        return clamp_to
+    return retry_at
+
+
+def _load_json_cache(key: str) -> dict | None:
+    cached = cache_get(key)
+    if not cached:
+        return None
+    try:
+        data = json.loads(cached)
+        return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+
+
+def _load_scheduled_ai_snapshot(date_str: str, symbol: str, snapshot_id: str) -> dict | None:
+    return _load_json_cache(_ai_snapshot_cache_key(symbol, date_str, snapshot_id))
+
+
+def _load_latest_scheduled_ai_snapshot(date_str: str, symbol: str, upto_hhmm: int) -> tuple[dict | None, dict | None]:
+    for slot in reversed(AI_SNAPSHOT_WINDOWS):
+        if slot["hhmm"] > upto_hhmm:
+            continue
+        payload = _load_scheduled_ai_snapshot(date_str, symbol, slot["id"])
+        if payload is not None:
+            return slot, payload
+    return None, None
+
+
+def _load_cached_eod_payload(target_day: date, symbol: str) -> dict | None:
+    import hashlib
+
+    cache_key = f"{EOD_CACHE_KEY_PREFIX}{target_day.strftime('%Y-%m-%d')}:{hashlib.md5(symbol.encode()).hexdigest()}"
+    return _load_json_cache(cache_key)
+
+
+def _decorate_intraday_snapshot(
+    payload: dict,
+    symbol: str,
+    snapshot_slot: dict,
+    next_slot: dict | None,
+    valid_until: datetime,
+    next_refresh_at: datetime,
+    snapshot_stale: bool = False,
+) -> dict:
+    data = dict(payload)
+    data.setdefault("analysis_type", "INTRADAY")
+    data.setdefault("symbol", symbol)
+    data["checkpoint_mode"] = True
+    data["active_checkpoint"] = snapshot_slot["id"]
+    data["active_checkpoint_time_ist"] = snapshot_slot["time"]
+    data["next_checkpoint"] = next_slot["id"] if next_slot else None
+    data["next_checkpoint_time_ist"] = next_slot["time"] if next_slot else "15:30"
+    data["valid_until_ist"] = valid_until.isoformat()
+    data["next_refresh_at_ist"] = next_refresh_at.isoformat()
+    data["checkpoint_generated_at_ist"] = data.get("captured_at") or next_refresh_at.isoformat()
+    data["snapshot_mode"] = True
+    data["snapshot_label"] = f"{snapshot_slot['label']} snapshot"
+    data["snapshot_stale"] = snapshot_stale
+    return data
+
+
+def _build_intraday_snapshot_fallback(
+    symbol: str,
+    now_ist: datetime,
+    active_slot: dict | None,
+    next_slot: dict | None,
+    next_refresh_at: datetime,
+    reason: str,
+) -> dict:
+    payload = _fallback(reason)
+    payload.update(
+        {
+            "analysis_type": "INTRADAY",
+            "symbol": symbol,
+            "checkpoint_mode": True,
+            "active_checkpoint": active_slot["id"] if active_slot else None,
+            "active_checkpoint_time_ist": active_slot["time"] if active_slot else None,
+            "next_checkpoint": next_slot["id"] if next_slot else None,
+            "next_checkpoint_time_ist": next_slot["time"] if next_slot else ("15:30" if active_slot else None),
+            "valid_until_ist": next_refresh_at.isoformat(),
+            "next_refresh_at_ist": next_refresh_at.isoformat(),
+            "checkpoint_generated_at_ist": now_ist.isoformat(),
+            "snapshot_mode": True,
+            "snapshot_label": f"{active_slot['label']} snapshot pending" if active_slot else "Waiting for morning snapshot",
+            "snapshot_stale": True,
+        }
+    )
+    return payload
+
+
+async def run_ai_snapshot_for_all_symbols(snapshot_id: str, now: datetime | None = None) -> dict:
+    snapshot_slot = _ai_snapshot_slot(snapshot_id)
+    if snapshot_slot is None:
+        raise ValueError(f"Invalid AI snapshot_id: {snapshot_id}")
+
+    current_now = now or datetime.now(timezone.utc)
+    date_str = current_now.astimezone(IST).strftime("%Y-%m-%d")
+    idx = next((i for i, slot in enumerate(AI_SNAPSHOT_WINDOWS) if slot["id"] == snapshot_id), -1)
+    next_slot = AI_SNAPSHOT_WINDOWS[idx + 1] if idx != -1 and idx + 1 < len(AI_SNAPSHOT_WINDOWS) else None
+
+    summary = {
+        "snapshot_id": snapshot_id,
+        "snapshot_time": snapshot_slot["time"],
+        "date": date_str,
+        "saved_symbols": [],
+        "fallback_symbols": [],
+    }
+
+    for sym in AI_DECISION_SYMBOLS:
+        try:
+            frames = await fetch_multi_timeframe(sym, include_1m=False)
+            horizon_target = next_slot["time"] if next_slot else "15:30"
+            horizon_text = (
+                f"Scheduled live snapshot captured at {snapshot_slot['time']} IST. "
+                f"Predict the most probable next move ONLY until {horizon_target} IST. "
+                "Do not provide full-day forecast."
+            )
+            payload = await get_ai_decision(
+                frames,
+                sym,
+                current_now,
+                checkpoint_horizon=horizon_text,
+            )
+        except Exception as exc:
+            payload = _fallback(f"Scheduled AI snapshot failed: {exc}")
+            payload["symbol"] = sym
+
+        payload.setdefault("symbol", sym)
+        payload.setdefault("captured_at", current_now.astimezone(IST).isoformat())
+        payload["scheduled_snapshot_id"] = snapshot_slot["id"]
+        payload["scheduled_snapshot_time_ist"] = snapshot_slot["time"]
+
+        cache_set(
+            _ai_snapshot_cache_key(sym, date_str, snapshot_id),
+            json.dumps(payload),
+            AI_SNAPSHOT_CACHE_TTL_SECONDS,
+        )
+
+        if payload.get("analysis_status") == "fallback":
+            summary["fallback_symbols"].append(sym)
+        else:
+            summary["saved_symbols"].append(sym)
+
+    return summary
+
+
+async def run_eod_ai_for_all_symbols(now: datetime | None = None) -> dict:
+    import hashlib
+
+    current_now = now or datetime.now(timezone.utc)
+    ist_now = current_now.astimezone(IST)
+    date_str = ist_now.strftime("%Y-%m-%d")
+    next_open = _next_nse_market_open_ist(ist_now).isoformat()
+    summary = {
+        "date": date_str,
+        "saved_symbols": [],
+        "fallback_symbols": [],
+    }
+
+    for sym in AI_DECISION_SYMBOLS:
+        payload = await get_eod_analysis(sym, current_now)
+        payload.setdefault("analysis_type", "EOD")
+        payload.setdefault("session_date", date_str)
+        payload["symbol"] = sym
+        payload["next_refresh_at_ist"] = next_open
+
+        cache_key = f"{EOD_CACHE_KEY_PREFIX}{date_str}:{hashlib.md5(sym.encode()).hexdigest()}"
+        cache_set(cache_key, json.dumps(payload), EOD_CACHE_TTL)
+
+        if payload.get("analysis_status") == "fallback":
+            summary["fallback_symbols"].append(sym)
+        else:
+            summary["saved_symbols"].append(sym)
+
+    return summary
+
+
 def _is_nse_trading_day(day: date) -> bool:
-    """Shared helper so EOD and checkpoint timing stay holiday-aware."""
+    """Shared helper so EOD and scheduled AI timing stay holiday-aware."""
     return market_is_nse_trading_day(day)
+
 
 def _previous_nse_trading_day(day: date) -> date:
     probe = day - timedelta(days=1)
@@ -748,7 +933,7 @@ def _build_eod_cache_fallback(
         "next_day_target": None,
         "alert_levels": [],
         "news_tomorrow": [],
-        "reasoning": "EOD cached plan not ready yet. Wait for next refresh window.",
+        "reasoning": "Saved EOD plan is not ready yet. Wait for the scheduled close update.",
         "captured_at": now_ist.isoformat(),
         "session_date": session_date,
         "symbol": symbol,
@@ -757,116 +942,72 @@ def _build_eod_cache_fallback(
         "eod_cache_only": True,
     }
 
+
 @router.get("/ai-decision")
 async def ai_decision_endpoint(symbol: str = Query(default=None)):
     """
-    Gemini-powered price action analysis.
-    - Market OPEN  → Intraday checkpoint analysis at 09:15 / 10:00 / 12:00 / 14:30 / 15:00 IST
-                      (each result stays fixed until next checkpoint)
-    - Market CLOSED → EOD cache-only display until next market open
-    - Intraday failure → safe WAIT fallback for current checkpoint window
+    Saved AI decision flow. Gemini runs only on scheduled backend jobs:
+    - Market OPEN  -> Saved intraday AI snapshots at 10:00 and 14:30 IST
+    - Market CLOSED -> Saved EOD next-day outlook from 15:30 IST
+    Refresh only reloads the latest saved snapshot.
     """
-    import hashlib
-    from services.ai_decision import (
-        cache_get, cache_set, _fallback,
-        EOD_CACHE_KEY_PREFIX,
-        get_eod_analysis,
-    )
-
     try:
         sym = symbol or settings.default_symbol
         now = datetime.now(timezone.utc)
         ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
 
-        # Use shared market-status helper so holiday handling stays consistent.
         is_open, _ = is_indian_market_open(now)
         if is_open:
-            # ── Intraday checkpoint mode ───────────────────────────────────────
             date_str = ist_now.strftime("%Y-%m-%d")
-            active_cp, next_cp = _resolve_live_ai_window(ist_now)
-            valid_until = _window_valid_until_ist(ist_now, next_cp)
+            active_slot, next_slot = _resolve_ai_snapshot_window(ist_now)
 
-            # Before first checkpoint (09:15): show wait message until first run.
-            if active_cp is None:
-                pre_open_result = _fallback("First live AI checkpoint starts at 09:15 IST.")
-                pre_open_result.update(
-                    {
-                        "analysis_type": "INTRADAY",
-                        "symbol": sym,
-                        "checkpoint_mode": True,
-                        "active_checkpoint": None,
-                        "active_checkpoint_time_ist": None,
-                        "next_checkpoint": next_cp["id"] if next_cp else None,
-                        "next_checkpoint_time_ist": next_cp["time"] if next_cp else None,
-                        "valid_until_ist": valid_until.isoformat(),
-                        "next_refresh_at_ist": valid_until.isoformat(),
-                    }
+            if active_slot is None:
+                next_refresh_at = _snapshot_valid_until_ist(ist_now, next_slot)
+                return _build_intraday_snapshot_fallback(
+                    symbol=sym,
+                    now_ist=ist_now,
+                    active_slot=None,
+                    next_slot=next_slot,
+                    next_refresh_at=next_refresh_at,
+                    reason="First saved AI snapshot will be available at 10:00 IST.",
                 )
-                return pre_open_result
 
-            checkpoint_cache_key = _intraday_checkpoint_cache_key(
-                sym,
-                date_str,
-                active_cp["id"],
-            )
-            cached = cache_get(checkpoint_cache_key)
-            if cached:
-                try:
-                    data = json.loads(cached)
-                    data.setdefault("analysis_type", "INTRADAY")
-                    data.setdefault("symbol", sym)
-                    data.setdefault("checkpoint_mode", True)
-                    data.setdefault("active_checkpoint", active_cp["id"])
-                    data.setdefault("active_checkpoint_time_ist", active_cp["time"])
-                    data.setdefault("next_checkpoint", next_cp["id"] if next_cp else None)
-                    data.setdefault("next_checkpoint_time_ist", next_cp["time"] if next_cp else None)
-                    data.setdefault("valid_until_ist", valid_until.isoformat())
-                    data.setdefault("next_refresh_at_ist", valid_until.isoformat())
-                    return data
-                except Exception:
-                    pass
-
-            try:
-                frames = await fetch_multi_timeframe(sym, include_1m=False)
-                horizon_target = next_cp["time"] if next_cp else "15:30"
-                horizon_text = (
-                    f"Current checkpoint is {active_cp['time']} IST. "
-                    f"Predict the most probable next move ONLY until {horizon_target} IST. "
-                    "Do not provide full-day forecast."
+            valid_until = _snapshot_valid_until_ist(ist_now, next_slot)
+            current_payload = _load_scheduled_ai_snapshot(date_str, sym, active_slot["id"])
+            if current_payload is not None:
+                return _decorate_intraday_snapshot(
+                    payload=current_payload,
+                    symbol=sym,
+                    snapshot_slot=active_slot,
+                    next_slot=next_slot,
+                    valid_until=valid_until,
+                    next_refresh_at=valid_until,
+                    snapshot_stale=False,
                 )
-                result = await get_ai_decision(
-                    frames,
-                    sym,
-                    now,
-                    checkpoint_horizon=horizon_text,
-                )
-            except Exception as exc:
-                result = _fallback(f"Intraday checkpoint analysis failed: {exc}")
-                result["symbol"] = sym
 
-            result.update(
-                {
-                    "analysis_type": "INTRADAY",
-                    "symbol": sym,
-                    "checkpoint_mode": True,
-                    "active_checkpoint": active_cp["id"],
-                    "active_checkpoint_time_ist": active_cp["time"],
-                    "next_checkpoint": next_cp["id"] if next_cp else None,
-                    "next_checkpoint_time_ist": next_cp["time"] if next_cp else None,
-                    "valid_until_ist": valid_until.isoformat(),
-                    "next_refresh_at_ist": valid_until.isoformat(),
-                    "checkpoint_generated_at_ist": ist_now.isoformat(),
-                }
+            latest_slot, latest_payload = _load_latest_scheduled_ai_snapshot(date_str, sym, active_slot["hhmm"])
+            retry_at = _scheduled_retry_ist(ist_now, AI_PENDING_RETRY_SECONDS, clamp_to=valid_until)
+            if latest_slot is not None and latest_payload is not None:
+                pending_next_slot = active_slot if latest_slot["id"] != active_slot["id"] else next_slot
+                return _decorate_intraday_snapshot(
+                    payload=latest_payload,
+                    symbol=sym,
+                    snapshot_slot=latest_slot,
+                    next_slot=pending_next_slot,
+                    valid_until=retry_at,
+                    next_refresh_at=retry_at,
+                    snapshot_stale=latest_slot["id"] != active_slot["id"],
+                )
+
+            return _build_intraday_snapshot_fallback(
+                symbol=sym,
+                now_ist=ist_now,
+                active_slot=active_slot,
+                next_slot=next_slot,
+                next_refresh_at=retry_at,
+                reason="Scheduled AI snapshot is not ready yet. Retry shortly.",
             )
 
-            cache_set(
-                checkpoint_cache_key,
-                json.dumps(result),
-                _window_ttl_seconds(ist_now, next_cp),
-            )
-            return result
-
-        # ── EOD / Market-closed mode (cache only; no new Gemini call) ───────
         next_open = _next_nse_market_open_ist(ist_now)
         session_date = _latest_eod_date_for_display(ist_now)
         session_dates = [session_date]
@@ -874,42 +1015,29 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
         if prev_session != session_date:
             session_dates.append(prev_session)
 
-        sym_hash = hashlib.md5(sym.encode()).hexdigest()
         for d in session_dates:
-            eod_key = f"{EOD_CACHE_KEY_PREFIX}{d.strftime('%Y-%m-%d')}:{sym_hash}"
-            cached = cache_get(eod_key)
-            if not cached:
+            data = _load_cached_eod_payload(d, sym)
+            if data is None:
                 continue
-            try:
-                data = json.loads(cached)
-                data.setdefault("analysis_type", "EOD")
-                data.setdefault("session_date", d.strftime("%Y-%m-%d"))
-                data.setdefault("symbol", sym)
-                data["next_refresh_at_ist"] = next_open.isoformat()
-                data["eod_cache_only"] = True
-                return data
-            except Exception:
-                continue
+            data.setdefault("analysis_type", "EOD")
+            data.setdefault("session_date", d.strftime("%Y-%m-%d"))
+            data.setdefault("symbol", sym)
+            data["next_refresh_at_ist"] = next_open.isoformat()
+            data["eod_cache_only"] = True
+            return data
 
-        # No cached EOD found — run a fresh Gemini EOD analysis now.
-        # This covers first request after market close when no EOD was
-        # generated during intraday checkpoint windows.
-        try:
-            result = await get_eod_analysis(sym, now)
-            result["next_refresh_at_ist"] = next_open.isoformat()
-            result["eod_cache_only"] = False
-            return result
-        except Exception:
-            return _build_eod_cache_fallback(
-                symbol=sym,
-                now_ist=ist_now,
-                session_date=session_date.strftime("%Y-%m-%d"),
-                next_refresh_at_ist=next_open.isoformat(),
-            )
+        retry_at = next_open
+        if _is_nse_trading_day(ist_now.date()) and ist_now.time() >= dt_time(15, 30):
+            retry_at = _scheduled_retry_ist(ist_now, EOD_PENDING_RETRY_SECONDS, clamp_to=next_open)
+
+        return _build_eod_cache_fallback(
+            symbol=sym,
+            now_ist=ist_now,
+            session_date=session_date.strftime("%Y-%m-%d"),
+            next_refresh_at_ist=retry_at.isoformat(),
+        )
     except Exception as exc:
-        # Never bubble raw 5xx for this endpoint; keep UI stable with fallback payload.
         return _fallback(f"AI decision endpoint failed: {exc}")
-
 
 
 @router.get("/market-focus-options")
