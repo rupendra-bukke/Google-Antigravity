@@ -690,8 +690,37 @@ Respond ONLY with a valid JSON object (no markdown, no explanation outside JSON)
   "reasoning": "Full explanation of why this bias for tomorrow, 3-5 sentences"
 }}"""
 
-ZERO_HERO_PROMPT = """You are an Indian index options scalper focused on expiry-day zero-to-hero opportunities.
-Your job is to give actionable CE and PE buy plans for 1PM, 2PM, and 3PM windows.
+ZERO_HERO_PROMPT = """Act as an intraday options trader specializing in expiry-day trading for NIFTY / BANK NIFTY / SENSEX using a VWAP breakout strategy.
+
+Follow this exact structured approach:
+1. Pre-trade setup:
+- Focus only on expiry day
+- Trading window: 3:00 PM to 3:10 PM IST (last 10 minutes only)
+- Use 5-minute chart
+
+2. Entry rules:
+- Bullish (BUY CALL) only if price breaks day high OR crosses above VWAP with momentum.
+- Bearish (BUY PUT) only if price breaks day low OR crosses below VWAP with momentum.
+- If no clear breakout, return NO TRADE.
+
+3. Trap avoidance:
+- Flag fake breakout risk.
+- Breakout candle must have a strong body, not wick-dominant.
+- Avoid entries in choppy zone between VWAP and day range midpoint.
+
+4. Trade execution:
+- Strike must be ATM or 1-step ITM only.
+- Stop loss must be 30-35 percent premium risk.
+- Keep position sizing low risk.
+
+5. Target management:
+- Target 1: 60-70 percent premium gain; book 30-40 percent.
+- After T1: move SL to cost.
+- Target 2: open target (100-120 percent or more).
+
+6. Market context filter:
+- Mention if market is trending or sideways.
+- Avoid trade if extremely sideways near closing.
 
 INDEX CONTEXT:
 - Index: {index_abbr} ({index_name}) | Exchange: {exchange}
@@ -699,63 +728,27 @@ INDEX CONTEXT:
 - ATM strike step: {strike_step}
 - Timestamp IST: {timestamp_ist}
 
-MARKET DATA:
+MARKET SETUP:
 {market_data_block}
 
 LIVE NEWS SNAPSHOT (last 24h):
 {live_news_block}
 
-RULES:
-1) Reply ONLY valid JSON. No markdown and no extra text.
-2) Contracts must include exact strike, example: "NIFTY 23650 CE".
-3) Include both CE and PE plans in every window.
-4) Use short, practical lines for entry, sl, target.
-5) Keep risk-first behavior. If setup is weak, mark status as WAIT.
-
-Output JSON exactly in this shape:
+Return ONLY valid JSON (no markdown) in this exact structure:
 {{
-  "headline": "max 14 words",
-  "overall_risk": "HIGH|VERY_HIGH|EXTREME",
-  "market_phase": "PRE_1PM|1PM_2PM|2PM_3PM|3PM_330|POST_330",
-  "no_trade_filter": "max 20 words",
-  "risk_note": "max 20 words",
-  "windows": [
-    {{
-      "window": "1PM",
-      "status": "WAIT|ACTIVE|CLOSED",
-      "confidence": "LOW|MEDIUM|HIGH",
-      "ce": {{
-        "contract": "exact CE contract",
-        "entry": "entry rule",
-        "sl": "sl or invalidation",
-        "target": "target or exit rule"
-      }},
-      "pe": {{
-        "contract": "exact PE contract",
-        "entry": "entry rule",
-        "sl": "sl or invalidation",
-        "target": "target or exit rule"
-      }},
-      "note": "max 18 words"
-    }},
-    {{
-      "window": "2PM",
-      "status": "WAIT|ACTIVE|CLOSED",
-      "confidence": "LOW|MEDIUM|HIGH",
-      "ce": {{"contract": "", "entry": "", "sl": "", "target": ""}},
-      "pe": {{"contract": "", "entry": "", "sl": "", "target": ""}},
-      "note": "max 18 words"
-    }},
-    {{
-      "window": "3PM",
-      "status": "WAIT|ACTIVE|CLOSED",
-      "confidence": "LOW|MEDIUM|HIGH",
-      "ce": {{"contract": "", "entry": "", "sl": "", "target": ""}},
-      "pe": {{"contract": "", "entry": "", "sl": "", "target": ""}},
-      "note": "max 18 words"
-    }}
-  ]
-}"""
+  "trade_type": "CALL|PUT|NO TRADE",
+  "reason": "string",
+  "entry": "string",
+  "stop_loss": "string",
+  "target_1": "string",
+  "target_2": "string",
+  "risk_level": "LOW|MEDIUM|HIGH",
+  "confidence_pct": 0,
+  "strike": "ATM/ITM option contract string or NO TRADE",
+  "market_context": "TRENDING|SIDEWAYS",
+  "trap_check": "string",
+  "position_sizing": "string"
+}}"""
 
 
 def _safe_text(v: object, default: str, max_len: int = 180) -> str:
@@ -766,143 +759,388 @@ def _safe_text(v: object, default: str, max_len: int = 180) -> str:
     return default
 
 
-def _window_defaults(index_abbr: str, atm: int | None, strike_step: int) -> list[dict]:
-    offsets = {"1PM": 0, "2PM": 1, "3PM": 0}
-
-    def mk_contract(window: str, option_side: str) -> str:
-        if atm is None:
-            return f"{index_abbr} {option_side}"
-        offset = offsets.get(window, 0)
-        strike = atm + (offset if option_side == "CE" else -offset) * strike_step
-        return f"{index_abbr} {strike} {option_side}"
-
-    rows: list[dict] = []
-    for w in ("1PM", "2PM", "3PM"):
-        rows.append(
-            {
-                "window": w,
-                "status": "WAIT",
-                "confidence": "LOW",
-                "ce": {
-                    "contract": mk_contract(w, "CE"),
-                    "entry": "Take CE only after upside breakout confirmation.",
-                    "sl": "Exit if breakout fails and spot slips below trigger candle low.",
-                    "target": "Book 40-80% burst or force-exit by 3:28 PM.",
-                },
-                "pe": {
-                    "contract": mk_contract(w, "PE"),
-                    "entry": "Take PE only after downside breakdown confirmation.",
-                    "sl": "Exit if breakdown fails and spot reclaims trigger candle high.",
-                    "target": "Book 40-80% burst or force-exit by 3:28 PM.",
-                },
-                "note": "Wait for clean momentum candle before entry.",
-            }
-        )
-    return rows
-
-
-def _normalize_leg(raw_leg: object, fallback_contract: str) -> dict:
-    if not isinstance(raw_leg, dict):
-        raw_leg = {}
-    return {
-        "contract": _safe_text(raw_leg.get("contract"), fallback_contract, 50),
-        "entry": _safe_text(raw_leg.get("entry"), "Wait for confirmation before entry."),
-        "sl": _safe_text(raw_leg.get("sl"), "Use strict invalidation and cut loss fast."),
-        "target": _safe_text(raw_leg.get("target"), "Book partial on burst and hard-exit by 3:28 PM."),
-    }
-
-
-def _normalize_windows(raw_windows: object, index_abbr: str, atm: int | None, strike_step: int) -> list[dict]:
-    fallback_rows = _window_defaults(index_abbr, atm, strike_step)
-    if not isinstance(raw_windows, list):
-        return fallback_rows
-
-    raw_map: dict[str, dict] = {}
-    for row in raw_windows:
-        if not isinstance(row, dict):
-            continue
-        key = str(row.get("window", "")).upper().replace(" ", "")
-        if key.startswith("1"):
-            raw_map["1PM"] = row
-        elif key.startswith("2"):
-            raw_map["2PM"] = row
-        elif key.startswith("3"):
-            raw_map["3PM"] = row
-
-    normalized: list[dict] = []
-    for fallback in fallback_rows:
-        w = fallback["window"]
-        src = raw_map.get(w, {})
-        offset = 1 if w == "2PM" else 0
-        ce_fallback = fallback["ce"]["contract"]
-        pe_fallback = fallback["pe"]["contract"]
-        if atm is not None:
-            ce_fallback = f"{index_abbr} {atm + offset * strike_step} CE"
-            pe_fallback = f"{index_abbr} {atm - offset * strike_step} PE"
-
-        normalized.append(
-            {
-                "window": w,
-                "status": _safe_text(src.get("status"), fallback["status"], 8).upper(),
-                "confidence": _safe_text(src.get("confidence"), fallback["confidence"], 12).upper(),
-                "ce": _normalize_leg(src.get("ce"), ce_fallback),
-                "pe": _normalize_leg(src.get("pe"), pe_fallback),
-                "note": _safe_text(src.get("note"), fallback["note"], 180),
-            }
-        )
-    return normalized
-
-
-def _build_zero_hero_market_block(frames: dict, symbol: str, spot_price: float | None, now: datetime) -> str:
-    lines = [
-        f"Symbol: {symbol}",
-        f"Timestamp IST: {now.astimezone(IST).strftime('%d-%b-%Y %H:%M')}",
-        f"Spot: {spot_price:,.2f}" if isinstance(spot_price, (int, float)) else "Spot: NA",
-    ]
-
-    df = None
-    for key in ("5m", "3m", "15m"):
-        candidate = frames.get(key)
-        if candidate is not None and not candidate.empty:
-            df = candidate
-            break
-    if df is None:
-        lines.append("No fresh candles available from feed.")
-        return "\n".join(lines)
-
+def _as_ist_intraday_frame(frame: object) -> object | None:
+    if frame is None or getattr(frame, "empty", True):
+        return None
+    df = frame.copy()
     try:
-        day_high = float(df["High"].max())
-        day_low = float(df["Low"].min())
-        day_open = float(df["Open"].iloc[0])
-        last_close = float(df["Close"].iloc[-1])
-        lines.append(f"Day Open: {day_open:.2f}")
-        lines.append(f"Day High: {day_high:.2f}")
-        lines.append(f"Day Low: {day_low:.2f}")
-        lines.append(f"Last Close: {last_close:.2f}")
-        lines.append("Recent candles (O/H/L/C):")
-        for idx, row in df.tail(6)[["Open", "High", "Low", "Close"]].iterrows():
-            ts = idx.strftime("%H:%M") if hasattr(idx, "strftime") else str(idx)
-            lines.append(f"  {ts} | {row['Open']:.0f} | {row['High']:.0f} | {row['Low']:.0f} | {row['Close']:.0f}")
+        if getattr(df.index, "tz", None) is None:
+            df.index = df.index.tz_localize("UTC").tz_convert(IST)
+        else:
+            df.index = df.index.tz_convert(IST)
     except Exception:
-        lines.append("Could not parse recent candles.")
-
-    return "\n".join(lines)
+        return None
+    try:
+        return df.sort_index()
+    except Exception:
+        return df
 
 
 def _compute_market_phase(now: datetime) -> str:
     hhmm = int(now.astimezone(IST).strftime("%H%M"))
-    if hhmm < 1300:
-        return "PRE_1PM"
-    if hhmm < 1400:
-        return "1PM_2PM"
     if hhmm < 1500:
-        return "2PM_3PM"
+        return "PRE_3PM"
+    if hhmm <= 1510:
+        return "LIVE_3PM_WINDOW"
     if hhmm < 1530:
-        return "3PM_330"
+        return "POST_310_PRE_CLOSE"
     return "POST_330"
 
 
+def _legacy_risk_bucket(risk_level: str) -> str:
+    risk = (risk_level or "").upper()
+    if risk == "LOW":
+        return "HIGH"
+    if risk == "MEDIUM":
+        return "VERY_HIGH"
+    return "EXTREME"
+
+
+def _build_zero_hero_rule_plan(
+    frames: dict,
+    index_abbr: str,
+    strike_step: int,
+    spot_price: float | None,
+) -> dict:
+    selected_df = None
+    timeframe_used = "NA"
+    for key in ("5m", "3m", "15m"):
+        candidate = _as_ist_intraday_frame(frames.get(key))
+        if candidate is not None and not candidate.empty:
+            selected_df = candidate
+            timeframe_used = key
+            break
+
+    if selected_df is None:
+        base_price = float(spot_price) if isinstance(spot_price, (int, float)) else None
+        return {
+            "trade_type": "NO TRADE",
+            "reason": "NO TRADE - No valid trigger (market candles unavailable).",
+            "entry": "NO TRADE - Wait for confirmed 5-minute breakout in 3:00-3:10 PM window.",
+            "stop_loss": "Not applicable",
+            "target_1": "Not applicable",
+            "target_2": "Not applicable",
+            "risk_level": "LOW",
+            "confidence_pct": 35,
+            "strike": "NO TRADE",
+            "market_context": "SIDEWAYS",
+            "trap_check": "Data unavailable: avoid forced entry.",
+            "position_sizing": "Low risk only: max 1 lot if setup confirms later.",
+            "setup": {
+                "day_high": None,
+                "day_low": None,
+                "vwap": None,
+                "current_price": round(base_price, 2) if base_price is not None else None,
+                "price_vs_vwap": "UNKNOWN",
+                "breakout_trigger": "NONE",
+                "breakout_candle": "UNKNOWN",
+                "choppy_zone": "UNKNOWN",
+                "timeframe_used": timeframe_used,
+            },
+        }
+
+    day_df = selected_df[selected_df.index.date == selected_df.index.date[-1]].copy()
+    if day_df.empty:
+        return {
+            "trade_type": "NO TRADE",
+            "reason": "NO TRADE - No valid trigger (latest session missing).",
+            "entry": "NO TRADE - Wait for 3:00-3:10 PM setup.",
+            "stop_loss": "Not applicable",
+            "target_1": "Not applicable",
+            "target_2": "Not applicable",
+            "risk_level": "LOW",
+            "confidence_pct": 35,
+            "strike": "NO TRADE",
+            "market_context": "SIDEWAYS",
+            "trap_check": "Session data incomplete: avoid entry.",
+            "position_sizing": "Low risk only: max 1 lot if setup confirms later.",
+            "setup": {
+                "day_high": None,
+                "day_low": None,
+                "vwap": None,
+                "current_price": None,
+                "price_vs_vwap": "UNKNOWN",
+                "breakout_trigger": "NONE",
+                "breakout_candle": "UNKNOWN",
+                "choppy_zone": "UNKNOWN",
+                "timeframe_used": timeframe_used,
+            },
+        }
+
+    for col in ("Open", "High", "Low", "Close", "Volume"):
+        day_df[col] = day_df[col].astype(float)
+
+    typical_price = (day_df["High"] + day_df["Low"] + day_df["Close"]) / 3.0
+    cum_vol = day_df["Volume"].cumsum().replace(0, float("nan"))
+    day_df["VWAP"] = ((typical_price * day_df["Volume"]).cumsum() / cum_vol).fillna(day_df["Close"])
+
+    day_open = float(day_df["Open"].iloc[0])
+    day_high = float(day_df["High"].max())
+    day_low = float(day_df["Low"].min())
+    current_price = float(day_df["Close"].iloc[-1])
+    vwap = float(day_df["VWAP"].iloc[-1])
+    price_vs_vwap = "ABOVE" if current_price > vwap * 1.0002 else ("BELOW" if current_price < vwap * 0.9998 else "AT_VWAP")
+
+    if len(day_df) > 1:
+        prev_rows = day_df.iloc[:-1]
+        prior_high = float(prev_rows["High"].max())
+        prior_low = float(prev_rows["Low"].min())
+    else:
+        prior_high = day_high
+        prior_low = day_low
+
+    last_row = day_df.iloc[-1]
+    prev_row = day_df.iloc[-2] if len(day_df) > 1 else day_df.iloc[-1]
+    prev_vwap = float(day_df["VWAP"].iloc[-2]) if len(day_df) > 1 else vwap
+
+    last_open = float(last_row["Open"])
+    last_close = float(last_row["Close"])
+    last_high = float(last_row["High"])
+    last_low = float(last_row["Low"])
+    candle_range = max(last_high - last_low, max(abs(last_close) * 0.0004, 0.01))
+    body = abs(last_close - last_open)
+    body_ratio = body / candle_range
+    strong_body = body_ratio >= 0.52
+    upper_wick = max(0.0, last_high - max(last_open, last_close))
+    lower_wick = max(0.0, min(last_open, last_close) - last_low)
+    wick_ratio = max(upper_wick, lower_wick) / candle_range
+    fake_breakout = wick_ratio > 0.45 or not strong_body
+
+    last_move_pct = ((last_close - last_open) / last_open * 100.0) if last_open else 0.0
+    momentum_up = strong_body and last_move_pct >= 0.08
+    momentum_down = strong_body and last_move_pct <= -0.08
+
+    cross_above_vwap = float(prev_row["Close"]) <= prev_vwap * 1.0001 and current_price > vwap * 1.0002
+    cross_below_vwap = float(prev_row["Close"]) >= prev_vwap * 0.9999 and current_price < vwap * 0.9998
+    break_above_high = current_price > prior_high * 1.00025
+    break_below_low = current_price < prior_low * 0.99975
+
+    mid_range = (day_high + day_low) / 2.0
+    tight_range = ((day_high - day_low) / max(abs(day_open), 1.0) * 100.0) < 0.50
+    near_vwap = abs(current_price - vwap) / max(abs(vwap), 1.0) <= 0.0008
+    between_vwap_mid = min(vwap, mid_range) <= current_price <= max(vwap, mid_range)
+    choppy_zone = bool(tight_range or (near_vwap and between_vwap_mid))
+
+    day_move_pct = ((current_price - day_open) / day_open * 100.0) if day_open else 0.0
+    day_range_pct = ((day_high - day_low) / max(day_open, 1.0) * 100.0) if day_open else 0.0
+    market_context = "TRENDING" if abs(day_move_pct) >= 0.60 and day_range_pct >= 0.90 else "SIDEWAYS"
+    extremely_sideways = market_context == "SIDEWAYS" and day_range_pct < 0.55
+
+    atm = int(round(current_price / strike_step) * strike_step) if strike_step > 0 else int(round(current_price))
+
+    trade_type = "NO TRADE"
+    breakout_trigger = "NONE"
+    trigger_level = None
+    invalidation_level = None
+
+    if not extremely_sideways and not choppy_zone and not fake_breakout:
+        if (break_above_high and momentum_up) or (cross_above_vwap and momentum_up):
+            trade_type = "CALL"
+            breakout_trigger = "ABOVE_DAY_HIGH" if break_above_high else "ABOVE_VWAP_MOMENTUM"
+            trigger_level = max(prior_high, vwap)
+            invalidation_level = min(last_low, vwap)
+        elif (break_below_low and momentum_down) or (cross_below_vwap and momentum_down):
+            trade_type = "PUT"
+            breakout_trigger = "BELOW_DAY_LOW" if break_below_low else "BELOW_VWAP_MOMENTUM"
+            trigger_level = min(prior_low, vwap)
+            invalidation_level = max(last_high, vwap)
+
+    score = 38
+    if trade_type != "NO TRADE":
+        score += 20
+    if strong_body:
+        score += 10
+    if not fake_breakout:
+        score += 8
+    if not choppy_zone:
+        score += 7
+    if market_context == "TRENDING":
+        score += 7
+    if breakout_trigger in {"ABOVE_DAY_HIGH", "BELOW_DAY_LOW"}:
+        score += 6
+    if timeframe_used != "5m":
+        score -= 8
+    confidence_pct = int(max(25, min(92, round(score if trade_type != "NO TRADE" else min(score, 52)))))
+
+    if trade_type == "CALL":
+        strike_value = atm if confidence_pct >= 72 else atm - strike_step
+        strike = f"{index_abbr} {strike_value} CE"
+        reason = (
+            "Breakout confirmation is valid on 5-minute structure: price moved above trigger with momentum, "
+            "and no strong fake-break pattern."
+        )
+        entry = f"Buy {strike} only after 5-minute close above {trigger_level:,.2f} with momentum continuation."
+        stop_loss = (
+            f"Hard SL: 30-35% premium risk. Spot invalidation below {invalidation_level:,.2f}. "
+            "Exit immediately if trigger fails."
+        )
+        target_1 = "Book 30-40% quantity at 60-70% premium gain. Move SL to cost."
+        target_2 = "Hold remaining for 100-120%+ burst while trailing SL candle-by-candle."
+    elif trade_type == "PUT":
+        strike_value = atm if confidence_pct >= 72 else atm + strike_step
+        strike = f"{index_abbr} {strike_value} PE"
+        reason = (
+            "Breakdown confirmation is valid on 5-minute structure: price moved below trigger with momentum, "
+            "and no strong fake-break pattern."
+        )
+        entry = f"Buy {strike} only after 5-minute close below {trigger_level:,.2f} with momentum continuation."
+        stop_loss = (
+            f"Hard SL: 30-35% premium risk. Spot invalidation above {invalidation_level:,.2f}. "
+            "Exit immediately if trigger fails."
+        )
+        target_1 = "Book 30-40% quantity at 60-70% premium gain. Move SL to cost."
+        target_2 = "Hold remaining for 100-120%+ burst while trailing SL candle-by-candle."
+    else:
+        strike = "NO TRADE"
+        reason = "NO TRADE - No valid trigger."
+        if extremely_sideways:
+            reason = "NO TRADE - Market is extremely sideways near close."
+        elif choppy_zone:
+            reason = "NO TRADE - Price is in choppy zone between VWAP and range."
+        elif fake_breakout:
+            reason = "NO TRADE - Breakout candle is wick-dominant (possible trap)."
+        entry = "NO TRADE - Wait for strict breakout confirmation only."
+        stop_loss = "Not applicable"
+        target_1 = "Not applicable"
+        target_2 = "Not applicable"
+
+    risk_level = "LOW" if trade_type == "NO TRADE" else ("MEDIUM" if confidence_pct >= 74 else "HIGH")
+    trap_check = (
+        "Breakout candle has acceptable body strength; trap risk controlled."
+        if not fake_breakout
+        else "Fake breakout risk detected: wick-dominant candle, avoid blind entry."
+    )
+    if choppy_zone:
+        trap_check = "Choppy zone detected between VWAP and range midpoint; avoid entry."
+
+    return {
+        "trade_type": trade_type,
+        "reason": reason,
+        "entry": entry,
+        "stop_loss": stop_loss,
+        "target_1": target_1,
+        "target_2": target_2,
+        "risk_level": risk_level,
+        "confidence_pct": confidence_pct,
+        "strike": strike,
+        "market_context": market_context,
+        "trap_check": trap_check,
+        "position_sizing": "Low risk sizing: risk <= 1% capital, start with one lot only.",
+        "setup": {
+            "day_high": round(day_high, 2),
+            "day_low": round(day_low, 2),
+            "vwap": round(vwap, 2),
+            "current_price": round(current_price, 2),
+            "price_vs_vwap": price_vs_vwap,
+            "breakout_trigger": breakout_trigger,
+            "breakout_candle": "STRONG_BODY" if strong_body else "WICKY",
+            "choppy_zone": "YES" if choppy_zone else "NO",
+            "timeframe_used": timeframe_used,
+        },
+        "analysis_status": "rule_based",
+    }
+
+
+def _build_zero_hero_market_block(
+    rule_plan: dict,
+    symbol: str,
+    index_abbr: str,
+    index_name: str,
+    exchange: str,
+    strike_step: int,
+    now: datetime,
+) -> str:
+    setup = rule_plan.get("setup", {}) if isinstance(rule_plan.get("setup"), dict) else {}
+    return "\n".join(
+        [
+            f"Symbol: {symbol}",
+            f"Index: {index_abbr} ({index_name}) | Exchange: {exchange}",
+            f"Timestamp IST: {now.astimezone(IST).strftime('%d-%b-%Y %H:%M')}",
+            f"Strike step: {strike_step}",
+            f"Day High: {setup.get('day_high')}",
+            f"Day Low: {setup.get('day_low')}",
+            f"VWAP: {setup.get('vwap')}",
+            f"Current Price: {setup.get('current_price')}",
+            f"Price vs VWAP: {setup.get('price_vs_vwap')}",
+            f"Rule Trigger Status: {setup.get('breakout_trigger')}",
+            f"Candle Quality: {setup.get('breakout_candle')}",
+            f"Choppy Zone: {setup.get('choppy_zone')}",
+            f"Rule Baseline Trade Type: {rule_plan.get('trade_type', 'NO TRADE')}",
+            f"Rule Baseline Reason: {rule_plan.get('reason', 'No trigger')}",
+        ]
+    )
+
+
+def _build_zero_hero_payload(
+    index_abbr: str,
+    index_name: str,
+    exchange: str,
+    symbol: str,
+    spot_price: float | None,
+    now: datetime,
+    plan: dict,
+    source: str,
+    source_reason: str | None = None,
+    news_ctx: dict | None = None,
+) -> dict:
+    safe_news = news_ctx if isinstance(news_ctx, dict) else {}
+    news_items = _merge_unique_news([], safe_news.get("items", []), limit=4)
+    risk_level = _safe_text(plan.get("risk_level"), "HIGH", 10).upper()
+    trade_type = _safe_text(plan.get("trade_type"), "NO TRADE", 12).upper()
+    confidence_pct = plan.get("confidence_pct", 40)
+    if isinstance(confidence_pct, str):
+        match = re.search(r"\d{1,3}", confidence_pct)
+        confidence_pct = int(match.group()) if match else 40
+    elif isinstance(confidence_pct, (int, float)):
+        confidence_pct = int(round(confidence_pct))
+    else:
+        confidence_pct = 40
+    confidence_pct = int(max(0, min(100, confidence_pct)))
+
+    if trade_type == "NO TRADE":
+        risk_level = "LOW"
+        confidence_pct = min(confidence_pct, 55)
+        headline = "NO TRADE - Strict 3PM breakout trigger not confirmed"
+    else:
+        headline = f"{trade_type} setup active in strict 3:00-3:10 PM window"
+
+    return {
+        "index": index_abbr,
+        "index_name": index_name,
+        "exchange": exchange,
+        "symbol": symbol,
+        "spot": round(float(spot_price), 2) if isinstance(spot_price, (int, float)) else None,
+        "trade_type": trade_type,
+        "reason": _safe_text(plan.get("reason"), "NO TRADE - No valid trigger.", 260),
+        "entry": _safe_text(plan.get("entry"), "NO TRADE - Wait for valid trigger.", 260),
+        "stop_loss": _safe_text(plan.get("stop_loss"), "Not applicable", 260),
+        "target_1": _safe_text(plan.get("target_1"), "Not applicable", 180),
+        "target_2": _safe_text(plan.get("target_2"), "Not applicable", 180),
+        "risk_level": risk_level,
+        "confidence_pct": confidence_pct,
+        "strike": _safe_text(plan.get("strike"), "NO TRADE", 60),
+        "market_context": _safe_text(plan.get("market_context"), "SIDEWAYS", 20).upper(),
+        "trap_check": _safe_text(plan.get("trap_check"), "Avoid entries without clean breakout confirmation.", 220),
+        "position_sizing": _safe_text(plan.get("position_sizing"), "Low risk sizing: risk <= 1% capital.", 180),
+        "setup": plan.get("setup", {}),
+        "headline": headline,
+        "overall_risk": _legacy_risk_bucket(risk_level),
+        "market_phase": _compute_market_phase(now),
+        "no_trade_filter": _safe_text(plan.get("trap_check"), "Skip if setup trigger is not confirmed.", 180),
+        "risk_note": _safe_text(plan.get("position_sizing"), "Use low risk position sizing and hard stop.", 180),
+        "windows": [],
+        "source": source,
+        "source_reason": source_reason or "",
+        "analysis_status": "ok" if source == "ai" else "fallback",
+        "news_items": news_items,
+        "captured_at": now.astimezone(IST).isoformat(),
+        "live_news_fetched_at": safe_news.get("fetched_at"),
+        "news_source_count": int(safe_news.get("source_count", 0) or 0),
+    }
+
+
 def _zero_hero_fallback(
+    frames: dict,
     index_abbr: str,
     index_name: str,
     exchange: str,
@@ -912,26 +1150,24 @@ def _zero_hero_fallback(
     now: datetime,
     reason: str,
 ) -> dict:
-    atm = None
-    if isinstance(spot_price, (int, float)) and spot_price > 0:
-        atm = int(round(float(spot_price) / strike_step) * strike_step)
-    return {
-        "index": index_abbr,
-        "index_name": index_name,
-        "exchange": exchange,
-        "symbol": symbol,
-        "spot": round(float(spot_price), 2) if isinstance(spot_price, (int, float)) else None,
-        "headline": "AI setup unavailable, use strict confirmation only",
-        "overall_risk": "EXTREME",
-        "market_phase": _compute_market_phase(now),
-        "no_trade_filter": "Skip if candles are choppy and range-bound.",
-        "risk_note": "High risk setup. Use strict size and hard stop.",
-        "windows": _window_defaults(index_abbr, atm, strike_step),
-        "news_items": [],
-        "source": "fallback",
-        "reason": reason,
-        "captured_at": now.astimezone(IST).isoformat(),
-    }
+    rule_plan = _build_zero_hero_rule_plan(
+        frames=frames,
+        index_abbr=index_abbr,
+        strike_step=strike_step,
+        spot_price=spot_price,
+    )
+    return _build_zero_hero_payload(
+        index_abbr=index_abbr,
+        index_name=index_name,
+        exchange=exchange,
+        symbol=symbol,
+        spot_price=spot_price,
+        now=now,
+        plan=rule_plan,
+        source="fallback",
+        source_reason=reason,
+        news_ctx=None,
+    )
 
 
 async def get_expiry_zero_hero_ai(
@@ -946,19 +1182,22 @@ async def get_expiry_zero_hero_ai(
 ) -> dict:
     from config import settings
 
-    if not settings.gemini_api_key:
-        return _zero_hero_fallback(
-            index_abbr=index_abbr,
-            index_name=index_name,
-            exchange=exchange,
-            symbol=symbol,
-            strike_step=strike_step,
-            spot_price=spot_price,
-            now=now,
-            reason="GEMINI_API_KEY not configured.",
-        )
+    rule_plan = _build_zero_hero_rule_plan(
+        frames=frames,
+        index_abbr=index_abbr,
+        strike_step=strike_step,
+        spot_price=spot_price,
+    )
 
-    market_block = _build_zero_hero_market_block(frames, symbol, spot_price, now)
+    market_block = _build_zero_hero_market_block(
+        rule_plan=rule_plan,
+        symbol=symbol,
+        index_abbr=index_abbr,
+        index_name=index_name,
+        exchange=exchange,
+        strike_step=strike_step,
+        now=now,
+    )
     spot_text = f"{spot_price:,.2f}" if isinstance(spot_price, (int, float)) else "NA"
     news_ctx = {
         "items": [],
@@ -967,9 +1206,19 @@ async def get_expiry_zero_hero_ai(
         "source_count": 0,
     }
 
-    atm = None
-    if isinstance(spot_price, (int, float)) and spot_price > 0:
-        atm = int(round(float(spot_price) / strike_step) * strike_step)
+    if not settings.gemini_api_key:
+        return _build_zero_hero_payload(
+            index_abbr=index_abbr,
+            index_name=index_name,
+            exchange=exchange,
+            symbol=symbol,
+            spot_price=spot_price,
+            now=now,
+            plan=rule_plan,
+            source="fallback",
+            source_reason="GEMINI_API_KEY not configured.",
+            news_ctx=news_ctx,
+        )
 
     try:
         news_ctx = await _collect_live_market_news(now, max_items=4)
@@ -986,28 +1235,53 @@ async def get_expiry_zero_hero_ai(
         raw_text = await _call_gemini(prompt, settings.gemini_api_key)
         parsed = json.loads(_extract_json(raw_text))
 
-        windows = _normalize_windows(parsed.get("windows"), index_abbr, atm, strike_step)
-        return {
-            "index": index_abbr,
-            "index_name": index_name,
-            "exchange": exchange,
-            "symbol": symbol,
-            "spot": round(float(spot_price), 2) if isinstance(spot_price, (int, float)) else None,
-            "headline": _safe_text(parsed.get("headline"), "Expiry momentum opportunities with strict discipline", 120),
-            "overall_risk": _safe_text(parsed.get("overall_risk"), "HIGH", 16).upper(),
-            "market_phase": _safe_text(parsed.get("market_phase"), _compute_market_phase(now), 16).upper(),
-            "no_trade_filter": _safe_text(parsed.get("no_trade_filter"), "Skip if setup trigger is not confirmed."),
-            "risk_note": _safe_text(parsed.get("risk_note"), "High risk. Position sizing and strict stop mandatory."),
-            "windows": windows,
-            "news_items": _merge_unique_news([], news_ctx.get("items", []), limit=4),
-            "source": "ai",
-            "captured_at": now.astimezone(IST).isoformat(),
-            "live_news_fetched_at": news_ctx.get("fetched_at"),
-            "news_source_count": int(news_ctx.get("source_count", 0) or 0),
-        }
+        ai_plan = dict(rule_plan)
+        parsed_trade_type = _safe_text(parsed.get("trade_type"), ai_plan.get("trade_type", "NO TRADE"), 12).upper()
+        if parsed_trade_type in {"CALL", "PUT", "NO TRADE"}:
+            ai_plan["trade_type"] = parsed_trade_type
+
+        parsed_risk = _safe_text(parsed.get("risk_level"), ai_plan.get("risk_level", "HIGH"), 12).upper()
+        if parsed_risk in {"LOW", "MEDIUM", "HIGH"}:
+            ai_plan["risk_level"] = parsed_risk
+
+        raw_conf = parsed.get("confidence_pct")
+        if isinstance(raw_conf, (int, float)):
+            ai_plan["confidence_pct"] = int(round(raw_conf))
+        elif isinstance(raw_conf, str):
+            conf_match = re.search(r"\d{1,3}", raw_conf)
+            if conf_match:
+                ai_plan["confidence_pct"] = int(conf_match.group())
+
+        ai_plan["reason"] = _safe_text(parsed.get("reason"), ai_plan.get("reason", "NO TRADE - No valid trigger."), 260)
+        ai_plan["entry"] = _safe_text(parsed.get("entry"), ai_plan.get("entry", "NO TRADE - Wait for valid trigger."), 260)
+        ai_plan["stop_loss"] = _safe_text(parsed.get("stop_loss"), ai_plan.get("stop_loss", "Not applicable"), 260)
+        ai_plan["target_1"] = _safe_text(parsed.get("target_1"), ai_plan.get("target_1", "Not applicable"), 180)
+        ai_plan["target_2"] = _safe_text(parsed.get("target_2"), ai_plan.get("target_2", "Not applicable"), 180)
+        ai_plan["strike"] = _safe_text(parsed.get("strike"), ai_plan.get("strike", "NO TRADE"), 60)
+        ai_plan["market_context"] = _safe_text(parsed.get("market_context"), ai_plan.get("market_context", "SIDEWAYS"), 20).upper()
+        ai_plan["trap_check"] = _safe_text(parsed.get("trap_check"), ai_plan.get("trap_check", ""), 220)
+        ai_plan["position_sizing"] = _safe_text(parsed.get("position_sizing"), ai_plan.get("position_sizing", ""), 180)
+
+        if ai_plan.get("trade_type") == "NO TRADE":
+            ai_plan["risk_level"] = "LOW"
+            ai_plan["strike"] = "NO TRADE"
+
+        return _build_zero_hero_payload(
+            index_abbr=index_abbr,
+            index_name=index_name,
+            exchange=exchange,
+            symbol=symbol,
+            spot_price=spot_price,
+            now=now,
+            plan=ai_plan,
+            source="ai",
+            source_reason="",
+            news_ctx=news_ctx,
+        )
     except Exception as e:
         logger.error("Expiry zero-to-hero AI error: %s", e)
         return _zero_hero_fallback(
+            frames=frames,
             index_abbr=index_abbr,
             index_name=index_name,
             exchange=exchange,
@@ -1017,7 +1291,6 @@ async def get_expiry_zero_hero_ai(
             now=now,
             reason=str(e),
         )
-
 
 def _classify_eod_session(net_pct: float, close_pct: float) -> tuple[str, str, str, str]:
     if close_pct >= 67:

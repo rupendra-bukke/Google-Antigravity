@@ -723,6 +723,131 @@ def _load_latest_scheduled_ai_snapshot(date_str: str, symbol: str, upto_hhmm: in
     return None, None
 
 
+
+def _zero_hero_snapshot_cache_key(index_abbr: str, date_str: str, snapshot_id: str) -> str:
+    import hashlib
+
+    return (
+        f"ai_zero_hero_snapshot:{date_str}:{snapshot_id}:"
+        f"{hashlib.md5(index_abbr.encode()).hexdigest()}"
+    )
+
+
+ZERO_HERO_SNAPSHOT_WINDOWS = [
+    {"id": "1500", "time": "15:00", "hhmm": 1500, "label": "3PM Open"},
+    {"id": "1507", "time": "15:07", "hhmm": 1507, "label": "3PM Confirm"},
+]
+ZERO_HERO_PENDING_RETRY_SECONDS = 60
+
+
+def _resolve_zero_hero_snapshot_window(ist_now: datetime) -> tuple[dict | None, dict | None]:
+    hhmm = ist_now.hour * 100 + ist_now.minute
+    active = None
+    for slot in reversed(ZERO_HERO_SNAPSHOT_WINDOWS):
+        if hhmm >= slot["hhmm"]:
+            active = slot
+            break
+
+    if active is None:
+        return None, ZERO_HERO_SNAPSHOT_WINDOWS[0]
+
+    idx = next((i for i, slot in enumerate(ZERO_HERO_SNAPSHOT_WINDOWS) if slot["id"] == active["id"]), -1)
+    if idx == -1 or idx + 1 >= len(ZERO_HERO_SNAPSHOT_WINDOWS):
+        return active, None
+    return active, ZERO_HERO_SNAPSHOT_WINDOWS[idx + 1]
+
+
+def _load_zero_hero_snapshot(date_str: str, index_abbr: str, snapshot_id: str) -> dict | None:
+    return _load_json_cache(_zero_hero_snapshot_cache_key(index_abbr, date_str, snapshot_id))
+
+
+def _load_latest_zero_hero_snapshot(date_str: str, index_abbr: str, upto_hhmm: int) -> tuple[dict | None, dict | None]:
+    for slot in reversed(ZERO_HERO_SNAPSHOT_WINDOWS):
+        if slot["hhmm"] > upto_hhmm:
+            continue
+        payload = _load_zero_hero_snapshot(date_str, index_abbr, slot["id"])
+        if payload is not None:
+            return slot, payload
+    return None, None
+
+
+def _decorate_zero_hero_snapshot(
+    payload: dict,
+    snapshot_slot: dict,
+    next_slot: dict | None,
+    valid_until: datetime,
+    next_refresh_at: datetime,
+    snapshot_stale: bool = False,
+) -> dict:
+    data = dict(payload)
+    data["checkpoint_mode"] = True
+    data["active_checkpoint"] = snapshot_slot["id"]
+    data["active_checkpoint_time_ist"] = snapshot_slot["time"]
+    data["next_checkpoint"] = next_slot["id"] if next_slot else None
+    data["next_checkpoint_time_ist"] = next_slot["time"] if next_slot else None
+    data["valid_until_ist"] = valid_until.isoformat()
+    data["next_refresh_at_ist"] = next_refresh_at.isoformat()
+    data["checkpoint_generated_at_ist"] = data.get("captured_at") or next_refresh_at.isoformat()
+    data["snapshot_mode"] = True
+    data["snapshot_label"] = f"{snapshot_slot['label']} snapshot"
+    data["snapshot_stale"] = snapshot_stale
+    data["checkpoint_plan"] = "STRICT_3PM_BREAKOUT"
+    return data
+
+
+def _build_zero_hero_pending_payload(idx: str, cfg: dict, now_ist: datetime, next_slot: dict | None, next_expiry: str) -> dict:
+    next_refresh_at = _snapshot_valid_until_ist(now_ist, next_slot)
+    return {
+        "index": idx,
+        "index_name": cfg["name"],
+        "exchange": cfg["exchange"],
+        "symbol": cfg["symbol"],
+        "expiry_today": True,
+        "next_expiry": next_expiry,
+        "trade_type": "NO TRADE",
+        "reason": "NO TRADE - 3:00 PM snapshot is not generated yet.",
+        "entry": "Wait for 3:00 PM checkpoint output.",
+        "stop_loss": "Not applicable",
+        "target_1": "Not applicable",
+        "target_2": "Not applicable",
+        "risk_level": "LOW",
+        "confidence_pct": 35,
+        "strike": "NO TRADE",
+        "market_context": "SIDEWAYS",
+        "trap_check": "Window not active yet. Avoid pre-trigger entries.",
+        "position_sizing": "Low risk only.",
+        "setup": {
+            "day_high": None,
+            "day_low": None,
+            "vwap": None,
+            "current_price": None,
+            "price_vs_vwap": "UNKNOWN",
+            "breakout_trigger": "NONE",
+            "breakout_candle": "UNKNOWN",
+            "choppy_zone": "UNKNOWN",
+            "timeframe_used": "5m",
+        },
+        "headline": "Awaiting strict 3PM expiry snapshot",
+        "overall_risk": "HIGH",
+        "market_phase": "PRE_3PM",
+        "no_trade_filter": "No valid checkpoint snapshot yet.",
+        "risk_note": "Wait for strict breakout confirmation.",
+        "windows": [],
+        "source": "info",
+        "captured_at": now_ist.isoformat(),
+        "checkpoint_mode": True,
+        "active_checkpoint": None,
+        "active_checkpoint_time_ist": None,
+        "next_checkpoint": next_slot["id"] if next_slot else None,
+        "next_checkpoint_time_ist": next_slot["time"] if next_slot else None,
+        "valid_until_ist": next_refresh_at.isoformat(),
+        "next_refresh_at_ist": next_refresh_at.isoformat(),
+        "checkpoint_generated_at_ist": now_ist.isoformat(),
+        "snapshot_mode": True,
+        "snapshot_label": "Waiting for 3PM snapshot",
+        "snapshot_stale": True,
+        "checkpoint_plan": "STRICT_3PM_BREAKOUT",
+    }
 def _load_cached_eod_payload(target_day: date, symbol: str) -> dict | None:
     import hashlib
 
@@ -1117,12 +1242,10 @@ async def expiry_calendar(refresh: bool = Query(False, description="Force refres
 @router.get("/expiry-zero-hero")
 async def expiry_zero_hero_endpoint(index: str = Query(..., description="NIFTY|BANKNIFTY|FINNIFTY|SENSEX")):
     """
-    Dedicated AI endpoint for expiry-day zero-to-hero option plans.
-    Independent from the main AI decision panel.
+    Strict expiry-day VWAP breakout plan.
+    AI is generated only at saved 3PM checkpoints and served from cache otherwise.
     """
-    import hashlib
     from services.ai_decision import (
-        cache_get,
         cache_set,
         get_expiry_zero_hero_ai,
     )
@@ -1151,7 +1274,6 @@ async def expiry_zero_hero_endpoint(index: str = Query(..., description="NIFTY|B
             if isinstance(match.get("next_expiry"), str) and match.get("next_expiry"):
                 next_expiry = match["next_expiry"]
     except Exception:
-        # Keep fallback weekday logic if exchange APIs fail.
         expiry_today = fallback_next == ist_now.date()
 
     if not expiry_today:
@@ -1167,16 +1289,46 @@ async def expiry_zero_hero_endpoint(index: str = Query(..., description="NIFTY|B
             "source": "info",
         }
 
-    cache_key = f"ai_zero_hero:{ist_now.strftime('%Y-%m-%d')}:{hashlib.md5(idx.encode()).hexdigest()}"
-    cached = cache_get(cache_key)
-    if cached:
-        try:
-            payload = json.loads(cached)
-            payload.setdefault("expiry_today", True)
-            payload.setdefault("next_expiry", next_expiry)
-            return payload
-        except Exception:
-            pass
+    date_str = ist_now.strftime("%Y-%m-%d")
+    active_slot, next_slot = _resolve_zero_hero_snapshot_window(ist_now)
+
+    if active_slot is None:
+        return _build_zero_hero_pending_payload(
+            idx=idx,
+            cfg=cfg,
+            now_ist=ist_now,
+            next_slot=next_slot,
+            next_expiry=next_expiry,
+        )
+
+    valid_until = _snapshot_valid_until_ist(ist_now, next_slot)
+    current_payload = _load_zero_hero_snapshot(date_str, idx, active_slot["id"])
+    if current_payload is not None:
+        current_payload.setdefault("expiry_today", True)
+        current_payload.setdefault("next_expiry", next_expiry)
+        return _decorate_zero_hero_snapshot(
+            payload=current_payload,
+            snapshot_slot=active_slot,
+            next_slot=next_slot,
+            valid_until=valid_until,
+            next_refresh_at=valid_until,
+            snapshot_stale=False,
+        )
+
+    latest_slot, latest_payload = _load_latest_zero_hero_snapshot(date_str, idx, active_slot["hhmm"])
+    retry_at = _scheduled_retry_ist(ist_now, ZERO_HERO_PENDING_RETRY_SECONDS, clamp_to=valid_until)
+    if latest_slot is not None and latest_payload is not None:
+        latest_payload.setdefault("expiry_today", True)
+        latest_payload.setdefault("next_expiry", next_expiry)
+        pending_next_slot = active_slot if latest_slot["id"] != active_slot["id"] else next_slot
+        return _decorate_zero_hero_snapshot(
+            payload=latest_payload,
+            snapshot_slot=latest_slot,
+            next_slot=pending_next_slot,
+            valid_until=retry_at,
+            next_refresh_at=retry_at,
+            snapshot_stale=latest_slot["id"] != active_slot["id"],
+        )
 
     spot_price = None
     frames = {}
@@ -1202,7 +1354,21 @@ async def expiry_zero_hero_endpoint(index: str = Query(..., description="NIFTY|B
     )
     result["expiry_today"] = True
     result["next_expiry"] = next_expiry
+    result["scheduled_snapshot_id"] = active_slot["id"]
+    result["scheduled_snapshot_time_ist"] = active_slot["time"]
 
-    # Keep one plan per expiry day; manual refresh can still regenerate after cache TTL.
-    cache_set(cache_key, json.dumps(result), 1800)
-    return result
+    cache_set(
+        _zero_hero_snapshot_cache_key(idx, date_str, active_slot["id"]),
+        json.dumps(result),
+        AI_SNAPSHOT_CACHE_TTL_SECONDS,
+    )
+
+    return _decorate_zero_hero_snapshot(
+        payload=result,
+        snapshot_slot=active_slot,
+        next_slot=next_slot,
+        valid_until=valid_until,
+        next_refresh_at=valid_until,
+        snapshot_stale=False,
+    )
+
