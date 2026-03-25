@@ -165,18 +165,6 @@ function getRefreshSeconds(payload: AIData | null): number {
     return INTRADAY_FALLBACK_REFRESH_SECONDS;
 }
 
-function formatCountdown(totalSeconds: number): string {
-    const safe = Math.max(0, totalSeconds);
-    const hrs = Math.floor(safe / 3600);
-    const mins = Math.floor((safe % 3600) / 60);
-    const secs = safe % 60;
-    const mm = String(mins).padStart(2, "0");
-    const ss = String(secs).padStart(2, "0");
-    if (hrs > 0) {
-        return `${hrs}:${mm}:${ss}`;
-    }
-    return `${mins}:${ss}`;
-}
 
 type AnalysisBadgeTone = {
     label: string;
@@ -185,9 +173,56 @@ type AnalysisBadgeTone = {
     border: string;
 };
 
+type SnapshotChipState = "active" | "pending" | "done" | "idle";
+
+const SNAPSHOT_CHECKPOINTS = [
+    { id: "1000", label: "Morning AI", time: "10:00 IST" },
+    { id: "1430", label: "Afternoon AI", time: "14:30 IST" },
+    { id: "1530", label: "Next Day", time: "15:30 IST" },
+] as const;
+
+const SNAPSHOT_ORDER: string[] = SNAPSHOT_CHECKPOINTS.map((item) => item.id);
+
 function includesAny(text: string | null | undefined, fragments: string[]): boolean {
     const normalized = (text || "").toLowerCase();
     return fragments.some((fragment) => normalized.includes(fragment));
+}
+
+function getSnapshotTracker(payload: AIData | null): { shownId: string | null; pendingId: string | null } {
+    if (!payload) {
+        return { shownId: null, pendingId: null };
+    }
+
+    if (payload.analysis_type === "EOD") {
+        return { shownId: "1530", pendingId: null };
+    }
+
+    const intraday = payload as IntradayData;
+    if (intraday.active_checkpoint) {
+        return {
+            shownId: intraday.active_checkpoint,
+            pendingId: intraday.snapshot_stale ? (intraday.next_checkpoint ?? null) : null,
+        };
+    }
+
+    return { shownId: null, pendingId: "1000" };
+}
+
+function getSnapshotChipState(chipId: string, shownId: string | null, pendingId: string | null): SnapshotChipState {
+    if (shownId === chipId) return "active";
+    if (pendingId === chipId) return "pending";
+
+    const chipIndex = SNAPSHOT_ORDER.indexOf(chipId);
+    const shownIndex = shownId ? SNAPSHOT_ORDER.indexOf(shownId) : -1;
+    const pendingIndex = pendingId ? SNAPSHOT_ORDER.indexOf(pendingId) : -1;
+    const completedBeforeShown = shownIndex > -1 && chipIndex < shownIndex
+    const completedBeforePending = shownIndex === -1 && pendingIndex > -1 && chipIndex < pendingIndex
+
+    if (completedBeforeShown || completedBeforePending) {
+        return "done";
+    }
+
+    return "idle";
 }
 
 function looksFallback(payload: AIData): boolean {
@@ -359,7 +394,6 @@ export default function AIDecision({ symbol }: { symbol: string }) {
         }
     }, [countdown, isLoading, fetchDecision]);
 
-    const refreshLabel = formatCountdown(countdown);
     const isEOD = data?.analysis_type === "EOD";
     const intraday = !isEOD ? (data as IntradayData | null) : null;
     const analysisBadge = getAnalysisStatusBadge(data);
@@ -372,7 +406,7 @@ export default function AIDecision({ symbol }: { symbol: string }) {
             : intraday?.checkpoint_mode
                 ? `Saved snapshot ${intraday.active_checkpoint_time_ist || "--"}`
                 : "Saved AI | News Context";
-    const refreshCopy = `Next scheduled update: ${refreshLabel}`;
+    const { shownId, pendingId } = getSnapshotTracker(data);
 
     return (
         <div
@@ -384,62 +418,109 @@ export default function AIDecision({ symbol }: { symbol: string }) {
                 backdropFilter: "blur(12px)",
             }}
         >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.8rem", gap: "0.8rem", flexWrap: "wrap" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "0.66rem", fontWeight: 800, color: isEOD ? "#fb923c" : "#818cf8", textTransform: "uppercase", letterSpacing: "0.16em" }}>
-                        {isEOD ? "Next Day Outlook" : "AI Price Action Analysis"}
-                    </span>
-                    <span
-                        style={{
-                            fontSize: "0.56rem",
-                            padding: "3px 8px",
-                            borderRadius: "6px",
-                            background: isEOD ? "rgba(251,146,60,0.1)" : "rgba(99,102,241,0.1)",
-                            border: `1px solid ${isEOD ? "rgba(251,146,60,0.24)" : "rgba(99,102,241,0.24)"}`,
-                            color: isEOD ? "#fb923c" : "#818cf8",
-                            fontWeight: 700,
-                            letterSpacing: "0.08em",
-                        }}
-                    >
-                        {snapshotChip}
-                    </span>
-                    {analysisBadge && (
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "0.95rem", gap: "0.9rem", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem", flex: 1, minWidth: "280px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: "0.66rem", fontWeight: 800, color: isEOD ? "#fb923c" : "#818cf8", textTransform: "uppercase", letterSpacing: "0.16em" }}>
+                            {isEOD ? "Next Day Outlook" : "AI Price Action Analysis"}
+                        </span>
                         <span
                             style={{
                                 fontSize: "0.56rem",
                                 padding: "3px 8px",
-                                borderRadius: "999px",
-                                background: analysisBadge.bg,
-                                border: `1px solid ${analysisBadge.border}`,
-                                color: analysisBadge.color,
+                                borderRadius: "6px",
+                                background: isEOD ? "rgba(251,146,60,0.1)" : "rgba(99,102,241,0.1)",
+                                border: `1px solid ${isEOD ? "rgba(251,146,60,0.24)" : "rgba(99,102,241,0.24)"}`,
+                                color: isEOD ? "#fb923c" : "#818cf8",
                                 fontWeight: 700,
                                 letterSpacing: "0.08em",
                             }}
                         >
-                            {analysisBadge.label}
+                            {snapshotChip}
                         </span>
-                    )}
+                        {analysisBadge && (
+                            <span
+                                style={{
+                                    fontSize: "0.56rem",
+                                    padding: "3px 8px",
+                                    borderRadius: "999px",
+                                    background: analysisBadge.bg,
+                                    border: `1px solid ${analysisBadge.border}`,
+                                    color: analysisBadge.color,
+                                    fontWeight: 700,
+                                    letterSpacing: "0.08em",
+                                }}
+                            >
+                                {analysisBadge.label}
+                            </span>
+                        )}
+                    </div>
+
+                    <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+                        {SNAPSHOT_CHECKPOINTS.map((chip) => {
+                            const state = getSnapshotChipState(chip.id, shownId, pendingId);
+                            const tone = state === "active"
+                                ? chip.id === "1530"
+                                    ? { fg: "#fdba74", bg: "rgba(251,146,60,0.12)", border: "rgba(251,146,60,0.34)" }
+                                    : { fg: "#93c5fd", bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.30)" }
+                                : state === "pending"
+                                    ? { fg: "#fbbf24", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.28)" }
+                                    : state === "done"
+                                        ? { fg: "#cbd5e1", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.18)" }
+                                        : { fg: "#64748b", bg: "rgba(15,23,42,0.28)", border: "rgba(71,85,105,0.18)" };
+                            const stateLabel = state === "active"
+                                ? "SHOWING"
+                                : state === "pending"
+                                    ? "NEXT"
+                                    : state === "done"
+                                        ? "DONE"
+                                        : "UPCOMING";
+
+                            return (
+                                <div
+                                    key={chip.id}
+                                    style={{
+                                        minWidth: "132px",
+                                        padding: "0.65rem 0.75rem",
+                                        borderRadius: "14px",
+                                        background: tone.bg,
+                                        border: `1px solid ${tone.border}`,
+                                        boxShadow: state === "active" ? `0 0 0 1px ${tone.border}` : "none",
+                                    }}
+                                >
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
+                                        <span style={{ fontSize: "0.56rem", color: tone.fg, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+                                            {chip.label}
+                                        </span>
+                                        <span style={{ fontSize: "0.5rem", color: tone.fg, fontWeight: 800, letterSpacing: "0.10em" }}>
+                                            {stateLabel}
+                                        </span>
+                                    </div>
+                                    <div style={{ marginTop: "0.45rem", fontSize: "0.88rem", color: state === "idle" ? "#94a3b8" : "#f8fafc", fontWeight: 800 }}>
+                                        {chip.time}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                    <span style={{ fontSize: "0.58rem", color: "#64748b", fontWeight: 600 }}>{refreshCopy}</span>
-                    <button
-                        onClick={fetchDecision}
-                        disabled={isLoading}
-                        style={{
-                            fontSize: "0.62rem",
-                            padding: "5px 11px",
-                            borderRadius: "8px",
-                            background: "rgba(99,102,241,0.12)",
-                            border: "1px solid rgba(99,102,241,0.24)",
-                            color: "#818cf8",
-                            cursor: "pointer",
-                            fontWeight: 700,
-                        }}
-                    >
-                        {isLoading ? "Loading..." : "Refresh"}
-                    </button>
-                </div>
+                <button
+                    onClick={fetchDecision}
+                    disabled={isLoading}
+                    style={{
+                        fontSize: "0.62rem",
+                        padding: "5px 11px",
+                        borderRadius: "8px",
+                        background: "rgba(99,102,241,0.12)",
+                        border: "1px solid rgba(99,102,241,0.24)",
+                        color: "#818cf8",
+                        cursor: "pointer",
+                        fontWeight: 700,
+                    }}
+                >
+                    {isLoading ? "Loading..." : "Refresh"}
+                </button>
             </div>
 
             {!isEOD && (
@@ -449,7 +530,7 @@ export default function AIDecision({ symbol }: { symbol: string }) {
                         <div style={{ marginTop: "0.35rem", fontSize: "0.62rem", color: "#bfdbfe", fontWeight: 700 }}>
                             {intraday.snapshot_stale
                                 ? "Showing the last saved AI snapshot while the next scheduled update is pending."
-                                : `Showing the saved AI snapshot captured at ${intraday.active_checkpoint_time_ist || "--"} IST.`}
+                                : `Showing the saved AI snapshot captured at ${intraday.active_checkpoint_time_ist || "--"} IST. The schedule row above highlights the current saved checkpoint.`}
                         </div>
                     )}
                 </div>
@@ -760,3 +841,4 @@ function fmtTime(iso: string): string {
         return "-";
     }
 }
+
