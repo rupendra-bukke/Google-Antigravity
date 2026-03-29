@@ -1047,19 +1047,19 @@ def _build_eod_cache_fallback(
 ) -> dict:
     return {
         "analysis_type": "EOD",
-        "session_type": "Unavailable",
-        "close_position": "Unknown",
+        "session_type": "Range Day",
+        "close_position": "Middle of Range",
         "next_day_bias": "WAIT",
         "bias_strength": "LOW",
         "key_resistance": [],
         "key_support": [],
-        "sl_hunt_risk": "Analysis unavailable",
+        "sl_hunt_risk": "Awaiting saved EOD snapshot; confirm direction after opening range.",
         "next_day_entry_zone": None,
         "next_day_stop_loss": None,
         "next_day_target": None,
         "alert_levels": [],
         "news_tomorrow": [],
-        "reasoning": "Saved EOD plan is not ready yet. Wait for the scheduled close update.",
+        "reasoning": "Saved EOD plan is not ready yet. Showing a protective fallback until the scheduled close update.",
         "captured_at": now_ist.isoformat(),
         "session_date": session_date,
         "symbol": symbol,
@@ -1190,12 +1190,36 @@ async def ai_decision_endpoint(symbol: str = Query(default=None)):
         if _is_nse_trading_day(ist_now.date()) and ist_now.time() >= dt_time(15, 30):
             retry_at = _scheduled_retry_ist(ist_now, EOD_PENDING_RETRY_SECONDS, clamp_to=next_open)
 
-        return _build_eod_cache_fallback(
+        synthesized = await _build_rule_based_eod_fallback(
             symbol=sym,
-            now_ist=ist_now,
-            session_date=session_date.strftime("%Y-%m-%d"),
-            next_refresh_at_ist=retry_at.isoformat(),
+            now=now,
+            reason="No saved EOD snapshot was found in cache; generated on-demand protective fallback.",
         )
+        synthesized.setdefault("analysis_type", "EOD")
+        synthesized.setdefault("session_date", session_date.strftime("%Y-%m-%d"))
+        synthesized["symbol"] = sym
+        synthesized["next_refresh_at_ist"] = retry_at.isoformat()
+        synthesized["eod_cache_only"] = True
+        synthesized.setdefault("analysis_status", "fallback")
+
+        # Keep UI stable even if rule fallback fails due temporary upstream data outages.
+        if str(synthesized.get("session_type", "")).lower() == "unavailable":
+            synthesized["session_type"] = "Range Day"
+        if str(synthesized.get("close_position", "")).lower() == "unknown":
+            synthesized["close_position"] = "Middle of Range"
+        if str(synthesized.get("sl_hunt_risk", "")).lower() == "analysis unavailable":
+            synthesized["sl_hunt_risk"] = "Await opening-range confirmation before taking directional trades."
+
+        try:
+            import hashlib
+
+            target_date = str(synthesized.get("session_date") or session_date.strftime("%Y-%m-%d"))
+            cache_key = f"{EOD_CACHE_KEY_PREFIX}{target_date}:{hashlib.md5(sym.encode()).hexdigest()}"
+            cache_set(cache_key, json.dumps(synthesized), EOD_CACHE_TTL)
+        except Exception:
+            pass
+
+        return synthesized
     except Exception as exc:
         return _fallback(f"AI decision endpoint failed: {exc}")
 
