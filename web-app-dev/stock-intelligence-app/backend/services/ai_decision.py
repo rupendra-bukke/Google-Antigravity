@@ -634,7 +634,7 @@ async def get_ai_decision(
 # â”€â”€ EOD Next-Day Outlook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 EOD_CACHE_KEY_PREFIX = "ai_eod:"
-EOD_CACHE_TTL = 72000  # 20 hours
+EOD_CACHE_TTL = 604800  # 7 days (survives weekends + holiday gaps)
 
 EOD_NEXT_DAY_PROMPT = """You are an expert intraday trader specializing in smart money concepts for Indian markets (NSE Nifty 50).
 

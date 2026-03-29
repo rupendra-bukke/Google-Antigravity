@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from routers.analyze import (
+    ensure_latest_eod_snapshot_cache as ensure_latest_eod_cache_for_startup,
     router as analyze_router,
     run_ai_snapshot_for_all_symbols,
     run_eod_ai_for_all_symbols,
@@ -142,6 +143,19 @@ scheduler.add_job(
 )
 
 
+async def _run_startup_eod_backfill():
+    """Fill latest EOD cache on startup if the scheduled 15:30 run was missed."""
+    try:
+        summary = await ensure_latest_eod_cache_for_startup()
+        print(
+            f"[EOD-BOOTSTRAP] date={summary.get('date')} "
+            f"existing={len(summary.get('existing_symbols', []))} "
+            f"saved={len(summary.get('saved_symbols', []))} "
+            f"fallback={len(summary.get('fallback_symbols', []))}"
+        )
+    except Exception as exc:
+        print(f"[EOD-BOOTSTRAP] failed: {exc}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     env_label = "DEV" if settings.is_dev else "PROD"
@@ -152,6 +166,7 @@ async def lifespan(app: FastAPI):
     print(f"[SCHEDULER] started with {len(CHECKPOINT_SCHEDULE)} checkpoint jobs (IST, Mon-Fri)")
     print(f"[SCHEDULER] started with {len(AI_SNAPSHOT_SCHEDULE)} saved AI snapshot jobs (IST, Mon-Fri)")
     print("[SCHEDULER] external checkpoint wake/capture endpoints ready for GitHub Actions")
+    await _run_startup_eod_backfill()
     yield
     scheduler.shutdown()
     print("[SCHEDULER] stopped")

@@ -997,6 +997,47 @@ async def run_eod_ai_for_all_symbols(now: datetime | None = None) -> dict:
     return summary
 
 
+async def ensure_latest_eod_snapshot_cache(now: datetime | None = None) -> dict:
+    """Backfill latest display-date EOD snapshot if scheduler run was missed."""
+    import hashlib
+
+    current_now = now or datetime.now(timezone.utc)
+    ist_now = current_now.astimezone(IST)
+    target_session = _latest_eod_date_for_display(ist_now)
+    target_date_str = target_session.strftime("%Y-%m-%d")
+    next_open = _next_nse_market_open_ist(ist_now).isoformat()
+    target_close_now = datetime.combine(target_session, dt_time(15, 31), tzinfo=IST).astimezone(timezone.utc)
+
+    summary = {
+        "date": target_date_str,
+        "existing_symbols": [],
+        "saved_symbols": [],
+        "fallback_symbols": [],
+    }
+
+    for sym in AI_DECISION_SYMBOLS:
+        cache_key = f"{EOD_CACHE_KEY_PREFIX}{target_date_str}:{hashlib.md5(sym.encode()).hexdigest()}"
+        existing_payload = _load_json_cache(cache_key)
+        if existing_payload is not None:
+            summary["existing_symbols"].append(sym)
+            continue
+
+        payload = await get_eod_analysis(sym, target_close_now)
+        payload.setdefault("analysis_type", "EOD")
+        payload.setdefault("session_date", target_date_str)
+        payload["symbol"] = sym
+        payload["next_refresh_at_ist"] = next_open
+
+        cache_set(cache_key, json.dumps(payload), EOD_CACHE_TTL)
+
+        if payload.get("analysis_status") == "fallback":
+            summary["fallback_symbols"].append(sym)
+        else:
+            summary["saved_symbols"].append(sym)
+
+    return summary
+
+
 def _is_nse_trading_day(day: date) -> bool:
     """Shared helper so EOD and scheduled AI timing stay holiday-aware."""
     return market_is_nse_trading_day(day)
