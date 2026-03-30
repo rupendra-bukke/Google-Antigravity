@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
 import { useSymbol } from "../context/SymbolContext";
 
 const SYMBOL_META: Record<string, { name: string; initial: string }> = {
@@ -26,9 +27,11 @@ const navItems: Array<{
 
 export default function Sidebar() {
     const { selectedSymbol } = useSymbol();
+    const { user, signOut } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
+    const [isSigningOut, setIsSigningOut] = useState(false);
     const [showToast, setShowToast] = useState<string | null>(null);
 
     const meta = SYMBOL_META[selectedSymbol] || { name: selectedSymbol, initial: "?" };
@@ -42,6 +45,16 @@ export default function Sidebar() {
         }
         if (path) router.push(path);
         setIsOpen(false);
+    };
+
+    const handleSignOut = async () => {
+        setIsSigningOut(true);
+        try {
+            await signOut();
+            router.push("/login");
+        } finally {
+            setIsSigningOut(false);
+        }
     };
 
     return (
@@ -126,7 +139,21 @@ export default function Sidebar() {
 
                 <div className="mx-4 border-t border-gray-800/30" />
 
-                <div className="p-4">
+                <div className="p-4 pt-3">
+                    <div className="px-4 py-3 rounded-xl bg-gray-900/40 border border-gray-800/40">
+                        <p className="text-[9px] text-gray-500 font-semibold uppercase tracking-widest">Signed in</p>
+                        <p className="text-[11px] text-gray-300 font-medium truncate mt-1">{user?.email || "Unknown user"}</p>
+                        <button
+                            onClick={handleSignOut}
+                            disabled={isSigningOut}
+                            className="mt-3 w-full rounded-lg border border-rose-500/35 bg-rose-500/10 text-rose-300 text-[11px] font-bold py-1.5"
+                        >
+                            {isSigningOut ? "Signing out..." : "Logout"}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="p-4 pt-0">
                     <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-gray-800/20 to-gray-800/40 text-center border border-gray-800/30">
                         <p className="text-[9px] text-gray-600 font-semibold uppercase tracking-widest">Designed by</p>
                         <p className="text-[11px] font-bold bg-gradient-to-r from-brand-400 to-emerald-400 bg-clip-text text-transparent mt-0.5">
