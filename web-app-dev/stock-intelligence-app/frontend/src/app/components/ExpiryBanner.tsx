@@ -1,5 +1,6 @@
 "use client";
 
+import { authedFetch } from "@/lib/authedFetch";
 import { useEffect, useMemo, useState } from "react";
 
 interface IndexConfig {
@@ -157,7 +158,7 @@ export default function ExpiryBanner() {
     useEffect(() => {
         const fetchCalendar = async () => {
             try {
-                const res = await fetch("/api/v1/expiry-calendar", { cache: "no-store" });
+                const res = await authedFetch("/api/v1/expiry-calendar", { cache: "no-store" });
                 if (!res.ok) return;
                 const data: ExpiryCalendarResponse = await res.json();
                 const cards = Array.isArray(data.cards) ? data.cards : [];

@@ -1,5 +1,6 @@
 "use client";
 
+import { authedFetch } from "@/lib/authedFetch";
 import { useState, useEffect, useCallback, useMemo } from "react";
 
 const API_BASE = "/api";
@@ -531,7 +532,7 @@ export default function CheckpointBoard({ symbol }: { symbol: string }) {
 
     const fetchPanels = useCallback(async () => {
         try {
-            const res = await fetch(`${API_BASE}/v1/checkpoints?symbol=${encodeURIComponent(symbol)}`);
+            const res = await authedFetch(`${API_BASE}/v1/checkpoints?symbol=${encodeURIComponent(symbol)}`);
             if (!res.ok) return;
             const json = await res.json();
             setPanels(json.panels || []);

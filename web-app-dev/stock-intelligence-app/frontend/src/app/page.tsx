@@ -1,5 +1,6 @@
 "use client";
 
+import { authedFetch } from "@/lib/authedFetch";
 import { useState, useEffect, useCallback } from "react";
 import { useSymbol } from "./context/SymbolContext";
 import StockHeader from "./components/StockHeader";
@@ -145,8 +146,8 @@ export default function Dashboard() {
 
             // Fetch both endpoints in parallel
             const [basicRes, advRes] = await Promise.all([
-                fetch(`${API_BASE}/v1/analyze?symbol=${encodeURIComponent(symbol)}`),
-                fetch(`${API_BASE}/v1/advanced-analyze?symbol=${encodeURIComponent(symbol)}`),
+                authedFetch(`${API_BASE}/v1/analyze?symbol=${encodeURIComponent(symbol)}`),
+                authedFetch(`${API_BASE}/v1/advanced-analyze?symbol=${encodeURIComponent(symbol)}`),
             ]);
 
             if (!basicRes.ok) {

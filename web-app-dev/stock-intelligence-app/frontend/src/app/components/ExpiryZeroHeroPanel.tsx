@@ -1,5 +1,6 @@
 "use client";
 
+import { authedFetch } from "@/lib/authedFetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface ExpirySpec {
@@ -277,7 +278,7 @@ export default function ExpiryZeroHeroPanel() {
     useEffect(() => {
         const fetchCalendar = async () => {
             try {
-                const res = await fetch("/api/v1/expiry-calendar", { cache: "no-store" });
+                const res = await authedFetch("/api/v1/expiry-calendar", { cache: "no-store" });
                 if (!res.ok) return;
                 const data: ExpiryCalendarResponse = await res.json();
                 const cards = Array.isArray(data.cards) ? data.cards : [];
@@ -340,7 +341,7 @@ export default function ExpiryZeroHeroPanel() {
 
             const results = await Promise.all(
                 todayExpiries.map(async (idx) => {
-                    const res = await fetch(`/api/v1/expiry-zero-hero?index=${encodeURIComponent(idx.abbr)}`, { cache: "no-store" });
+                    const res = await authedFetch(`/api/v1/expiry-zero-hero?index=${encodeURIComponent(idx.abbr)}`, { cache: "no-store" });
                     const data = await res.json();
                     if (!res.ok) {
                         throw new Error(data?.detail || `Failed for ${idx.abbr}`);

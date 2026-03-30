@@ -1,5 +1,6 @@
 "use client";
 
+import { authedFetch } from "@/lib/authedFetch";
 import { useState, useEffect, useCallback } from "react";
 
 type AnalysisStatus = "full" | "repaired" | "fallback";
@@ -317,7 +318,7 @@ export default function AIDecision({ symbol }: { symbol: string }) {
 
     const fetchDecision = useCallback(async () => {
         const runOnce = async (): Promise<AIData> => {
-            const res = await fetch(`/api/v1/ai-decision?symbol=${encodeURIComponent(symbol)}`, { cache: "no-store" });
+            const res = await authedFetch(`/api/v1/ai-decision?symbol=${encodeURIComponent(symbol)}`, { cache: "no-store" });
             if (!res.ok) {
                 let detail = `API error ${res.status}`;
                 try {

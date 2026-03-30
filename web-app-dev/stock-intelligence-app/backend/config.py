@@ -49,6 +49,26 @@ class Settings(BaseSettings):
         ),
     )
 
+    supabase_url: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "SUPABASE_URL",
+            "NEXT_PUBLIC_SUPABASE_URL",
+        ),
+    )
+    supabase_publishable_key: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "SUPABASE_PUBLISHABLE_KEY",
+            "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        ),
+    )
+    auth_required: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("AUTH_REQUIRED"),
+    )
+
     @property
     def is_dev(self) -> bool:
         return self.app_env == "development"

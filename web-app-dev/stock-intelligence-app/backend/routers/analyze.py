@@ -5,7 +5,7 @@ import json
 from datetime import date, datetime, timedelta, timezone, time as dt_time
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from models.schemas import (
     AnalyzeResponse,
@@ -42,9 +42,10 @@ from services.ai_decision import (
     get_eod_analysis,
 )
 from services.stock_focus import get_stock_focus_outlook
+from services.auth_guard import require_authenticated_user
 from config import settings
 
-router = APIRouter(prefix="/api/v1", tags=["analyze"])
+router = APIRouter(prefix="/api/v1", tags=["analyze"], dependencies=[Depends(require_authenticated_user)])
 
 IST = timezone(timedelta(hours=5, minutes=30))
 # Expiry dates do not change frequently intraday; long cache keeps free-tier API usage low.

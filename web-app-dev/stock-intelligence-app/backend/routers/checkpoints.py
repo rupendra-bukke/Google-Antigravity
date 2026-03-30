@@ -13,7 +13,7 @@ checkpoint time (IST) on weekdays.
 
 import hmac
 
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, Header
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Header
 from datetime import datetime, timezone, timedelta, time, date as date_cls
 from config import settings
 
@@ -23,6 +23,7 @@ from services.market_data import (
     is_indian_market_open,
 )
 from services.decision_v2 import run_advanced_analysis
+from services.auth_guard import require_authenticated_user
 from services.checkpoint_store import (
     save_checkpoint,
     load_all_checkpoints,
@@ -145,7 +146,7 @@ async def _compute_session_close_price(symbol: str, date_str: str) -> float | No
 
 
 # Read all 7 panels
-@router.get("")
+@router.get("", dependencies=[Depends(require_authenticated_user)])
 async def get_checkpoints(
     background_tasks: BackgroundTasks,
     symbol: str = Query(default="^NSEI"),
@@ -216,7 +217,7 @@ async def get_checkpoints(
 LAST_ERROR = "None yet"
 
 
-@router.get("/diag")
+@router.get("/diag", dependencies=[Depends(require_authenticated_user)])
 async def checkpoint_diag():
     """Diagnostic endpoint to check backend status on live server."""
     now_ist = datetime.now(IST)

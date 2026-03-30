@@ -1,5 +1,6 @@
 "use client";
 
+import { authedFetch } from "@/lib/authedFetch";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type AssetKind = "index" | "stock";
@@ -130,7 +131,7 @@ export default function WatchlistPage() {
     );
 
     const fetchOptions = useCallback(async () => {
-        const res = await fetch("/api/v1/market-focus-options", { cache: "no-store" });
+        const res = await authedFetch("/api/v1/market-focus-options", { cache: "no-store" });
         if (!res.ok) {
             throw new Error(`Failed to load selector options (${res.status})`);
         }
@@ -151,7 +152,7 @@ export default function WatchlistPage() {
             if (forceRefresh) {
                 params.set("refresh", "true");
             }
-            const res = await fetch(`/api/v1/market-focus?${params.toString()}`, {
+            const res = await authedFetch(`/api/v1/market-focus?${params.toString()}`, {
                 cache: "no-store",
             });
             if (!res.ok) {
