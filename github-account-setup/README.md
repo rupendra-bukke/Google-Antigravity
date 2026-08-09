@@ -20,12 +20,25 @@ gh auth login
 gh auth status   # Must show your user, not a bot/integration
 ```
 
+### Codespaces note (important)
+
+Codespaces often sets a limited `GITHUB_TOKEN` that can write only to the **current** repo.
+Before deploying, run:
+
+```bash
+unset GITHUB_TOKEN
+gh auth login -h github.com -p https -w
+gh auth status   # Must show rupendra-bukke (NOT GITHUB_TOKEN)
+```
+
+Then run `./deploy.sh --skip-cleanup`.
+
 ## Quick Deploy
 
 ```bash
 cd github-account-setup
 chmod +x deploy.sh
-./deploy.sh
+./deploy.sh --skip-cleanup
 ```
 
 ### Options

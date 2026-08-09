@@ -23,28 +23,76 @@ done
 log() { echo "▸ $*"; }
 ok()  { echo "✓ $*"; }
 warn(){ echo "⚠ $*"; }
+err() { echo "✗ $*"; }
 
 require_gh() {
   if ! gh auth status &>/dev/null; then
-    echo "Error: Run 'gh auth login' with your personal GitHub account first."
+    err "GitHub CLI is not logged in."
+    echo "Run: unset GITHUB_TOKEN && gh auth login -h github.com -p https -w"
     exit 1
   fi
+
   local login
   login=$(gh api user --jq .login 2>/dev/null || echo "")
   if [[ "$login" != "$GITHUB_USER" ]]; then
     warn "Authenticated as '${login:-unknown}', expected '$GITHUB_USER'."
-    warn "Deploy may fail if you lack write access. Continue? [y/N]"
+    warn "Continue anyway? [y/N]"
+    read -r confirm
+    [[ "$confirm" =~ ^[Yy]$ ]] || exit 1
+  fi
+
+  # Codespaces default GITHUB_TOKEN can only write to the current repo.
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    echo ""
+    warn "GITHUB_TOKEN is set (common in Codespaces)."
+    warn "That token usually cannot push to your OTHER repos."
+    echo ""
+    echo "Fix (run these in Codespaces, then re-run this script):"
+    echo "  unset GITHUB_TOKEN"
+    echo "  gh auth login -h github.com -p https -w"
+    echo ""
+    warn "Continue with current token anyway? [y/N]"
     read -r confirm
     [[ "$confirm" =~ ^[Yy]$ ]] || exit 1
   fi
 }
 
+copy_tree() {
+  local src="$1" dest="$2"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --exclude='.git' "$src/" "$dest/"
+  else
+    # Fallback when rsync is unavailable
+    (cd "$src" && tar cf - --exclude='.git' .) | (cd "$dest" && tar xf -)
+  fi
+}
+
 update_description() {
   local repo="$1" desc="$2"
-  gh api "repos/$GITHUB_USER/$repo" \
-    --method PATCH \
-    -f description="$desc" \
-    --silent 2>/dev/null && ok "Description updated: $repo" || warn "Could not update description: $repo"
+  if gh api "repos/$GITHUB_USER/$repo" --method PATCH -f description="$desc" --silent 2>/dev/null; then
+    ok "Description updated: $repo"
+  else
+    warn "Could not update description: $repo"
+  fi
+}
+
+push_branch() {
+  local repo="$1"
+  local push_out
+  if push_out=$(git push -u origin HEAD 2>&1); then
+    ok "Pushed $repo"
+    return 0
+  fi
+
+  err "Push failed for $repo"
+  echo "$push_out" | sed 's/^/    /'
+  echo ""
+  warn "Most common cause in Codespaces: limited GITHUB_TOKEN."
+  echo "    Run:"
+  echo "      unset GITHUB_TOKEN"
+  echo "      gh auth login -h github.com -p https -w"
+  echo "      ./deploy.sh --skip-cleanup"
+  return 1
 }
 
 deploy_readme_repo() {
@@ -57,17 +105,17 @@ deploy_readme_repo() {
 
   log "Deploying $repo..."
   local clone_dir="$WORK_DIR/$repo"
-  gh repo clone "$GITHUB_USER/$repo" "$clone_dir" -- --quiet 2>/dev/null || {
+  if ! gh repo clone "$GITHUB_USER/$repo" "$clone_dir" -- --quiet; then
     warn "Could not clone $repo"
     return
-  }
+  fi
 
   cd "$clone_dir"
-  git checkout -b "chore/professional-readme-$(date +%Y%m%d)" 2>/dev/null || git checkout -b "chore/professional-readme"
+  # Prefer pushing directly to main for simpler first-time setup
+  git checkout main 2>/dev/null || git checkout master 2>/dev/null || true
 
   if [[ "$repo" == "powerbi-dashboard" ]]; then
-    # Full portfolio deploy — copy everything except .git
-    rsync -a --exclude='.git' "$src/" "$clone_dir/"
+    copy_tree "$src" "$clone_dir"
     git add -A
     if git diff --cached --quiet; then
       ok "$repo — no changes"
@@ -80,7 +128,6 @@ deploy_readme_repo() {
 - Migrate PBIX files, data, and screenshots into structured folders
 - Add dax-tutorials section for future learning content"
   else
-    # README-only update for learning repos
     if [[ -f "$src/README.md" ]]; then
       cp "$src/README.md" "$clone_dir/README.md"
       git add README.md
@@ -92,7 +139,7 @@ deploy_readme_repo() {
     fi
   fi
 
-  git push -u origin HEAD 2>/dev/null && ok "Pushed $repo" || warn "Push failed for $repo — create PR manually"
+  push_branch "$repo" || true
   cd "$SCRIPT_DIR"
 }
 
@@ -114,16 +161,25 @@ deploy_profile_readme() {
   if gh repo view "$GITHUB_USER/$profile_repo" &>/dev/null; then
     gh repo clone "$GITHUB_USER/$profile_repo" "$clone_dir" -- --quiet
   else
-    gh repo create "$profile_repo" --public --description "GitHub profile README" --clone "$clone_dir"
+    # Create repo first, then clone into a known path
+    # (gh --clone does not accept a custom path argument)
+    if ! gh repo create "$GITHUB_USER/$profile_repo" --public --description "GitHub profile README"; then
+      err "Could not create profile repo $GITHUB_USER/$profile_repo"
+      return 1
+    fi
+    gh repo clone "$GITHUB_USER/$profile_repo" "$clone_dir" -- --quiet
   fi
 
   cd "$clone_dir"
-  git checkout -b "chore/profile-readme-$(date +%Y%m%d)" 2>/dev/null || git checkout -b "chore/profile-readme"
+  git checkout main 2>/dev/null || git checkout master 2>/dev/null || true
   cp "$SCRIPT_DIR/profile/README.md" "$clone_dir/README.md"
   git add README.md
-  git commit -m "docs: add professional GitHub profile README" || true
-  git push -u origin HEAD 2>/dev/null || git push origin main 2>/dev/null || git push origin master 2>/dev/null || warn "Profile README push failed"
-  ok "Profile README deployed"
+  if git diff --cached --quiet; then
+    ok "Profile README already up to date"
+  else
+    git commit -m "docs: add professional GitHub profile README"
+    push_branch "profile ($profile_repo)" || true
+  fi
   cd "$SCRIPT_DIR"
 }
 
@@ -216,12 +272,12 @@ main() {
 
   echo ""
   echo "══════════════════════════════════════════════"
-  ok "Deployment complete!"
+  ok "Deployment finished (check warnings above)."
   echo ""
   echo "Next steps:"
-  echo "  1. Pin Google-Antigravity + powerbi-dashboard on your profile"
-  echo "  2. Review PRs if branches were pushed (merge to main)"
-  echo "  3. Visit https://github.com/$GITHUB_USER"
+  echo "  1. Open https://github.com/$GITHUB_USER/powerbi-dashboard"
+  echo "  2. Open https://github.com/$GITHUB_USER (profile README)"
+  echo "  3. Pin Google-Antigravity + powerbi-dashboard"
   echo "══════════════════════════════════════════════"
 }
 
