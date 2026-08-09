@@ -230,14 +230,14 @@ export default function WatchlistPage() {
                     <button
                         onClick={() => selectedSymbol && fetchFocus(selectedSymbol, true, true)}
                         disabled={refreshing || !selectedSymbol}
-                        className="btn-gold"
+                        className="btn-primary"
                     >
                         {refreshing ? "Refreshing..." : "Refresh"}
                     </button>
                 }
             />
 
-            <div className="glass-card rounded-2xl p-4 border border-gold-500/15">
+            <div className="glass-card p-3 border border-terminal-border">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div>
                         <p className="text-[0.62rem] uppercase tracking-[0.18em] text-brand-300 font-extrabold">Selector</p>

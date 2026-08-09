@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,119 +6,117 @@
 
 @layer base {
     * {
-        @apply border-surface-700;
+        @apply border-terminal-border;
     }
 
     body {
-        @apply bg-surface-950 text-gray-100 antialiased;
-        font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-        background-color: #06080f;
-        background-image:
-            linear-gradient(rgba(212, 175, 55, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(212, 175, 55, 0.03) 1px, transparent 1px),
-            radial-gradient(ellipse 90% 60% at 50% -15%, rgba(212, 175, 55, 0.09), transparent 55%),
-            radial-gradient(ellipse 50% 40% at 100% 0%, rgba(99, 102, 241, 0.07), transparent 50%),
-            radial-gradient(ellipse 40% 30% at 0% 100%, rgba(16, 185, 129, 0.05), transparent 45%);
-        background-size: 48px 48px, 48px 48px, auto, auto, auto;
-        background-attachment: fixed;
+        @apply bg-terminal-bg text-terminal-text antialiased text-[13px] leading-snug;
+        font-family: Inter, system-ui, sans-serif;
     }
 
     ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+        width: 5px;
+        height: 5px;
     }
 
     ::-webkit-scrollbar-track {
-        @apply bg-transparent;
+        @apply bg-terminal-bg;
     }
 
     ::-webkit-scrollbar-thumb {
-        @apply bg-surface-600/60 rounded-full;
+        @apply bg-terminal-border rounded-none;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        @apply bg-gold-600/40;
+        @apply bg-bb-orange/60;
     }
 }
 
 @layer components {
     .page-shell {
-        @apply max-w-6xl mx-auto px-4 md:px-6 pt-5 md:pt-7 pb-12 space-y-5 animate-fade-in;
+        @apply max-w-[1400px] mx-auto px-3 md:px-4 pt-3 md:pt-4 pb-8 space-y-3 animate-fade-in;
+    }
+
+    .font-data {
+        font-family: "IBM Plex Mono", "Courier New", monospace;
     }
 
     .glass-card {
-        @apply bg-surface-900/55 backdrop-blur-xl border border-white/[0.06] rounded-2xl shadow-terminal;
+        @apply bg-terminal-panel border border-terminal-border rounded-none;
     }
 
     .glass-card-hover {
-        @apply glass-card hover:bg-surface-800/60 hover:border-gold-500/15 transition-all duration-300;
+        @apply glass-card hover:border-bb-orange/40 transition-colors duration-150;
     }
 
     .glass-sidebar {
-        @apply bg-surface-950/90 backdrop-blur-2xl border-r border-gold-500/10;
-        background-image: linear-gradient(180deg, rgba(212, 175, 55, 0.04) 0%, transparent 35%);
+        @apply bg-terminal-panel border-r border-terminal-border;
     }
 
     .toolbar-card {
-        @apply glass-card rounded-xl border-gold-500/10 p-3 md:p-4;
+        @apply bg-terminal-panel border border-terminal-border px-3 py-2;
     }
 
-    .text-gradient-gold {
-        background: linear-gradient(135deg, #ffffff 0%, #f5e6b8 45%, #d4af37 85%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .bg-mesh-terminal {
-        background-image:
-            radial-gradient(circle at 20% 20%, rgba(212, 175, 55, 0.12), transparent 45%),
-            radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.08), transparent 40%);
+    .terminal-header {
+        @apply bg-terminal-panel border border-terminal-border border-t-2 border-t-bb-orange px-3 py-2;
     }
 
     .nav-item-active {
-        @apply bg-gold-500/10 text-gold-200 border border-gold-500/20;
-        box-shadow: inset 3px 0 0 0 rgba(212, 175, 55, 0.85);
+        @apply bg-bb-orange/15 text-bb-orange border-l-2 border-l-bb-orange;
     }
 
-    .btn-gold {
-        @apply inline-flex items-center justify-center gap-2 rounded-xl border border-gold-500/35 bg-gold-500/10 px-3.5 py-2 text-xs font-bold text-gold-100 transition-all hover:bg-gold-500/20 hover:border-gold-400/50 disabled:opacity-50;
+    .btn-primary {
+        @apply inline-flex items-center justify-center gap-1.5 border border-bb-orange bg-bb-orange/10 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-bb-orange transition-colors hover:bg-bb-orange/20 disabled:opacity-50 font-data;
     }
 
     .btn-ghost {
-        @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-surface-800/40 px-3.5 py-2 text-xs font-bold text-gray-300 transition-all hover:border-white/20 hover:bg-surface-800/70;
-    }
-
-    .indicator-glow {
-        box-shadow: 0 0 20px rgba(212, 175, 55, 0.12), 0 0 60px rgba(99, 102, 241, 0.06);
-    }
-
-    .decision-buy {
-        @apply bg-emerald-500/10 text-emerald-400 border border-emerald-500/25;
-        box-shadow: 0 0 40px rgba(16, 185, 129, 0.12), 0 4px 20px rgba(16, 185, 129, 0.08);
-    }
-
-    .decision-sell {
-        @apply bg-rose-500/10 text-rose-400 border border-rose-500/25;
-        box-shadow: 0 0 40px rgba(244, 63, 94, 0.12), 0 4px 20px rgba(244, 63, 94, 0.08);
-    }
-
-    .decision-hold {
-        @apply bg-amber-500/10 text-amber-400 border border-amber-500/25;
-        box-shadow: 0 0 40px rgba(245, 158, 11, 0.12), 0 4px 20px rgba(245, 158, 11, 0.08);
-    }
-
-    .shimmer {
-        background: linear-gradient(90deg,
-                rgba(255, 255, 255, 0) 0%,
-                rgba(212, 175, 55, 0.06) 50%,
-                rgba(255, 255, 255, 0) 100%);
-        background-size: 200% 100%;
-        animation: shimmer 1.8s ease-in-out infinite;
+        @apply inline-flex items-center justify-center gap-1.5 border border-terminal-border bg-terminal-bg px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-terminal-muted transition-colors hover:border-terminal-muted hover:text-terminal-text font-data;
     }
 
     .section-label {
-        @apply text-[10px] font-bold text-gold-500/70 uppercase tracking-[0.2em];
+        @apply text-[10px] font-bold text-bb-orange uppercase tracking-[0.18em] font-data;
+    }
+
+    .data-table {
+        @apply w-full text-[11px] font-data border-collapse;
+    }
+
+    .data-table th {
+        @apply text-left text-[10px] font-bold uppercase tracking-wider text-terminal-dim bg-terminal-bg border border-terminal-border px-2 py-1;
+    }
+
+    .data-table td {
+        @apply border border-terminal-border px-2 py-1 text-terminal-text;
+    }
+
+    .signal-buy {
+        @apply text-bb-green font-bold;
+    }
+
+    .signal-sell {
+        @apply text-bb-red font-bold;
+    }
+
+    .signal-neutral {
+        @apply text-terminal-dim font-semibold;
+    }
+
+    .shimmer {
+        background: linear-gradient(90deg, transparent 0%, rgba(255, 119, 0, 0.06) 50%, transparent 100%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s ease-in-out infinite;
+    }
+
+    .decision-buy {
+        @apply bg-bb-green/10 text-bb-green border border-bb-green/30;
+    }
+
+    .decision-sell {
+        @apply bg-bb-red/10 text-bb-red border border-bb-red/30;
+    }
+
+    .decision-hold {
+        @apply bg-terminal-muted/10 text-terminal-muted border border-terminal-border;
     }
 }
 
@@ -128,16 +126,6 @@
 }
 
 @keyframes fadeIn {
-    0% { opacity: 0; transform: translateY(6px); }
-    100% { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-3px); }
-}
-
-@keyframes glow-pulse {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
+    0% { opacity: 0; }
+    100% { opacity: 1; }
 }

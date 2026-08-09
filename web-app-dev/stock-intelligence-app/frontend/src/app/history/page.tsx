@@ -74,7 +74,7 @@ export default function HistoryPage() {
                                 value={selectedDate}
                                 max={quickDates.today}
                                 onChange={(event) => setSelectedDate(event.target.value)}
-                                className="rounded-xl border border-white/10 bg-surface-950/80 px-3 py-2 text-sm text-white outline-none focus:border-gold-500/50"
+                                className="border border-terminal-border bg-terminal-bg px-2 py-2 text-[11px] font-mono text-white outline-none focus:border-bb-orange"
                             />
                             <button
                                 type="button"
@@ -94,8 +94,8 @@ export default function HistoryPage() {
                         onClick={() => setSelectedDate(quickDates.today)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${
                             selectedDate === quickDates.today
-                                ? "border-gold-500/40 bg-gold-500/15 text-gold-200"
-                                : "border-white/10 text-gray-400"
+                                ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
+                                : "border-terminal-border text-terminal-muted"
                         }`}
                     >
                         Today
@@ -105,8 +105,8 @@ export default function HistoryPage() {
                         onClick={() => setSelectedDate(quickDates.yesterday)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${
                             selectedDate === quickDates.yesterday
-                                ? "border-gold-500/40 bg-gold-500/15 text-gold-200"
-                                : "border-white/10 text-gray-400"
+                                ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
+                                : "border-terminal-border text-terminal-muted"
                         }`}
                     >
                         Yesterday

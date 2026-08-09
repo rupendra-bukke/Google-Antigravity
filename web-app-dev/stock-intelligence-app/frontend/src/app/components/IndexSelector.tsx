@@ -14,25 +14,25 @@ export default function IndexSelector({
     disabled,
 }: IndexSelectorProps) {
     return (
-        <div className="flex flex-wrap gap-2">
-            {DASHBOARD_INDICES.map(({ label, symbol, emoji }) => {
+        <div className="inline-flex flex-wrap border border-terminal-border bg-terminal-bg">
+            {DASHBOARD_INDICES.map(({ label, symbol }) => {
                 const isActive = selected === symbol;
                 return (
                     <button
                         key={symbol}
+                        type="button"
                         onClick={() => onSelect(symbol)}
                         disabled={disabled}
                         className={`
-              px-4 py-2.5 rounded-xl text-sm font-semibold
-              transition-all duration-200
-              disabled:opacity-40 disabled:cursor-not-allowed
-              ${isActive
-                                ? "glass-card bg-brand-500/15 text-brand-400 border-brand-500/30 shadow-lg shadow-brand-500/10"
-                                : "bg-gray-800/40 text-gray-400 border border-gray-700/50 hover:bg-gray-800/70 hover:text-gray-200"
+                            px-2.5 py-1 text-[10px] font-mono font-bold uppercase tracking-wide
+                            border-r border-terminal-border last:border-r-0
+                            transition-colors disabled:opacity-40 disabled:cursor-not-allowed
+                            ${isActive
+                                ? "bg-bb-orange text-black"
+                                : "text-terminal-muted hover:text-bb-orange hover:bg-bb-orange/10"
                             }
-            `}
+                        `}
                     >
-                        <span className="mr-1.5">{emoji}</span>
                         {label}
                     </button>
                 );

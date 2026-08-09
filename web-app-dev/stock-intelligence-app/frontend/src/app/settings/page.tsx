@@ -96,7 +96,7 @@ export default function SettingsPage() {
                 description="Preferences are saved in your browser on this device."
             />
 
-            <div className="glass-card border-gold-500/10 p-5 space-y-6">
+            <div className="glass-card border-terminal-border p-4 space-y-6">
                 <section className="space-y-3">
                     <h2 className="text-sm font-bold text-white">Default index</h2>
                     <p className="text-xs text-gray-500">
@@ -112,8 +112,8 @@ export default function SettingsPage() {
                                     onClick={() => updateSettings({ defaultSymbol: option.symbol })}
                                     className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
-                                            ? "border-brand-500/40 bg-brand-500/15 text-brand-300"
-                                            : "border-white/10 bg-gray-900/40 text-gray-400"
+                                            ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
+                                            : "border-terminal-border bg-terminal-bg text-terminal-muted"
                                     }`}
                                 >
                                     {option.label}
@@ -138,8 +138,8 @@ export default function SettingsPage() {
                                     onClick={() => updateSettings({ dashboardRefreshSec: option.value })}
                                     className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
-                                            ? "border-brand-500/40 bg-brand-500/15 text-brand-300"
-                                            : "border-white/10 bg-gray-900/40 text-gray-400"
+                                            ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
+                                            : "border-terminal-border bg-terminal-bg text-terminal-muted"
                                     }`}
                                 >
                                     {option.label}
@@ -164,8 +164,8 @@ export default function SettingsPage() {
                                     onClick={() => updateSettings({ checkpointRefreshSec: option.value })}
                                     className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
-                                            ? "border-brand-500/40 bg-brand-500/15 text-brand-300"
-                                            : "border-white/10 bg-gray-900/40 text-gray-400"
+                                            ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
+                                            : "border-terminal-border bg-terminal-bg text-terminal-muted"
                                     }`}
                                 >
                                     {option.label}
@@ -190,8 +190,8 @@ export default function SettingsPage() {
                                     onClick={() => updateSettings({ checkpointCatchupSec: option.value })}
                                     className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
-                                            ? "border-brand-500/40 bg-brand-500/15 text-brand-300"
-                                            : "border-white/10 bg-gray-900/40 text-gray-400"
+                                            ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
+                                            : "border-terminal-border bg-terminal-bg text-terminal-muted"
                                     }`}
                                 >
                                     {option.label}
@@ -236,8 +236,8 @@ export default function SettingsPage() {
                                     onClick={() => toggleWatchlistSymbol(option.symbol)}
                                     className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
-                                            ? "border-brand-500/40 bg-brand-500/15 text-brand-300"
-                                            : "border-white/10 bg-gray-900/40 text-gray-400"
+                                            ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
+                                            : "border-terminal-border bg-terminal-bg text-terminal-muted"
                                     } ${isLast ? "opacity-60 cursor-not-allowed" : ""}`}
                                 >
                                     {option.label}
@@ -272,7 +272,7 @@ export default function SettingsPage() {
                 )}
             </div>
 
-            <div className="glass-card border-gold-500/10 p-5">
+            <div className="glass-card border-terminal-border p-4">
                 <h2 className="text-sm font-bold text-white mb-2">Current values</h2>
                 <div className="text-xs text-gray-400 space-y-1">
                     <p>Default index: <span className="text-gray-200">{settings.defaultSymbol}</span></p>

@@ -5,47 +5,34 @@ interface PageHeaderProps {
     title: string;
     description?: string;
     actions?: ReactNode;
-    align?: "left" | "center";
 }
 
 export default function PageHeader({
-    eyebrow = "Trade-Craft",
+    eyebrow = "TRADE-CRAFT",
     title,
     description,
     actions,
-    align = "left",
 }: PageHeaderProps) {
-    const isCenter = align === "center";
-
     return (
-        <header
-            className={`relative overflow-hidden rounded-2xl border border-gold-500/15 bg-surface-900/80 backdrop-blur-xl shadow-terminal ${
-                isCenter ? "text-center px-6 py-8" : "px-5 py-5 md:px-6 md:py-6"
-            }`}
-        >
-            <div className="pointer-events-none absolute inset-0 bg-mesh-terminal opacity-60" />
-            <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gold-500/10 blur-3xl" />
-            <div className="pointer-events-none absolute -left-6 bottom-0 h-24 w-24 rounded-full bg-brand-500/10 blur-3xl" />
-
-            <div className={`relative ${isCenter ? "" : "flex flex-col gap-4 md:flex-row md:items-end md:justify-between"}`}>
-                <div className={isCenter ? "space-y-2" : "space-y-1.5 min-w-0"}>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-gold-400/90">
-                        {eyebrow}
-                    </p>
-                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white text-gradient-gold">
-                        {title}
-                    </h1>
-                    {description && (
-                        <p className={`text-sm text-gray-400 max-w-2xl ${isCenter ? "mx-auto" : ""}`}>
-                            {description}
+        <header className="terminal-header">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0 flex items-start gap-3">
+                    <div className="hidden sm:block w-1 self-stretch bg-bb-orange shrink-0" />
+                    <div className="min-w-0">
+                        <p className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-bb-orange">
+                            {eyebrow}
                         </p>
-                    )}
-                </div>
-                {actions && (
-                    <div className={`shrink-0 ${isCenter ? "mt-4 flex justify-center" : ""}`}>
-                        {actions}
+                        <h1 className="text-base md:text-lg font-bold uppercase tracking-wide text-white font-mono">
+                            {title}
+                        </h1>
+                        {description && (
+                            <p className="text-[11px] text-terminal-muted mt-0.5 max-w-3xl leading-relaxed">
+                                {description}
+                            </p>
+                        )}
                     </div>
-                )}
+                </div>
+                {actions && <div className="shrink-0">{actions}</div>}
             </div>
         </header>
     );

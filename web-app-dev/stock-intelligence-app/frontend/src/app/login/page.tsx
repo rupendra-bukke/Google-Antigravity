@@ -14,75 +14,59 @@ export default function LoginPage() {
         event.preventDefault();
         setSubmitting(true);
         setError(null);
-
         const result = await signIn(email.trim(), password);
-        if (result.error) {
-            setError(result.error);
-        }
-
+        if (result.error) setError(result.error);
         setSubmitting(false);
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4 py-12">
-            <div className="w-full max-w-md">
-                <div className="text-center mb-6">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl border border-gold-500/30 shadow-terminal-gold overflow-hidden mb-4">
-                        <img src="/assets/trade-craft-logo.png" alt="Trade-Craft" className="w-full h-full object-cover" />
-                    </div>
-                    <p className="text-[10px] font-bold text-gold-400 uppercase tracking-[0.22em]">Trade-Craft Terminal</p>
-                    <h1 className="text-2xl md:text-3xl font-display font-black text-gradient-gold mt-2">Sign in</h1>
-                    <p className="text-sm text-gray-400 mt-2">
-                        Access your intraday dashboard, watchlist, and checkpoint history.
+        <div className="min-h-screen flex items-center justify-center px-4 py-8">
+            <div className="w-full max-w-sm">
+                <div className="border border-terminal-border border-t-2 border-t-bb-orange bg-terminal-panel p-5">
+                    <p className="text-[9px] font-mono font-bold text-bb-orange uppercase tracking-[0.25em]">
+                        Trade-Craft Terminal
                     </p>
-                </div>
+                    <h1 className="text-lg font-mono font-bold text-white uppercase mt-1">Sign In</h1>
+                    <p className="text-[11px] text-terminal-muted mt-1">
+                        Authenticate to access market intelligence.
+                    </p>
 
-                <div className="glass-card border-gold-500/15 p-6 md:p-7 shadow-terminal-gold">
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="mt-4 space-y-3">
                         <div>
-                            <label className="section-label mb-2 block">Email</label>
+                            <label className="section-label block mb-1">Email</label>
                             <input
                                 type="email"
                                 value={email}
-                                onChange={(event) => setEmail(event.target.value)}
+                                onChange={(e) => setEmail(e.target.value)}
                                 required
                                 autoComplete="email"
-                                placeholder="you@example.com"
-                                className="w-full rounded-xl border border-white/10 bg-surface-950/80 px-3 py-2.5 text-sm text-white outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/20"
+                                className="w-full border border-terminal-border bg-terminal-bg px-2 py-2 text-[12px] font-mono text-white outline-none focus:border-bb-orange"
                             />
                         </div>
-
                         <div>
-                            <label className="section-label mb-2 block">Password</label>
+                            <label className="section-label block mb-1">Password</label>
                             <input
                                 type="password"
                                 value={password}
-                                onChange={(event) => setPassword(event.target.value)}
+                                onChange={(e) => setPassword(e.target.value)}
                                 required
                                 autoComplete="current-password"
-                                placeholder="Enter your password"
-                                className="w-full rounded-xl border border-white/10 bg-surface-950/80 px-3 py-2.5 text-sm text-white outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/20"
+                                className="w-full border border-terminal-border bg-terminal-bg px-2 py-2 text-[12px] font-mono text-white outline-none focus:border-bb-orange"
                             />
                         </div>
-
                         {(error || configError) && (
-                            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2.5">
-                                <p className="text-xs text-rose-300">{error || configError}</p>
-                            </div>
+                            <p className="text-[11px] font-mono text-bb-red border border-bb-red/30 bg-bb-red/10 px-2 py-1.5">
+                                {error || configError}
+                            </p>
                         )}
-
                         <button
                             type="submit"
                             disabled={loading || submitting || !!configError}
-                            className="w-full btn-gold py-2.5 text-sm disabled:cursor-not-allowed"
+                            className="w-full btn-primary py-2 disabled:cursor-not-allowed"
                         >
-                            {submitting ? "Signing in..." : "Sign In"}
+                            {submitting ? "AUTH..." : "Sign In"}
                         </button>
                     </form>
-
-                    <p className="text-[11px] text-gray-500 mt-5 text-center">
-                        Need access? Ask admin to add your email in Supabase users.
-                    </p>
                 </div>
             </div>
         </div>
