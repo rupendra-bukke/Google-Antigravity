@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
@@ -21,6 +21,8 @@ from routers.checkpoints import (
     router as checkpoints_router,
     run_checkpoint_for_all_symbols,
 )
+from routers.career_pulse import router as career_pulse_router
+from services.career_pulse import ensure_today_career_pulse_on_startup, generate_career_pulse
 from services.market_data import is_nse_trading_day
 from services.keepalive import ping_supabase_auth, ping_upstash_redis
 
@@ -40,6 +42,10 @@ CHECKPOINT_SCHEDULE = [
 AI_SNAPSHOT_SCHEDULE = [
     ("1000", 10, 0),
     ("1430", 14, 30),
+]
+
+CAREER_PULSE_SCHEDULE = [
+    ("0800", 8, 0),
 ]
 
 
@@ -88,6 +94,25 @@ for snapshot_id, hour, minute in AI_SNAPSHOT_SCHEDULE:
         CronTrigger(day_of_week="mon-fri", hour=hour, minute=minute),
         args=[snapshot_id],
         id=f"ai_snapshot_{snapshot_id}",
+        replace_existing=True,
+    )
+
+
+async def _run_scheduled_career_pulse(job_id: str):
+    """Generate the daily Data & AI Pulse digest."""
+    summary = await generate_career_pulse()
+    print(
+        f"[CAREER-PULSE] scheduler {job_id} | "
+        f"status={summary.get('status')} date={summary.get('date')}"
+    )
+
+
+for job_id, hour, minute in CAREER_PULSE_SCHEDULE:
+    scheduler.add_job(
+        _run_scheduled_career_pulse,
+        CronTrigger(hour=hour, minute=minute),
+        args=[job_id],
+        id=f"career_pulse_{job_id}",
         replace_existing=True,
     )
 
@@ -158,6 +183,14 @@ async def _run_startup_eod_backfill():
     except Exception as exc:
         print(f"[EOD-BOOTSTRAP] failed: {exc}")
 
+
+async def _run_startup_career_pulse_backfill():
+    try:
+        summary = await ensure_today_career_pulse_on_startup()
+        print(f"[CAREER-PULSE-BOOTSTRAP] {summary}")
+    except Exception as exc:
+        print(f"[CAREER-PULSE-BOOTSTRAP] failed: {exc}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     env_label = "DEV" if settings.is_dev else "PROD"
@@ -167,8 +200,10 @@ async def lifespan(app: FastAPI):
     scheduler.start()
     print(f"[SCHEDULER] started with {len(CHECKPOINT_SCHEDULE)} checkpoint jobs (IST, Mon-Fri)")
     print(f"[SCHEDULER] started with {len(AI_SNAPSHOT_SCHEDULE)} saved AI snapshot jobs (IST, Mon-Fri)")
+    print(f"[SCHEDULER] started with {len(CAREER_PULSE_SCHEDULE)} career pulse jobs (IST, daily)")
     print("[SCHEDULER] external checkpoint wake/capture endpoints ready for GitHub Actions")
     await _run_startup_eod_backfill()
+    await _run_startup_career_pulse_backfill()
     yield
     scheduler.shutdown()
     print("[SCHEDULER] stopped")
@@ -191,6 +226,7 @@ app.add_middleware(
 
 app.include_router(analyze_router)
 app.include_router(checkpoints_router)
+app.include_router(career_pulse_router)
 
 
 def _require_cron_secret(x_checkpoint_cron_secret: str | None) -> None:
@@ -250,3 +286,13 @@ async def health_keepalive(
             "upstash_redis": upstash,
         },
     }
+
+
+@app.post("/api/v1/career-pulse/cron-generate", tags=["career-pulse"])
+async def career_pulse_cron_generate(
+    x_checkpoint_cron_secret: str | None = Header(default=None, alias="X-Checkpoint-Cron-Secret"),
+    force: bool = Query(default=False),
+):
+    """Secure endpoint for GitHub Actions to generate the daily career pulse."""
+    _require_cron_secret(x_checkpoint_cron_secret)
+    return await generate_career_pulse(force=force)

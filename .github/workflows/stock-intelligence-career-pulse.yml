@@ -1,0 +1,142 @@
+name: Stock Intelligence Career Pulse
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: Which backend to call
+        required: true
+        default: prod
+        type: choice
+        options:
+          - dev
+          - prod
+          - both
+      force:
+        description: Regenerate even if today's pulse exists
+        required: true
+        default: false
+        type: boolean
+
+  schedule:
+    # 02:30 UTC = 08:00 IST — daily Data & AI Pulse generation
+    - cron: "30 2 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stock-intelligence-career-pulse
+  cancel-in-progress: false
+
+jobs:
+  career-pulse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Resolve targets
+        id: resolve
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TARGET: ${{ github.event.inputs.target_env }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${EVENT_NAME}" == "schedule" ]]; then
+            echo "targets=prod,dev" >> "$GITHUB_OUTPUT"
+          else
+            case "${INPUT_TARGET}" in
+              prod) echo "targets=prod" >> "$GITHUB_OUTPUT" ;;
+              dev) echo "targets=dev" >> "$GITHUB_OUTPUT" ;;
+              both) echo "targets=prod,dev" >> "$GITHUB_OUTPUT" ;;
+              *) echo "Unknown target: ${INPUT_TARGET}"; exit 1 ;;
+            esac
+          fi
+
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "force=${{ github.event.inputs.force }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "force=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate career pulse
+        shell: bash
+        env:
+          DEV_BASE_URL: ${{ secrets.CHECKPOINT_CRON_DEV_BASE_URL }}
+          DEV_SECRET: ${{ secrets.CHECKPOINT_CRON_DEV_SECRET }}
+          PROD_BASE_URL: ${{ secrets.CHECKPOINT_CRON_PROD_BASE_URL }}
+          PROD_SECRET: ${{ secrets.CHECKPOINT_CRON_PROD_SECRET }}
+          TARGETS: ${{ steps.resolve.outputs.targets }}
+          FORCE: ${{ steps.resolve.outputs.force }}
+        run: |
+          set -euo pipefail
+
+          call_target() {
+            local label="$1"
+            local base_url="$2"
+            local secret="$3"
+
+            if [[ -z "${base_url}" || -z "${secret}" ]]; then
+              echo "[${label}] skipped — missing base URL or secret"
+              return 0
+            fi
+
+            base_url="${base_url%/}"
+            local url="${base_url}/api/v1/career-pulse/cron-generate?force=${FORCE}"
+
+            echo "[${label}] waking ${base_url}/health"
+            for attempt in 1 2 3 4 5 6; do
+              health_code=$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 60 "${base_url}/health" || true)
+              if [[ "${health_code}" == "200" ]]; then
+                break
+              fi
+              echo "[${label}] wake attempt ${attempt} -> HTTP ${health_code}"
+              sleep 20
+            done
+
+            if [[ "${health_code}" != "200" ]]; then
+              echo "[${label}] backend did not wake"
+              return 1
+            fi
+
+            echo "[${label}] POST ${url}"
+
+            for attempt in 1 2 3 4 5; do
+              http_code=$(curl -sS -o /tmp/career-pulse-response.json -w "%{http_code}" \
+                -X POST "${url}" \
+                -H "X-Checkpoint-Cron-Secret: ${secret}" \
+                -H "Accept: application/json" \
+                --max-time 120 || true)
+
+              echo "[${label}] attempt ${attempt} -> HTTP ${http_code}"
+              cat /tmp/career-pulse-response.json || true
+              echo ""
+
+              if [[ "${http_code}" == "200" ]]; then
+                echo "[${label}] ok"
+                return 0
+              fi
+
+              if [[ "${http_code}" == "503" || "${http_code}" == "502" || "${http_code}" == "000" ]]; then
+                sleep $((attempt * 15))
+                continue
+              fi
+
+              echo "[${label}] failed with HTTP ${http_code}"
+              return 1
+            done
+
+            echo "[${label}] failed after retries"
+            return 1
+          }
+
+          IFS=',' read -ra TARGET_ARR <<< "${TARGETS}"
+          for target in "${TARGET_ARR[@]}"; do
+            case "${target}" in
+              dev) call_target "dev" "${DEV_BASE_URL}" "${DEV_SECRET}" ;;
+              prod) call_target "prod" "${PROD_BASE_URL}" "${PROD_SECRET}" ;;
+              *) echo "Unknown target: ${target}"; exit 1 ;;
+            esac
+          done

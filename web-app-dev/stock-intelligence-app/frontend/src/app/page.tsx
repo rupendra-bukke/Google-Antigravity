@@ -16,6 +16,7 @@ import ExpiryZeroHeroPanel from "./components/ExpiryZeroHeroPanel";
 import MarketStatusBanner from "./components/MarketStatusBanner";
 import CheckpointBoard from "./components/CheckpointBoard";
 import DashboardSyncBar from "./components/DashboardSyncBar";
+import DataAIPulsePanel from "./components/DataAIPulsePanel";
 import ISTClock from "./components/ISTClock";
 import ExpiryBanner from "./components/ExpiryBanner";
 import { triggerDashboardRefresh } from "@/lib/dashboardRefresh";
@@ -336,6 +337,8 @@ export default function Dashboard() {
                 <CheckpointBoard symbol={selectedSymbol} />
             </div>
 
+            {/* ── Data & AI Pulse (BI / analytics career brief) ── */}
+            <DataAIPulsePanel />
 
             {/* ── Footer ── */}
             <div className="text-center pt-2">
