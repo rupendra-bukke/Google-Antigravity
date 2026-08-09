@@ -1,74 +1,238 @@
-# Trade-Craft Stock Intelligence App
+# Trade-Craft — Project Hub
 
-Trade-Craft is a full-stack intraday market intelligence dashboard for Indian indices.
+> **Open this file first.** All live URLs, workflow, services, and documentation links in one place.  
+> **Repo:** [github.com/rupendra-bukke/Google-Antigravity](https://github.com/rupendra-bukke/Google-Antigravity)  
+> **Current release:** `v2026.08.09-01`  
+> **Last updated:** 2026-08-09
 
-- Frontend: Next.js (Vercel)
-- Backend: FastAPI (Render)
-- Cache/Store: Upstash Redis
-- Auth: Supabase (email/password login, JWT on API calls)
-- AI: Gemini (intraday + EOD outlook)
-- Market data: `yfinance` in deployed runtime, `tvDatafeed` optional locally if installed
+---
 
-## Current Product Scope
+## Quick Links — Live Apps
 
-- Index support: `^NSEI`, `^NSEBANK`, `^CNXFINSERVICE`, `^BSESN` (Nifty 50, Bank Nifty, FinNifty, Sensex)
-- Supabase login (`/login`) with protected dashboard and watchlist routes
-- Bearer-token auth on all `/api/v1/*` endpoints (cron endpoints use a separate secret)
-- Live/near-live technical analysis (EMA, RSI, VWAP, BB, MACD)
-- Advanced multi-timeframe analysis (`/advanced-analyze`)
-- AI decision panel (`/ai-decision`) with:
-  - market-open intraday mode
-  - market-closed EOD next-day mode
-- Watchlist MVP with batched snapshot fetch
-- Checkpoint timeline with 7 strategic market-time snapshots
-- Holiday-aware market status handling
-- Live expiry calendar plus expiry zero-to-hero panel
+| Environment | Branch | Frontend URL | Use for |
+|-------------|--------|--------------|---------|
+| **Dev / Preview** | `dev` | [trade-craft-app-git-dev (Vercel Preview)](https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/) | Test changes before prod |
+| **Production** | `main` | [trade-craft-rb.vercel.app](https://trade-craft-rb.vercel.app/) | Live app for daily use |
 
-## UI Sections (Current Order in `page.tsx`)
+### App pages (add to base URL)
 
-1. Header (branding, IST clock, refresh)
-2. Index selector
-3. Error panel (if API fails)
-4. Market status banner
-5. Expiry banner
-6. Stock header (symbol + price)
-7. AI decision panel
-8. Expiry zero-to-hero panel
-9. Indicators strip + combined signal
-10. Selected index market timeline (checkpoint board)
-11. Footer
+| Page | Dev | Prod |
+|------|-----|------|
+| Login | [Dev Login](https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/login) | [Prod Login](https://trade-craft-rb.vercel.app/login) |
+| Dashboard | [Dev Dashboard](https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/) | [Prod Dashboard](https://trade-craft-rb.vercel.app/) |
+| Watchlist | [Dev Watchlist](https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/watchlist) | [Prod Watchlist](https://trade-craft-rb.vercel.app/watchlist) |
 
-## Folder Structure
+---
+
+## Quick Links — Backends (API)
+
+| Environment | Branch | Backend URL | Health check |
+|-------------|--------|-------------|--------------|
+| **Dev** | `dev` | [stock-intelligence-api-dev.onrender.com](https://stock-intelligence-api-dev.onrender.com) | [Dev /health](https://stock-intelligence-api-dev.onrender.com/health) |
+| **Production** | `main` | [stock-intelligence-api.onrender.com](https://stock-intelligence-api.onrender.com) | [Prod /health](https://stock-intelligence-api.onrender.com/health) |
+
+Frontend calls backend via `/api/*` rewrite — you normally use the frontend URLs above, not the backend directly.
+
+---
+
+## Quick Links — Cloud Services & Dashboards
+
+| Service | What it does | Dashboard |
+|---------|--------------|-----------|
+| **GitHub** | Source code, branches, PRs, Actions | [github.com/rupendra-bukke/Google-Antigravity](https://github.com/rupendra-bukke/Google-Antigravity) |
+| **Vercel** | Frontend hosting (Next.js) | [vercel.com/dashboard](https://vercel.com/dashboard) |
+| **Render** | Backend hosting (FastAPI) | [dashboard.render.com](https://dashboard.render.com) |
+| **Supabase** | User authentication (login) | [supabase.com/dashboard](https://supabase.com/dashboard) |
+| **Upstash** | Redis cache + checkpoint storage | [console.upstash.com](https://console.upstash.com) |
+| **Google AI Studio** | Gemini API key (AI panel) | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+
+---
+
+## What Is This Project?
+
+**Trade-Craft** is a full-stack **Indian index intraday market intelligence dashboard**.
+
+It monitors Nifty 50, Bank Nifty, FinNifty, and Sensex with:
+
+- Live technical indicators (EMA, RSI, VWAP, Bollinger Bands, MACD)
+- Rule-based multi-timeframe analysis
+- Google Gemini AI intraday and end-of-day outlook
+- 7-checkpoint intraday timeline with win/loss review
+- Expiry calendar tracking and 3 PM expiry breakout panel
+- Watchlist page with market-focus cards
+- Supabase email/password login
+
+### Tech stack
+
+| Layer | Technology | Hosted on |
+|-------|-----------|-----------|
+| Frontend | Next.js 14, React, TypeScript, Tailwind | Vercel |
+| Backend | FastAPI, Python 3.11 | Render |
+| Auth | Supabase | Supabase cloud |
+| Cache / checkpoints | Upstash Redis | Upstash cloud |
+| AI | Google Gemini | Google AI API |
+| Market data | Yahoo Finance (`yfinance`) | Fetched by backend |
+| Expiry data | NSE + BSE APIs | Fetched by backend |
+| CI / automation | GitHub Actions | GitHub |
+
+---
+
+## Our Workflow (dev → prod)
+
+This is the workflow we follow for every feature:
+
+```
+1. Work on `dev` branch
+2. Commit + push to origin/dev
+3. Test on DEV preview URL
+4. If good → PR: dev → main → merge
+5. Test on PROD URL
+6. Back to `dev` for next feature
+```
+
+### Golden rules
+
+- **Build in `dev`, ship in `main`**
+- **Preview before public** — always test dev URL first
+- **Never** push untested changes directly to `main`
+- Set Supabase env vars on Vercel **Preview AND Production**
+- Keep free-tier limits in mind (Render, Upstash, Gemini)
+
+### Daily commands
+
+```powershell
+git checkout dev
+git pull origin dev
+# ... make changes ...
+git add <files>
+git commit -m "dev: <what you changed>"
+git push origin dev
+# → test DEV URL
+```
+
+### Release to production
+
+```powershell
+# On GitHub: create PR dev → main, review, merge
+# OR via CLI:
+git checkout main
+git pull origin main
+git merge dev
+git push origin main
+git checkout dev
+# → test PROD URL
+```
+
+Memory tricks: `D-P-S-A-C-P` = Dev, Pull, Status, Add, Commit, Push  
+Memory tricks: `Build in dev, ship in main`
+
+### Smoke test before every prod merge
+
+- [ ] Login works
+- [ ] Dashboard loads
+- [ ] Index selector works (Nifty, Bank Nifty, FinNifty, Sensex)
+- [ ] Watchlist loads
+- [ ] No red error panels
+
+---
+
+## What's Inside This Folder
 
 ```text
 stock-intelligence-app/
-|-- backend/
-|   |-- main.py
-|   |-- config.py
-|   |-- routers/
-|   |   |-- analyze.py
-|   |   `-- checkpoints.py
-|   |-- services/
-|   |   |-- market_data.py
-|   |   |-- ai_decision.py
-|   |   |-- decision.py
-|   |   `-- decision_v2.py
-|   `-- models/
-|       `-- schemas.py
-|-- frontend/
-|   |-- next.config.mjs
-|   |-- src/app/
-|   |   |-- layout.tsx
-|   |   |-- page.tsx
-|   |   |-- login/page.tsx
-|   |   |-- watchlist/page.tsx
-|   |   |-- context/
-|   |   `-- components/
-|   `-- package.json
-`-- docs (*.md)
+├── backend/                  # FastAPI API server (Python)
+│   ├── main.py               # App entry + scheduler
+│   ├── routers/              # API routes (analyze, checkpoints)
+│   ├── services/             # Business logic (AI, market data, auth)
+│   └── models/               # Pydantic schemas
+├── frontend/                 # Next.js dashboard (TypeScript)
+│   └── src/app/
+│       ├── page.tsx          # Main dashboard
+│       ├── login/            # Login page
+│       ├── watchlist/        # Watchlist page
+│       ├── components/       # UI components
+│       └── context/          # Auth + symbol state
+├── releases/                 # Per-release notes (v2026.03.*, v2026.08.*)
+├── README.md                 # ← THIS FILE (project hub)
+└── docs (*.md)               # Detailed guides (see below)
 ```
 
-## Quick Start
+### Related folders in the monorepo
+
+| Path | Status |
+|------|--------|
+| `web-app-dev/stock-intelligence-app/` | **Active** — main product |
+| `web-app-dev/stock-intelligence-mobile/` | Planned — Phase 2 mobile app (placeholder) |
+| `web-app-dev/dhanya-diaries-app/` | Separate project |
+| `web-app-dev/profile-app/` | Separate project |
+
+---
+
+## Documentation Map
+
+| When you need… | Read this file |
+|----------------|----------------|
+| **This hub (URLs + workflow)** | `README.md` (this file) |
+| **Project history + roadmap** | `PROJECT_REFERENCE_AND_ROADMAP.md` |
+| **Fix login / Supabase setup** | `AUTH_SETUP.md` |
+| **Daily git commands** | `FLOW_QUICK_REF.md` |
+| **Full branch/deploy guide** | `BRANCH_DEPLOY_FLOW.md` |
+| **Release checklist** | `RELEASE_RUNBOOK.md` |
+| **What changed per version** | `CHANGELOG.md` + `releases/` |
+| **Technical architecture** | `ARCHITECTURE.md` |
+| **Beginner walkthrough** | `BEGINNER_SYSTEM_GUIDE.md` |
+| **Which docs are active** | `DOCS_INDEX.md` |
+
+---
+
+## Environment Variables
+
+### Vercel (frontend)
+
+Set for **Preview** (dev URL) and **Production** (prod URL):
+
+| Variable | Dev (Preview) value | Prod (Production) value |
+|----------|--------------------|-----------------------|
+| `BACKEND_URL` | `https://stock-intelligence-api-dev.onrender.com` | `https://stock-intelligence-api.onrender.com` |
+| `NEXT_PUBLIC_SUPABASE_URL` | your Supabase project URL | same |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | your anon/publishable key | same |
+| `NEXT_PUBLIC_APP_CHANNEL` | `dev` | `prod` |
+| `NEXT_PUBLIC_APP_VERSION` | `vYYYY.MM.DD-NN` | `vYYYY.MM.DD-NN` |
+
+### Render (backend)
+
+| Variable | Required |
+|----------|----------|
+| `GEMINI_API_KEY` | Yes (AI panel) |
+| `UPSTASH_REDIS_REST_URL` | Yes (checkpoints + cache) |
+| `UPSTASH_REDIS_REST_TOKEN` | Yes |
+| `SUPABASE_URL` | Yes (auth) |
+| `SUPABASE_PUBLISHABLE_KEY` | Yes |
+| `AUTH_REQUIRED` | `true` in prod |
+| `CHECKPOINT_CRON_SECRET` | Yes (GitHub Actions cron) |
+| `APP_ENV` | `development` or `production` |
+
+Login not working? → see [AUTH_SETUP.md](./AUTH_SETUP.md)
+
+---
+
+## Key API Endpoints
+
+All `/api/v1/*` routes require Supabase bearer token (except when `AUTH_REQUIRED=false` locally).
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /health` | Public health check |
+| `GET /api/v1/analyze` | Basic indicators |
+| `GET /api/v1/advanced-analyze` | Multi-timeframe analysis |
+| `GET /api/v1/ai-decision` | Gemini AI panel |
+| `GET /api/v1/checkpoints` | Timeline snapshots |
+| `GET /api/v1/expiry-calendar` | Live expiry dates |
+| `GET /api/v1/watchlist-snapshot` | Batched watchlist data |
+
+---
+
+## Local Development
 
 ### Backend
 
@@ -78,7 +242,7 @@ python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
-# Set GEMINI_API_KEY and Supabase vars; use AUTH_REQUIRED=false for local dev without login
+# Set GEMINI_API_KEY; use AUTH_REQUIRED=false to skip login locally
 uvicorn main:app --reload --port 8000
 ```
 
@@ -88,77 +252,50 @@ uvicorn main:app --reload --port 8000
 cd frontend
 npm install
 copy .env.local.example .env.local
-# Set BACKEND_URL=http://localhost:8000 and Supabase keys (or leave empty with AUTH_REQUIRED=false on backend)
+# Set BACKEND_URL=http://localhost:8000
 npm run dev
 ```
 
-Open `http://localhost:3000`. If backend `AUTH_REQUIRED=false`, the dashboard loads without login.
+Open [http://localhost:3000](http://localhost:3000)
 
-## Authentication
+---
 
-- Users sign in at `/login` with Supabase email/password.
-- `AppShell.tsx` redirects unauthenticated users to `/login`.
-- Frontend API calls use `authedFetch` (`frontend/src/lib/authedFetch.ts`) to attach `Authorization: Bearer <jwt>`.
-- Backend validates tokens via `backend/services/auth_guard.py` (Supabase `/auth/v1/user`).
-- Checkpoint cron endpoints (`/checkpoints/cron-capture`, `/checkpoints/cron-reconcile`) use `X-Checkpoint-Cron-Secret`, not Supabase.
-- `GET /health` remains public.
+## Release History (recent)
 
-Login issues: see `AUTH_SETUP.md`.
+| Version | Date | Highlights |
+|---------|------|------------|
+| `v2026.08.09-01` | Aug 9, 2026 | Phase A: auth docs, FinNifty, CI, cleanup |
+| `v2026.03.30-01` | Mar 30, 2026 | Supabase auth, checkpoint automation, AI snapshots |
+| `v2026.03.13-01` | Mar 13, 2026 | Live NSE/BSE expiry calendar |
+| `v2026.03.12-01` | Mar 12, 2026 | Watchlist MVP, memory optimizations |
+| `v2026.03.08-01` | Mar 8, 2026 | EOD checkpoint reconcile |
+| `v2026.03.07-02` | Mar 7, 2026 | AI panel redesign, expiry highlighting |
 
-## API Endpoints (Key)
+Full history: [CHANGELOG.md](./CHANGELOG.md)
 
-All `/api/v1/*` routes below require a valid Supabase bearer token unless `AUTH_REQUIRED=false` on the backend.
+---
 
-- `GET /health`
-- `GET /api/v1/analyze?symbol=^NSEI`
-- `GET /api/v1/advanced-analyze?symbol=^NSEI`
-- `GET /api/v1/ai-decision?symbol=^NSEI`
-- `GET /api/v1/watchlist-snapshot?symbols=^NSEI,^NSEBANK,^CNXFINSERVICE,^BSESN`
-- `GET /api/v1/checkpoints?symbol=^NSEI`
-- `POST /api/v1/checkpoints/trigger?checkpoint_id=0915&symbol=^NSEI`
-- `POST /api/v1/checkpoints/reconcile?date=YYYY-MM-DD`
-- `GET /api/v1/expiry-calendar`
-- `GET /api/v1/expiry-zero-hero?index=NIFTY`
-- `GET /api/v1/checkpoints/diag`
-- `GET /api/v1/gemini-test`
-- `GET /api/v1/gemini-models`
+## Roadmap (what's next)
 
-## Environment Variables
+| Phase | Status | Focus |
+|-------|--------|-------|
+| **A — Stabilize** | ✅ Done | Docs, FinNifty, CI, cleanup |
+| **B — Complete UI** | Next | History page, Settings page, watchlist expansion |
+| **C — Data & AI** | Planned | Backtesting, Supabase DB tables, rate limiting |
+| **D — Mobile** | Planned | React Native / Expo app |
+| **E — Scale** | When needed | Paid Render/Upstash tiers |
 
-### Backend (Render/local)
+Details: [PROJECT_REFERENCE_AND_ROADMAP.md](./PROJECT_REFERENCE_AND_ROADMAP.md)
 
-- `APP_ENV` (`development` or `production`)
-- `GEMINI_API_KEY` (required for AI panel)
-- `UPSTASH_REDIS_REST_URL`
-- `UPSTASH_REDIS_REST_TOKEN`
-- `SUPABASE_URL`
-- `SUPABASE_PUBLISHABLE_KEY`
-- `AUTH_REQUIRED` (`true` in production; set `false` for local dev without login)
-- `CHECKPOINT_CRON_SECRET` (required for unattended checkpoint GitHub Actions)
-- `DEFAULT_SYMBOL` (optional)
+---
 
-### Frontend (Vercel/local)
+## GitHub Actions (automation)
 
-- `BACKEND_URL` (used by `next.config.mjs` rewrite for `/api/*`)
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+| Workflow | File | Purpose |
+|----------|------|---------|
+| Stock Intelligence CI | `.github/workflows/stock-intelligence-ci.yml` | Python + TypeScript checks on push/PR |
+| Checkpoint Capture | `.github/workflows/stock-intelligence-checkpoint-capture.yml` | Unattended intraday timeline snapshots |
 
-## Branch and Deploy Flow
+---
 
-- Build/test on `dev`
-- Push `origin/dev`
-- Validate on Vercel Preview
-- Merge `dev` -> `main`
-- Push `origin/main` to deploy production
-
-Detailed docs:
-
-- `FLOW_QUICK_REF.md`
-- `BRANCH_DEPLOY_FLOW.md`
-- `RELEASE_RUNBOOK.md`
-
-## Documentation Map
-
-Start with `PROJECT_REFERENCE_AND_ROADMAP.md` for a full project overview and roadmap.
-
-Use `DOCS_INDEX.md` to know which files are active vs archived.
+*Trade-Craft · Built by Rupendra Bukke · Stock Intelligence Project*

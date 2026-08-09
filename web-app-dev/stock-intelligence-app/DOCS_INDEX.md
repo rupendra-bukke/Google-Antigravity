@@ -4,19 +4,11 @@ This file defines which docs are active source-of-truth and which are archive/hi
 
 ## Active Docs (Use These)
 
-0. `PROJECT_REFERENCE_AND_ROADMAP.md`
-- Purpose: single re-orientation doc — what was built, current state, gaps, and future roadmap.
-- Use when: returning after time away, onboarding yourself, planning next work, or explaining the project to someone new.
+0. `README.md`
+- Purpose: **project hub** — all live URLs, workflow, services, folder map, and doc index in one file.
+- Use when: you need to open apps, backends, or dashboards; or remember the dev → prod workflow.
 
-0b. `AUTH_SETUP.md`
-- Purpose: fix login / Supabase configuration on Vercel, Render, and Supabase dashboard.
-- Use when: login shows "Load failed", auth works locally but not in production, or setting up auth for the first time.
-
-1. `README.md`
-- Purpose: project entry point, setup, architecture summary, API overview.
-- Use when: onboarding, setup, quick understanding of current app.
-
-2. `ARCHITECTURE.md`
+1. `PROJECT_REFERENCE_AND_ROADMAP.md`
 - Purpose: current technical architecture and runtime behavior.
 - Use when: implementation decisions, debugging data flow, backend/frontend integration.
 
@@ -61,8 +53,8 @@ This file defines which docs are active source-of-truth and which are archive/hi
 
 ## Recommended Reference Order
 
-0. `PROJECT_REFERENCE_AND_ROADMAP.md`
-1. `BEGINNER_SYSTEM_GUIDE.md`
+0. `README.md` (project hub — URLs + workflow)
+1. `PROJECT_REFERENCE_AND_ROADMAP.md`
 2. `WORKFLOW_FROM_SCRATCH.md`
 3. `FLOW_QUICK_REF.md`
 4. `BRANCH_DEPLOY_FLOW.md`
