@@ -146,6 +146,64 @@ Meaning:
 Memory trick:
 - "Preview first, public later"
 
+## 4.1) Dev URL stuck on an old commit? (Vercel rate limit)
+
+**Symptom:** You pushed new commits to `dev` (for example `6e00ef8`), but the dev preview still shows an older build badge like `DEV | 86864BC`.
+
+**This is usually not a Git problem.** Check GitHub first:
+
+```powershell
+git fetch origin dev
+git log origin/dev -3 --oneline
+```
+
+If GitHub shows your latest commit, the push succeeded. The preview is stale because **Vercel did not deploy** that commit.
+
+### Why it happens (monorepo + free tier)
+
+This repo (`Google-Antigravity`) is linked to **multiple Vercel projects** (for example `trade-craft-app`, `dhanya-diaries`, `binita-profile`). **Each push to any branch can trigger a build for every connected project**, which burns through the **Hobby (free) daily deployment limit** quickly.
+
+When rate-limited, GitHub commit status shows:
+
+```text
+Deployment rate limited — retry in 24 hours.
+```
+
+The dev URL keeps serving the **last successful deployment** until a newer one completes.
+
+### How to confirm on GitHub
+
+1. Open your repo on GitHub → **Commits** on `dev`
+2. Click the latest commit → check **status checks**
+3. Look for **Vercel – trade-craft-app**
+   - **Success** → preview should update (hard-refresh the page)
+   - **Rate limited** → wait or redeploy manually (below)
+
+### What to do
+
+| Action | When |
+|--------|------|
+| **Wait ~24 hours**, then **Redeploy** in Vercel → `trade-craft-app` → Deployments → pick commit → Redeploy | Rate limit active |
+| **Preview locally** (`npm run dev` in `frontend/`) | Need to see changes immediately |
+| **Disable Preview auto-deploy** on inactive Vercel projects in this repo | Reduce future rate-limit hits |
+| **Ignored Build Step** per project (only build when that app's folder changes) | Best long-term free-tier fix |
+
+### Verify the live dev build
+
+After a successful deploy, the sidebar build badge should match the latest commit, for example:
+
+```text
+DEV | 6E00EF8
+```
+
+Dev preview URL (unchanged):
+
+`https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/`
+
+Memory trick:
+- "Git pushed ≠ Vercel built"
+- "Badge SHA tells the truth"
+
 ## 5) Move changes to production
 
 Option A (recommended): GitHub PR
