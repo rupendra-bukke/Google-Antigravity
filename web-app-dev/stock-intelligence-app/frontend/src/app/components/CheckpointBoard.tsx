@@ -1,6 +1,7 @@
 "use client";
 
 import { authedFetch } from "@/lib/authedFetch";
+import { onDashboardRefresh } from "@/lib/dashboardRefresh";
 import { usePageVisible } from "@/hooks/usePageVisible";
 import { useState, useEffect, useCallback, useMemo } from "react";
 
@@ -578,6 +579,13 @@ export default function CheckpointBoard({
         const interval = setInterval(run, catchingUp ? 30_000 : 120_000);
         return () => clearInterval(interval);
     }, [fetchPanels, catchingUp, isHistory, pageVisible]);
+
+    useEffect(() => {
+        if (isHistory) return;
+        return onDashboardRefresh(() => {
+            void fetchPanels();
+        });
+    }, [fetchPanels, isHistory]);
 
     const latestIndex = panels.length - 1 - [...panels].reverse().findIndex((p) => p.data);
     const effectiveLatestIndex = latestIndex >= 0 ? latestIndex : -1;

@@ -11,8 +11,10 @@ import AIDecision from "./components/AIDecision";
 import ExpiryZeroHeroPanel from "./components/ExpiryZeroHeroPanel";
 import MarketStatusBanner from "./components/MarketStatusBanner";
 import CheckpointBoard from "./components/CheckpointBoard";
+import DashboardSyncBar from "./components/DashboardSyncBar";
 import ISTClock from "./components/ISTClock";
 import ExpiryBanner from "./components/ExpiryBanner";
+import { triggerDashboardRefresh } from "@/lib/dashboardRefresh";
 
 
 /* ── Types ── */
@@ -134,12 +136,18 @@ export default function Dashboard() {
     const { settings } = useSettings();
     const [data, setData] = useState<AnalyzeData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSyncing, setIsSyncing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [lastRefresh, setLastRefresh] = useState<number>(0);
 
-    const fetchData = useCallback(async (symbol: string) => {
+    const fetchData = useCallback(async (symbol: string, options?: { silent?: boolean }) => {
+        const silent = options?.silent ?? false;
         try {
-            setIsLoading(true);
+            if (silent) {
+                setIsSyncing(true);
+            } else {
+                setIsLoading(true);
+            }
             setError(null);
 
             const basicRes = await authedFetch(
@@ -162,9 +170,18 @@ export default function Dashboard() {
                 err instanceof Error ? err.message : "Failed to fetch data";
             setError(message);
         } finally {
-            setIsLoading(false);
+            if (silent) {
+                setIsSyncing(false);
+            } else {
+                setIsLoading(false);
+            }
         }
     }, []);
+
+    const handleSyncAll = useCallback(() => {
+        void fetchData(selectedSymbol, { silent: true });
+        triggerDashboardRefresh();
+    }, [fetchData, selectedSymbol]);
 
     useEffect(() => {
         const run = () => {
@@ -234,55 +251,29 @@ export default function Dashboard() {
                 </div>
 
                 {/* ── IST Clock: desktop absolute top-right ── */}
-                <div className="hidden md:block" style={{ position: "absolute", top: "1rem", right: "5rem" }}>
+                <div className="hidden md:block" style={{ position: "absolute", top: "1rem", right: "1rem" }}>
                     <ISTClock />
-                </div>
-
-                {/* ── Floating Refresh Button ── */}
-                <div className="absolute top-6 right-0 md:right-4">
-                    <button
-                        onClick={() => fetchData(selectedSymbol)}
-                        disabled={isLoading}
-                        className="group relative p-3.5 rounded-2xl 
-                                   bg-brand-500/10 border border-brand-500/20
-                                   hover:bg-brand-500/20 active:scale-95
-                                   transition-all duration-300 shadow-xl"
-                        title="Refresh Dashboard"
-                    >
-                        {/* Glow effect */}
-                        <div className="absolute inset-0 rounded-2xl bg-brand-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                        <div className="relative flex items-center justify-center">
-                            <svg
-                                className={`w-6 h-6 text-brand-400 ${isLoading ? "animate-spin" : "group-hover:rotate-180"} transition-transform duration-700`}
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2.5}
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                />
-                            </svg>
-                        </div>
-                    </button>
-                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-2 text-center opacity-40 group-hover:opacity-100 transition-opacity">
-                        REFRESH
-                    </p>
                 </div>
             </div>
 
             {/* ── Controls Row ── */}
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="px-2.5 py-1 rounded-md border border-brand-500/20 bg-brand-500/5 text-[10px] font-bold tracking-[0.08em] uppercase text-brand-300">
-                    Build: {BUILD_LABEL}
+            <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="px-2.5 py-1 rounded-md border border-brand-500/20 bg-brand-500/5 text-[10px] font-bold tracking-[0.08em] uppercase text-brand-300">
+                        Build: {BUILD_LABEL}
+                    </div>
+                    <IndexSelector
+                        selected={selectedSymbol}
+                        onSelect={handleSymbolChange}
+                        disabled={isLoading}
+                    />
                 </div>
-                <IndexSelector
-                    selected={selectedSymbol}
-                    onSelect={handleSymbolChange}
-                    disabled={isLoading}
+
+                <DashboardSyncBar
+                    isSyncing={isSyncing}
+                    lastRefresh={lastRefresh}
+                    autoRefreshSec={settings.dashboardRefreshSec}
+                    onSync={handleSyncAll}
                 />
             </div>
 
@@ -510,12 +501,7 @@ export default function Dashboard() {
             {/* ── Footer ── */}
             <div className="text-center pt-2">
                 <p className="text-[10px] text-gray-600 font-medium">
-                    {lastRefresh > 0
-                        ? `Last refreshed ${new Date(lastRefresh).toLocaleTimeString("en-IN", {
-                            timeZone: "Asia/Kolkata",
-                        })} IST`
-                        : "Connecting…"}{" "}
-                    · Data via market feeds + exchange APIs · Not financial advice
+                    Data via market feeds + exchange APIs · Not financial advice
                 </p>
             </div>
         </div>

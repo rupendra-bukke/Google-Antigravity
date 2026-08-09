@@ -1,6 +1,7 @@
 "use client";
 
 import { authedFetch } from "@/lib/authedFetch";
+import { onDashboardRefresh } from "@/lib/dashboardRefresh";
 import { SYMBOL_LABELS } from "@/lib/indices";
 import { useState, useEffect, useCallback } from "react";
 
@@ -377,6 +378,10 @@ export default function AIDecision({ symbol }: { symbol: string }) {
     useEffect(() => {
         fetchDecision();
     }, [fetchDecision]);
+
+    useEffect(() => onDashboardRefresh(() => {
+        void fetchDecision();
+    }), [fetchDecision]);
 
     useEffect(() => {
         const tick = setInterval(() => {
