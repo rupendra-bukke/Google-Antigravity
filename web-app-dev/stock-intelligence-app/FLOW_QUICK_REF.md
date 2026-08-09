@@ -54,8 +54,19 @@ Memory trick: `D-P-S-A-C-P` = Dev, Pull, Status, Add, Commit, Push.
 
 - Open latest Vercel Preview URL.
 - Validate changed feature and basic smoke tests.
+- Confirm sidebar build badge matches latest commit (example: `DEV | 6E00EF8`).
 
 Memory trick: `Preview before Public`.
+
+## Preview stuck on old commit?
+
+If GitHub `dev` has a newer commit but the dev URL still shows an older build badge:
+
+1. Git push succeeded — check `git log origin/dev -1 --oneline`
+2. Vercel may be **rate-limited** (common with multiple projects on one repo)
+3. Fix: wait ~24h and **Redeploy** in Vercel → `trade-craft-app`, or run `npm run dev` locally
+
+Full troubleshooting: `BRANCH_DEPLOY_FLOW.md` → section **4.1**
 
 ## Release to Prod
 
