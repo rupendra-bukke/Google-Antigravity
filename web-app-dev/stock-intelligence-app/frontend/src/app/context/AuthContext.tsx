@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase, supabaseConfigError } from "@/lib/supabaseClient";
+import { supabase, supabaseConfigError, formatAuthError } from "@/lib/supabaseClient";
 
 interface AuthContextValue {
     session: Session | null;
@@ -67,8 +67,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     };
                 }
 
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
-                return { error: error?.message ?? null };
+                try {
+                    const { error } = await supabase.auth.signInWithPassword({ email, password });
+                    if (error) {
+                        return { error: formatAuthError(error.message) };
+                    }
+                    return { error: null };
+                } catch (err) {
+                    const message = err instanceof Error ? err.message : "Sign in failed.";
+                    return { error: formatAuthError(message) };
+                }
             },
             signOut: async () => {
                 if (!supabase) return;
