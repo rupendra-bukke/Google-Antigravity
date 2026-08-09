@@ -7,7 +7,7 @@ Project path:
 
 - Dev (Vercel Preview): `https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/`
 - Prod (Vercel Production): `https://trade-craft-rb.vercel.app/`
-- Current prod release: `v2026.03.13-01` (`main` head: `6a361ec`)
+- Current prod release: `v2026.08.09-01` (`main` and `dev` synced at `88c5ef8`)
 
 ## Checkpoint Automation
 
