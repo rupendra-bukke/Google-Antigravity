@@ -11,6 +11,8 @@ Version format:
 
 ## Unreleased
 
+## [v2026.08.09-06] - 2026-08-09
+
 ### Added
 - **Data & AI Pulse** dashboard panel: daily BI/analytics brief (Power BI, Databricks, KQL, Grafana, vehicle data) via scheduled Gemini digest + RSS headlines.
 - Backend `GET /api/v1/career-pulse` (cached snapshot) and cron `POST /api/v1/career-pulse/cron-generate`.

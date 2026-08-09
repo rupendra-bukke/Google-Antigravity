@@ -102,7 +102,14 @@ export default function DataAIPulsePanel() {
             setData(json);
             setError(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to load");
+            const message = err instanceof Error ? err.message : "Failed to load";
+            if (message.includes("404")) {
+                setError(
+                    "Career pulse API not deployed yet — redeploy the Render backend (dev or prod) from the latest main/dev commit."
+                );
+            } else {
+                setError(message);
+            }
             setData((prev) => prev ?? makeFallback());
         } finally {
             setLoading(false);
