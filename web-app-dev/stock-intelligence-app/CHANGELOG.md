@@ -11,6 +11,10 @@ Version format:
 
 ## Unreleased
 
+_No unreleased changes._
+
+## [v2026.08.09-02] - 2026-08-09
+
 ### Added
 - Shared build badge in sidebar (visible on all authenticated pages).
 - Settings: checkpoint timeline refresh intervals, catch-up polling, candlestick chart toggle, and watchlist symbol picker.
