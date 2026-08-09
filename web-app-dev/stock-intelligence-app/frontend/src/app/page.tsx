@@ -243,9 +243,10 @@ export default function Dashboard() {
         <div className="page-shell">
 
             <PageHeader
+                module="Dashboard"
                 title="Market Dashboard"
                 description="NSE indices · live signals · checkpoint timeline"
-                actions={<ISTClock />}
+                actions={<ISTClock embedded />}
             />
 
             <div className="toolbar-card space-y-3">

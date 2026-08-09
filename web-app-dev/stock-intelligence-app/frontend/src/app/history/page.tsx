@@ -48,6 +48,7 @@ export default function HistoryPage() {
     return (
         <div className="page-shell">
             <PageHeader
+                module="History"
                 title="Market History"
                 description="Browse past checkpoint timelines by date and index. Review signals, outcomes, and session close."
             />

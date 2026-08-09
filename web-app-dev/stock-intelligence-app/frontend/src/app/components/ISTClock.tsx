@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 
 interface ISTClockProps {
     compact?: boolean;
+    embedded?: boolean;
 }
 
-export default function ISTClock({ compact = false }: ISTClockProps) {
+export default function ISTClock({ compact = false, embedded = false }: ISTClockProps) {
     const [time, setTime] = useState({ hh: "00", mm: "00", ss: "00", period: "AM", date: "" });
 
     useEffect(() => {
@@ -38,8 +39,12 @@ export default function ISTClock({ compact = false }: ISTClockProps) {
 
     return (
         <div
-            className={`font-mono border border-terminal-border bg-terminal-bg ${
-                compact ? "px-2 py-1 text-[10px]" : "px-3 py-1.5 text-[11px]"
+            className={`font-mono ${
+                embedded
+                    ? "flex h-full items-center bg-terminal-bg px-3 py-1.5 text-[11px]"
+                    : `border border-terminal-border bg-terminal-bg ${
+                          compact ? "px-2 py-1 text-[10px]" : "px-3 py-1.5 text-[11px]"
+                      }`
             }`}
         >
             <div className="flex items-center gap-2 text-bb-orange font-bold tabular-nums">

@@ -58,7 +58,43 @@
     }
 
     .terminal-header {
-        @apply bg-terminal-panel border border-terminal-border border-t-2 border-t-bb-orange px-3 py-2;
+        @apply bg-terminal-panel border border-terminal-border overflow-hidden;
+    }
+
+    .terminal-header-rail {
+        @apply flex items-stretch justify-between border-b border-terminal-border bg-terminal-bg;
+    }
+
+    .terminal-header-brand {
+        @apply flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5;
+    }
+
+    .terminal-header-mark {
+        @apply inline-flex h-4 w-4 shrink-0 items-center justify-center bg-bb-orange text-[8px] font-bold text-black font-data;
+    }
+
+    .terminal-header-product {
+        @apply text-[10px] font-data font-semibold uppercase tracking-[0.14em] text-terminal-muted;
+    }
+
+    .terminal-header-module {
+        @apply truncate text-[10px] font-data font-bold uppercase tracking-[0.14em] text-bb-orange;
+    }
+
+    .terminal-header-actions {
+        @apply flex shrink-0 items-stretch border-l border-terminal-border;
+    }
+
+    .terminal-header-body {
+        @apply px-3 py-2.5 md:py-3;
+    }
+
+    .terminal-header-title {
+        @apply text-lg font-semibold tracking-tight text-white md:text-xl;
+    }
+
+    .terminal-header-desc {
+        @apply mt-1 max-w-3xl text-[12px] leading-relaxed text-terminal-muted;
     }
 
     .nav-item-active {

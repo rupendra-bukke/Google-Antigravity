@@ -92,6 +92,7 @@ export default function SettingsPage() {
     return (
         <div className="page-shell">
             <PageHeader
+                module="Settings"
                 title="Settings"
                 description="Preferences are saved in your browser on this device."
             />

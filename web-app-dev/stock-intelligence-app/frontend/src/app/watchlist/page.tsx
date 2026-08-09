@@ -224,13 +224,14 @@ export default function WatchlistPage() {
     return (
         <div className="page-shell">
             <PageHeader
+                module="Watchlist"
                 title="Watchlist Focus"
                 description="Today, next day, and weekly outlook for indices and NSE stocks. Customize symbols in Settings."
                 actions={
                     <button
                         onClick={() => selectedSymbol && fetchFocus(selectedSymbol, true, true)}
                         disabled={refreshing || !selectedSymbol}
-                        className="btn-primary"
+                        className="btn-primary h-full rounded-none border-0 border-l border-terminal-border px-4"
                     >
                         {refreshing ? "Refreshing..." : "Refresh"}
                     </button>
