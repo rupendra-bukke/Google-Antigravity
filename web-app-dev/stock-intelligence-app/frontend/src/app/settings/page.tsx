@@ -6,6 +6,7 @@ import { DASHBOARD_INDICES } from "@/lib/indices";
 import { DEFAULT_WATCHLIST_SYMBOLS } from "@/lib/userSettings";
 import { useSettings } from "../context/SettingsContext";
 import { useSymbol } from "../context/SymbolContext";
+import PageHeader from "../components/PageHeader";
 
 const REFRESH_OPTIONS = [
     { label: "1 minute", value: 60 },
@@ -89,16 +90,13 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="max-w-3xl mx-auto px-4 md:px-6 pt-6 md:pt-10 space-y-6 pb-12 animate-fade-in">
-            <div className="text-center py-4">
-                <p className="text-[10px] font-black text-brand-400 uppercase tracking-[0.2em]">Trade-Craft</p>
-                <h1 className="text-3xl md:text-4xl font-black text-white mt-2">Settings</h1>
-                <p className="text-sm text-gray-400 mt-2">
-                    Preferences are saved in your browser on this device.
-                </p>
-            </div>
+        <div className="page-shell">
+            <PageHeader
+                title="Settings"
+                description="Preferences are saved in your browser on this device."
+            />
 
-            <div className="glass-card border border-white/10 rounded-2xl p-5 space-y-6">
+            <div className="glass-card border-gold-500/10 p-5 space-y-6">
                 <section className="space-y-3">
                     <h2 className="text-sm font-bold text-white">Default index</h2>
                     <p className="text-xs text-gray-500">
@@ -274,7 +272,7 @@ export default function SettingsPage() {
                 )}
             </div>
 
-            <div className="glass-card border border-white/10 rounded-2xl p-5">
+            <div className="glass-card border-gold-500/10 p-5">
                 <h2 className="text-sm font-bold text-white mb-2">Current values</h2>
                 <div className="text-xs text-gray-400 space-y-1">
                     <p>Default index: <span className="text-gray-200">{settings.defaultSymbol}</span></p>

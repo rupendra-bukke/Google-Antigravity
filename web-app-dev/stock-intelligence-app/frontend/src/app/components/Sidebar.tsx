@@ -4,8 +4,13 @@ import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { useSymbol } from "../context/SymbolContext";
-
 import BuildBadge from "./BuildBadge";
+import {
+    IconDashboard,
+    IconHistory,
+    IconSettings,
+    IconWatchlist,
+} from "./NavIcons";
 
 const SYMBOL_META: Record<string, { name: string; initial: string }> = {
     "^NSEI": { name: "NIFTY 50", initial: "N" },
@@ -13,17 +18,11 @@ const SYMBOL_META: Record<string, { name: string; initial: string }> = {
     "^BSESN": { name: "SENSEX", initial: "S" },
 };
 
-const navItems: Array<{
-    label: string;
-    icon: string;
-    id: "dashboard" | "watchlist" | "history" | "settings";
-    path?: string;
-    comingSoon?: boolean;
-}> = [
-    { label: "Dashboard", icon: "📊", id: "dashboard", path: "/" },
-    { label: "Watchlist", icon: "👁️", id: "watchlist", path: "/watchlist" },
-    { label: "History", icon: "📈", id: "history", path: "/history" },
-    { label: "Settings", icon: "⚙️", id: "settings", path: "/settings" },
+const navItems = [
+    { label: "Dashboard", id: "dashboard" as const, path: "/", Icon: IconDashboard },
+    { label: "Watchlist", id: "watchlist" as const, path: "/watchlist", Icon: IconWatchlist },
+    { label: "History", id: "history" as const, path: "/history", Icon: IconHistory },
+    { label: "Settings", id: "settings" as const, path: "/settings", Icon: IconSettings },
 ];
 
 export default function Sidebar() {
@@ -33,7 +32,6 @@ export default function Sidebar() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
     const [isSigningOut, setIsSigningOut] = useState(false);
-    const [showToast, setShowToast] = useState<string | null>(null);
 
     const meta = SYMBOL_META[selectedSymbol] || { name: selectedSymbol, initial: "?" };
     const activeTab =
@@ -45,13 +43,8 @@ export default function Sidebar() {
                 ? "settings"
                 : "dashboard";
 
-    const handleNavClick = (id: string, comingSoon?: boolean, path?: string) => {
-        if (comingSoon) {
-            setShowToast(id);
-            setTimeout(() => setShowToast(null), 2000);
-            return;
-        }
-        if (path) router.push(path);
+    const handleNavClick = (path: string) => {
+        router.push(path);
         setIsOpen(false);
     };
 
@@ -69,10 +62,10 @@ export default function Sidebar() {
         <>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="fixed top-4 left-4 z-50 md:hidden p-2.5 rounded-xl glass-card hover:bg-gray-800/60 transition-colors"
+                className="fixed top-4 left-4 z-50 md:hidden p-2.5 rounded-xl glass-card border-gold-500/20 hover:border-gold-500/35 transition-colors"
                 aria-label="Toggle menu"
             >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-gold-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     {isOpen ? (
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     ) : (
@@ -83,94 +76,80 @@ export default function Sidebar() {
 
             {isOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden transition-opacity"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
                     onClick={() => setIsOpen(false)}
                 />
             )}
 
             <aside
                 className={`
-                    fixed top-0 left-0 h-full w-64 z-40
+                    fixed top-0 left-0 h-full w-[17.5rem] z-40
                     glass-sidebar flex flex-col
                     transition-transform duration-300 ease-out
                     ${isOpen ? "translate-x-0" : "-translate-x-full"}
                     md:translate-x-0
                 `}
             >
-                <div className="p-6 border-b border-gray-800/30">
+                <div className="p-5 border-b border-gold-500/10">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-amber-500/30 shadow-lg shadow-amber-500/10">
+                        <div className="w-11 h-11 rounded-xl overflow-hidden border border-gold-500/35 shadow-terminal-gold ring-1 ring-gold-500/10">
                             <img
                                 src="/assets/trade-craft-logo.png"
                                 alt="Trade-Craft Logo"
                                 className="w-full h-full object-cover"
                             />
                         </div>
-                        <div>
-                            <h1 className="text-sm font-bold text-white tracking-tight transition-all duration-300">Trade-Craft</h1>
-                            <p className="text-[10px] text-gray-500 font-semibold tracking-wide">RB Stock Intelligence</p>
-                            <p className="text-[10px] text-gray-600 mt-0.5">{meta.name}</p>
+                        <div className="min-w-0">
+                            <h1 className="text-sm font-display font-bold text-white tracking-tight">Trade-Craft</h1>
+                            <p className="text-[10px] text-gold-400/80 font-semibold tracking-wide">Terminal · NSE Intelligence</p>
+                            <p className="text-[10px] text-gray-500 mt-0.5 truncate">{meta.name}</p>
                         </div>
                     </div>
                 </div>
 
-                <nav className="flex-1 p-3 space-y-0.5 mt-2">
-                    {navItems.map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => handleNavClick(item.id, item.comingSoon, item.path)}
-                            className={`
-                                w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium
-                                transition-all duration-200 relative group
-                                ${activeTab === item.id
-                                    ? "bg-brand-500/10 text-brand-400"
-                                    : "text-gray-500 hover:text-gray-300 hover:bg-gray-800/40"
-                                }
-                            `}
-                        >
-                            <span className="text-base">{item.icon}</span>
-                            {item.label}
-                            {item.comingSoon && (
-                                <span className="ml-auto text-[8px] font-bold uppercase tracking-widest text-gray-600 bg-gray-800/50 px-1.5 py-0.5 rounded">
-                                    Soon
-                                </span>
-                            )}
-
-                            {showToast === item.id && (
-                                <span className="absolute left-full ml-3 px-3 py-1.5 rounded-lg bg-gray-800 text-[11px] text-gray-300 border border-gray-700/50 whitespace-nowrap shadow-xl animate-fade-in z-50">
-                                    Coming soon!
-                                </span>
-                            )}
-                        </button>
-                    ))}
+                <nav className="flex-1 p-3 space-y-1 mt-1">
+                    <p className="px-3 pb-2 text-[9px] font-bold uppercase tracking-[0.2em] text-gray-600">Navigation</p>
+                    {navItems.map((item) => {
+                        const active = activeTab === item.id;
+                        const Icon = item.Icon;
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => handleNavClick(item.path)}
+                                className={`
+                                    w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold
+                                    transition-all duration-200
+                                    ${active ? "nav-item-active" : "text-gray-400 hover:text-gray-200 hover:bg-surface-800/50 border border-transparent"}
+                                `}
+                            >
+                                <Icon className={`w-[18px] h-[18px] ${active ? "text-gold-400" : "text-gray-500"}`} />
+                                {item.label}
+                            </button>
+                        );
+                    })}
                 </nav>
 
-                <div className="mx-4 border-t border-gray-800/30" />
+                <div className="mx-4 border-t border-gold-500/10" />
 
                 <div className="p-4 pt-3">
-                    <div className="px-4 py-3 rounded-xl bg-gray-900/40 border border-gray-800/40">
-                        <p className="text-[9px] text-gray-500 font-semibold uppercase tracking-widest">Signed in</p>
-                        <p className="text-[11px] text-gray-300 font-medium truncate mt-1">{user?.email || "Unknown user"}</p>
+                    <div className="px-3 py-3 rounded-xl bg-surface-900/60 border border-white/[0.06]">
+                        <p className="text-[9px] text-gray-500 font-semibold uppercase tracking-widest">Session</p>
+                        <p className="text-[11px] text-gray-200 font-medium truncate mt-1">{user?.email || "Unknown user"}</p>
                         <button
                             onClick={handleSignOut}
                             disabled={isSigningOut}
-                            className="mt-3 w-full rounded-lg border border-rose-500/35 bg-rose-500/10 text-rose-300 text-[11px] font-bold py-1.5"
+                            className="mt-3 w-full rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-300 text-[11px] font-bold py-2 hover:bg-rose-500/15 transition-colors"
                         >
                             {isSigningOut ? "Signing out..." : "Logout"}
                         </button>
                     </div>
                 </div>
 
-                <div className="p-4 pt-0 space-y-3">
-                    <div className="px-4">
-                        <BuildBadge className="w-full text-center" />
-                    </div>
-                    <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-gray-800/20 to-gray-800/40 text-center border border-gray-800/30">
-                        <p className="text-[9px] text-gray-600 font-semibold uppercase tracking-widest">Designed by</p>
-                        <p className="text-[11px] font-bold bg-gradient-to-r from-brand-400 to-emerald-400 bg-clip-text text-transparent mt-0.5">
-                            Trade-Craft
-                        </p>
-                    </div>
+                <div className="p-4 pt-0 space-y-2">
+                    <BuildBadge className="w-full text-center" />
+                    <p className="text-center text-[9px] text-gray-600 font-medium tracking-wide">
+                        Designed by Trade-Craft
+                    </p>
                 </div>
             </aside>
         </>

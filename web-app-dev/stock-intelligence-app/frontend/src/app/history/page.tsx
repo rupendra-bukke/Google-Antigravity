@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useSymbol } from "../context/SymbolContext";
 import IndexSelector from "../components/IndexSelector";
 import CheckpointBoard from "../components/CheckpointBoard";
+import PageHeader from "../components/PageHeader";
 
 function getIstDateStr(date: Date = new Date()): string {
     return new Intl.DateTimeFormat("en-CA", {
@@ -45,33 +46,26 @@ export default function HistoryPage() {
     );
 
     return (
-        <div className="max-w-6xl mx-auto px-4 md:px-6 pt-6 md:pt-10 space-y-6 pb-12 animate-fade-in">
-            <div className="text-center py-4">
-                <p className="text-[10px] font-black text-brand-400 uppercase tracking-[0.2em]">Trade-Craft</p>
-                <h1 className="text-3xl md:text-4xl font-black text-white mt-2">Market History</h1>
-                <p className="text-sm text-gray-400 mt-2 max-w-xl mx-auto">
-                    Browse past checkpoint timelines by date and index. Review signals, outcomes, and session close.
-                </p>
-            </div>
+        <div className="page-shell">
+            <PageHeader
+                title="Market History"
+                description="Browse past checkpoint timelines by date and index. Review signals, outcomes, and session close."
+            />
 
-            <div className="glass-card border border-white/10 rounded-2xl p-4 md:p-5 space-y-4">
+            <div className="toolbar-card space-y-4">
                 <div className="flex flex-col lg:flex-row lg:items-end gap-4 justify-between">
                     <div className="space-y-2">
-                        <label className="block text-xs font-semibold text-gray-300 uppercase tracking-[0.12em]">
-                            Index
-                        </label>
+                        <label className="section-label block">Index</label>
                         <IndexSelector selected={selectedSymbol} onSelect={setSelectedSymbol} />
                     </div>
 
                     <div className="space-y-2">
-                        <label className="block text-xs font-semibold text-gray-300 uppercase tracking-[0.12em]">
-                            Trading date
-                        </label>
+                        <label className="section-label block">Trading date</label>
                         <div className="flex flex-wrap items-center gap-2">
                             <button
                                 type="button"
                                 onClick={() => setSelectedDate(shiftDate(selectedDate, -1))}
-                                className="px-3 py-2 rounded-xl border border-white/10 bg-gray-900/50 text-sm text-gray-300"
+                                className="btn-ghost px-3 py-2 text-sm"
                             >
                                 ← Prev
                             </button>
@@ -80,13 +74,13 @@ export default function HistoryPage() {
                                 value={selectedDate}
                                 max={quickDates.today}
                                 onChange={(event) => setSelectedDate(event.target.value)}
-                                className="rounded-xl border border-white/15 bg-[#0b1225] px-3 py-2 text-sm text-white outline-none focus:border-brand-400"
+                                className="rounded-xl border border-white/10 bg-surface-950/80 px-3 py-2 text-sm text-white outline-none focus:border-gold-500/50"
                             />
                             <button
                                 type="button"
                                 onClick={() => setSelectedDate(shiftDate(selectedDate, 1))}
                                 disabled={selectedDate >= quickDates.today}
-                                className="px-3 py-2 rounded-xl border border-white/10 bg-gray-900/50 text-sm text-gray-300 disabled:opacity-40"
+                                className="btn-ghost px-3 py-2 text-sm disabled:opacity-40"
                             >
                                 Next →
                             </button>
@@ -100,7 +94,7 @@ export default function HistoryPage() {
                         onClick={() => setSelectedDate(quickDates.today)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${
                             selectedDate === quickDates.today
-                                ? "border-brand-500/40 bg-brand-500/15 text-brand-300"
+                                ? "border-gold-500/40 bg-gold-500/15 text-gold-200"
                                 : "border-white/10 text-gray-400"
                         }`}
                     >
@@ -111,7 +105,7 @@ export default function HistoryPage() {
                         onClick={() => setSelectedDate(quickDates.yesterday)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${
                             selectedDate === quickDates.yesterday
-                                ? "border-brand-500/40 bg-brand-500/15 text-brand-300"
+                                ? "border-gold-500/40 bg-gold-500/15 text-gold-200"
                                 : "border-white/10 text-gray-400"
                         }`}
                     >

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,20 +6,26 @@
 
 @layer base {
     * {
-        @apply border-gray-800;
+        @apply border-surface-700;
     }
 
     body {
-        @apply bg-gray-950 text-gray-100 antialiased;
+        @apply bg-surface-950 text-gray-100 antialiased;
         font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+        background-color: #06080f;
         background-image:
-            radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.08), transparent),
-            radial-gradient(ellipse 60% 40% at 80% 50%, rgba(16, 185, 129, 0.04), transparent);
+            linear-gradient(rgba(212, 175, 55, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(212, 175, 55, 0.03) 1px, transparent 1px),
+            radial-gradient(ellipse 90% 60% at 50% -15%, rgba(212, 175, 55, 0.09), transparent 55%),
+            radial-gradient(ellipse 50% 40% at 100% 0%, rgba(99, 102, 241, 0.07), transparent 50%),
+            radial-gradient(ellipse 40% 30% at 0% 100%, rgba(16, 185, 129, 0.05), transparent 45%);
+        background-size: 48px 48px, 48px 48px, auto, auto, auto;
+        background-attachment: fixed;
     }
 
-    /* Custom scrollbar */
     ::-webkit-scrollbar {
-        width: 5px;
+        width: 6px;
+        height: 6px;
     }
 
     ::-webkit-scrollbar-track {
@@ -27,31 +33,64 @@
     }
 
     ::-webkit-scrollbar-thumb {
-        @apply bg-gray-700/50 rounded-full;
+        @apply bg-surface-600/60 rounded-full;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        @apply bg-gray-600;
+        @apply bg-gold-600/40;
     }
 }
 
 @layer components {
+    .page-shell {
+        @apply max-w-6xl mx-auto px-4 md:px-6 pt-5 md:pt-7 pb-12 space-y-5 animate-fade-in;
+    }
+
     .glass-card {
-        @apply bg-gray-900/50 backdrop-blur-xl border border-gray-800/40 rounded-2xl shadow-xl shadow-black/20;
+        @apply bg-surface-900/55 backdrop-blur-xl border border-white/[0.06] rounded-2xl shadow-terminal;
     }
 
     .glass-card-hover {
-        @apply glass-card hover:bg-gray-900/60 hover:border-gray-700/40 hover:shadow-2xl hover:shadow-black/30 transition-all duration-300;
+        @apply glass-card hover:bg-surface-800/60 hover:border-gold-500/15 transition-all duration-300;
     }
 
     .glass-sidebar {
-        @apply bg-gray-900/70 backdrop-blur-2xl border-r border-gray-800/40;
-        background-image: linear-gradient(180deg, rgba(99, 102, 241, 0.03) 0%, transparent 40%);
+        @apply bg-surface-950/90 backdrop-blur-2xl border-r border-gold-500/10;
+        background-image: linear-gradient(180deg, rgba(212, 175, 55, 0.04) 0%, transparent 35%);
+    }
+
+    .toolbar-card {
+        @apply glass-card rounded-xl border-gold-500/10 p-3 md:p-4;
+    }
+
+    .text-gradient-gold {
+        background: linear-gradient(135deg, #ffffff 0%, #f5e6b8 45%, #d4af37 85%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .bg-mesh-terminal {
+        background-image:
+            radial-gradient(circle at 20% 20%, rgba(212, 175, 55, 0.12), transparent 45%),
+            radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.08), transparent 40%);
+    }
+
+    .nav-item-active {
+        @apply bg-gold-500/10 text-gold-200 border border-gold-500/20;
+        box-shadow: inset 3px 0 0 0 rgba(212, 175, 55, 0.85);
+    }
+
+    .btn-gold {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl border border-gold-500/35 bg-gold-500/10 px-3.5 py-2 text-xs font-bold text-gold-100 transition-all hover:bg-gold-500/20 hover:border-gold-400/50 disabled:opacity-50;
+    }
+
+    .btn-ghost {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-surface-800/40 px-3.5 py-2 text-xs font-bold text-gray-300 transition-all hover:border-white/20 hover:bg-surface-800/70;
     }
 
     .indicator-glow {
-        box-shadow: 0 0 20px rgba(99, 102, 241, 0.15),
-            0 0 60px rgba(99, 102, 241, 0.05);
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.12), 0 0 60px rgba(99, 102, 241, 0.06);
     }
 
     .decision-buy {
@@ -72,47 +111,33 @@
     .shimmer {
         background: linear-gradient(90deg,
                 rgba(255, 255, 255, 0) 0%,
-                rgba(255, 255, 255, 0.04) 50%,
+                rgba(212, 175, 55, 0.06) 50%,
                 rgba(255, 255, 255, 0) 100%);
         background-size: 200% 100%;
         animation: shimmer 1.8s ease-in-out infinite;
     }
 
     .section-label {
-        @apply text-[10px] font-bold text-gray-600 uppercase tracking-[0.2em];
+        @apply text-[10px] font-bold text-gold-500/70 uppercase tracking-[0.2em];
     }
 }
 
 @keyframes shimmer {
-    0% {
-        background-position: -200% 0;
-    }
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
 
-    100% {
-        background-position: 200% 0;
-    }
+@keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(6px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes float {
-
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-
-    50% {
-        transform: translateY(-3px);
-    }
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
 }
 
 @keyframes glow-pulse {
-
-    0%,
-    100% {
-        opacity: 0.6;
-    }
-
-    50% {
-        opacity: 1;
-    }
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
 }

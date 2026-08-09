@@ -2,6 +2,7 @@
 
 import { authedFetch } from "@/lib/authedFetch";
 import { useSettings } from "../context/SettingsContext";
+import PageHeader from "../components/PageHeader";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type AssetKind = "index" | "stock";
@@ -221,25 +222,22 @@ export default function WatchlistPage() {
     const nextWeekTone = toneForBias(data?.next_week_bias || "NEUTRAL");
 
     return (
-        <div className="max-w-6xl mx-auto px-4 md:px-6 pt-6 md:pt-10 pb-12 space-y-5 animate-fade-in">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div>
-                    <p className="text-[0.72rem] font-extrabold text-brand-300 uppercase tracking-[0.18em]">Watchlist Focus</p>
-                    <h2 className="text-2xl md:text-3xl font-black text-white mt-1">Today, Next Day, Next Week</h2>
-                    <p className="text-xs text-gray-400 mt-1 max-w-2xl">
-                        Selector-based focus view for indices and NSE stocks. Customize symbols in Settings. Built to stay light on free-tier usage.
-                    </p>
-                </div>
-                <button
-                    onClick={() => selectedSymbol && fetchFocus(selectedSymbol, true, true)}
-                    disabled={refreshing || !selectedSymbol}
-                    className="px-3 py-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 text-brand-300 text-xs font-bold"
-                >
-                    {refreshing ? "Refreshing..." : "Refresh"}
-                </button>
-            </div>
+        <div className="page-shell">
+            <PageHeader
+                title="Watchlist Focus"
+                description="Today, next day, and weekly outlook for indices and NSE stocks. Customize symbols in Settings."
+                actions={
+                    <button
+                        onClick={() => selectedSymbol && fetchFocus(selectedSymbol, true, true)}
+                        disabled={refreshing || !selectedSymbol}
+                        className="btn-gold"
+                    >
+                        {refreshing ? "Refreshing..." : "Refresh"}
+                    </button>
+                }
+            />
 
-            <div className="glass-card rounded-2xl p-4 border border-brand-500/20" style={{ background: "linear-gradient(135deg, rgba(15,23,42,0.86), rgba(15,23,42,0.72))" }}>
+            <div className="glass-card rounded-2xl p-4 border border-gold-500/15">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div>
                         <p className="text-[0.62rem] uppercase tracking-[0.18em] text-brand-300 font-extrabold">Selector</p>

@@ -11,7 +11,12 @@ Version format:
 
 ## Unreleased
 
-_No unreleased changes._
+### Added
+- **Terminal Gold** UI refresh on dev: gold-accent design system, grid background, SVG sidebar nav, shared `PageHeader`, compact dashboard command bar.
+
+### Changed
+- Dashboard hero replaced with compact command-center header and toolbar card.
+- Login, History, Settings, and Watchlist pages aligned to the new visual system.
 
 ## [v2026.08.09-04] - 2026-08-09
 

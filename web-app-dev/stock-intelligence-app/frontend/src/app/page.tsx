@@ -8,6 +8,7 @@ import { useSettings } from "./context/SettingsContext";
 import StockHeader from "./components/StockHeader";
 import IndexSelector from "./components/IndexSelector";
 import BuildBadge from "./components/BuildBadge";
+import PageHeader from "./components/PageHeader";
 
 import AIDecision from "./components/AIDecision";
 import ExpiryZeroHeroPanel from "./components/ExpiryZeroHeroPanel";
@@ -238,74 +239,26 @@ export default function Dashboard() {
     const loading = isLoading && !data;
 
     return (
-        <div className="max-w-6xl mx-auto px-4 md:px-6 pt-6 md:pt-10 space-y-6 pb-12 relative animate-fade-in">
+        <div className="page-shell">
 
-            {/* ── Hero Header ── */}
-            <div className="text-center py-6 relative">
-                {/* Gradient glow behind title */}
-                <div className="absolute inset-x-0 top-0 flex justify-center pointer-events-none">
-                    <div className="w-96 h-24 bg-gradient-to-b from-brand-500/10 via-emerald-500/5 to-transparent blur-2xl rounded-full" />
-                </div>
+            <PageHeader
+                title="Command Center"
+                description="Real-time intraday intelligence for Nifty, Bank Nifty, and Sensex."
+                actions={<ISTClock />}
+            />
 
-                {/* Brand chip */}
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-4 rounded-full bg-brand-500/10 border border-brand-500/20 text-[10px] font-black text-brand-400 uppercase tracking-[0.2em]">
-                    <span className="relative flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-                    </span>
-                    Live Intelligence
-                </div>
-
-                {/* Main title with gradient */}
-                <h1
-                    className="text-4xl md:text-5xl font-black tracking-tight leading-none"
-                    style={{
-                        background: "linear-gradient(135deg, #fff 0%, #a5b4fc 40%, #34d399 80%, #6ee7b7 100%)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        backgroundClip: "text",
-                        letterSpacing: "-0.03em"
-                    }}
-                >
-                    Trade-Craft
-                </h1>
-
-                {/* Subtitle */}
-                <p className="text-[11px] text-gray-500 mt-2 font-medium tracking-[0.15em] uppercase">
-                    Real-time intraday intelligence
-                </p>
-
-                {/* Divider line */}
-                <div className="flex items-center justify-center mt-5 gap-3">
-                    <div className="h-px w-16 bg-gradient-to-r from-transparent to-gray-700/60" />
-                    <div className="h-px w-2 bg-brand-500/40 rounded-full" />
-                    <div className="h-px w-16 bg-gradient-to-l from-transparent to-gray-700/60" />
-                </div>
-
-                {/* ── IST Clock: mobile inline version (below divider) ── */}
-                <div className="mt-4 flex justify-center md:hidden">
-                    <ISTClock compact />
-                </div>
-
-                {/* ── IST Clock: desktop absolute top-right ── */}
-                <div className="hidden md:block" style={{ position: "absolute", top: "1rem", right: "1rem" }}>
-                    <ISTClock />
-                </div>
-            </div>
-
-            {/* ── Controls Row ── */}
-            <div className="space-y-3">
+            <div className="toolbar-card space-y-3">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap">
                         <BuildBadge className="md:hidden" />
                         <button
                             type="button"
                             onClick={toggleChart}
-                            className={`rounded-xl border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] ${
+                            className={
                                 settings.showCandlestickChart
-                                    ? "border-brand-500/40 bg-brand-500/15 text-brand-300"
-                                    : "border-white/10 bg-gray-900/40 text-gray-400"
-                            }`}
+                                    ? "btn-gold text-[10px] uppercase tracking-[0.08em]"
+                                    : "btn-ghost text-[10px] uppercase tracking-[0.08em]"
+                            }
                         >
                             {settings.showCandlestickChart ? "Hide chart" : "Show chart"}
                         </button>

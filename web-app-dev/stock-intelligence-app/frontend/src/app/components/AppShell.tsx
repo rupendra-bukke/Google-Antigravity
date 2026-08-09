@@ -7,9 +7,9 @@ import { useAuth } from "../context/AuthContext";
 
 function FullScreenState({ message }: { message: string }) {
     return (
-        <main className="min-h-screen flex items-center justify-center px-6">
-            <div className="glass-card border border-white/10 rounded-2xl px-6 py-5 text-center max-w-md">
-                <p className="text-sm font-semibold text-brand-300 uppercase tracking-[0.16em]">Trade-Craft</p>
+        <main className="min-h-screen flex items-center justify-center px-6 bg-surface-950">
+            <div className="glass-card border-gold-500/15 rounded-2xl px-6 py-5 text-center max-w-md shadow-terminal-gold">
+                <p className="text-sm font-semibold text-gold-400 uppercase tracking-[0.16em]">Trade-Craft</p>
                 <p className="text-sm text-gray-300 mt-3">{message}</p>
             </div>
         </main>
@@ -54,16 +54,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return (
         <>
             <Sidebar />
-
-            <div className="fixed inset-0 md:ml-64 pointer-events-none flex items-center justify-center -z-10 overflow-hidden">
-                <img
-                    src="/assets/trade-craft-logo.png"
-                    alt="Watermark"
-                    className="w-[400px] h-[400px] md:w-[700px] md:h-[700px] object-contain opacity-[0.04] grayscale brightness-200"
-                />
-            </div>
-
-            <main className="md:ml-64 min-h-screen">{children}</main>
+            <main className="md:ml-[17.5rem] min-h-screen">{children}</main>
         </>
     );
 }
