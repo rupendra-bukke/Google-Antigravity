@@ -50,11 +50,18 @@ require_gh() {
     echo "Fix (run these in Codespaces, then re-run this script):"
     echo "  unset GITHUB_TOKEN"
     echo "  gh auth login -h github.com -p https -w"
+    echo "  gh auth setup-git"
     echo ""
     warn "Continue with current token anyway? [y/N]"
     read -r confirm
     [[ "$confirm" =~ ^[Yy]$ ]] || exit 1
   fi
+
+  # Make git use gh credentials (avoids broken Codespaces vscode-git socket)
+  gh auth setup-git >/dev/null 2>&1 || true
+  git config --global --unset-all credential.helper >/dev/null 2>&1 || true
+  gh auth setup-git >/dev/null 2>&1 || true
+  ok "Git credential helper configured via gh"
 }
 
 copy_tree() {
@@ -79,7 +86,23 @@ update_description() {
 push_branch() {
   local repo="$1"
   local push_out
-  if push_out=$(git push -u origin HEAD 2>&1); then
+  local token
+  token="$(gh auth token 2>/dev/null || true)"
+
+  # Prefer authenticated HTTPS URL so Codespaces VS Code git socket is bypassed
+  if [[ -n "$token" ]]; then
+    local remote_url
+    remote_url="$(git remote get-url origin)"
+    # Normalize to https://github.com/owner/repo.git
+    remote_url="${remote_url%.git}.git"
+    remote_url="$(echo "$remote_url" | sed -E 's#^git@github.com:#https://github.com/#; s#^https://[^@]+@github.com/#https://github.com/#')"
+    local auth_url
+    auth_url="$(echo "$remote_url" | sed -E "s#https://github.com/#https://x-access-token:${token}@github.com/#")"
+    if push_out=$(git push "$auth_url" HEAD:main 2>&1 || git push "$auth_url" HEAD:master 2>&1); then
+      ok "Pushed $repo"
+      return 0
+    fi
+  elif push_out=$(git push -u origin HEAD 2>&1); then
     ok "Pushed $repo"
     return 0
   fi
@@ -87,10 +110,10 @@ push_branch() {
   err "Push failed for $repo"
   echo "$push_out" | sed 's/^/    /'
   echo ""
-  warn "Most common cause in Codespaces: limited GITHUB_TOKEN."
-  echo "    Run:"
+  warn "Codespaces git auth fix:"
   echo "      unset GITHUB_TOKEN"
   echo "      gh auth login -h github.com -p https -w"
+  echo "      gh auth setup-git"
   echo "      ./deploy.sh --skip-cleanup"
   return 1
 }
