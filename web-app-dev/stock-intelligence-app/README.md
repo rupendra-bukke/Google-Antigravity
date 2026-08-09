@@ -2,6 +2,7 @@
 
 > **Open this file first.** All live URLs, workflow, services, and documentation links in one place.  
 > **Repo:** [github.com/rupendra-bukke/Google-Antigravity](https://github.com/rupendra-bukke/Google-Antigravity)  
+> **GitHub login:** username `rupendra-bukke` · email `bukke.rupendra@gmail.com`  
 > **Current release:** `v2026.08.09-01`  
 > **Last updated:** 2026-08-09
 
@@ -9,10 +10,12 @@
 
 ## Quick Links — Live Apps
 
-| Environment | Branch | Frontend URL | Use for |
-|-------------|--------|--------------|---------|
-| **Dev / Preview** | `dev` | [trade-craft-app-git-dev (Vercel Preview)](https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/) | Test changes before prod |
-| **Production** | `main` | [trade-craft-rb.vercel.app](https://trade-craft-rb.vercel.app/) | Live app for daily use |
+| Environment | Branch | Frontend URL | Vercel project | Use for |
+|-------------|--------|--------------|----------------|---------|
+| **Dev / Preview** | `dev` | [trade-craft-app-git-dev (Vercel Preview)](https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/) | `trade-craft-app` (preview) | Test changes before prod |
+| **Production** | `main` | [trade-craft-rb.vercel.app](https://trade-craft-rb.vercel.app/) | `trade-craft-app` (production) | Live app for daily use |
+
+**Vercel login:** [vercel.com/dashboard](https://vercel.com/dashboard) → account `rupendra-bukkes-projects` → email `bukke.rupendra@gmail.com` *(confirm)*
 
 ### App pages (add to base URL)
 
@@ -26,10 +29,12 @@
 
 ## Quick Links — Backends (API)
 
-| Environment | Branch | Backend URL | Health check |
-|-------------|--------|-------------|--------------|
-| **Dev** | `dev` | [stock-intelligence-api-dev.onrender.com](https://stock-intelligence-api-dev.onrender.com) | [Dev /health](https://stock-intelligence-api-dev.onrender.com/health) |
-| **Production** | `main` | [stock-intelligence-api.onrender.com](https://stock-intelligence-api.onrender.com) | [Prod /health](https://stock-intelligence-api.onrender.com/health) |
+| Environment | Branch | Backend URL | Health check | Render service name |
+|-------------|--------|-------------|--------------|---------------------|
+| **Dev** | `dev` | [stock-intelligence-api-dev.onrender.com](https://stock-intelligence-api-dev.onrender.com) | [Dev /health](https://stock-intelligence-api-dev.onrender.com/health) | `stock-intelligence-api-dev` |
+| **Production** | `main` | [stock-intelligence-api.onrender.com](https://stock-intelligence-api.onrender.com) | [Prod /health](https://stock-intelligence-api.onrender.com/health) | `stock-intelligence-api` |
+
+**Render login:** [dashboard.render.com](https://dashboard.render.com) → email *[update me]*
 
 Frontend calls backend via `/api/*` rewrite — you normally use the frontend URLs above, not the backend directly.
 
@@ -37,14 +42,28 @@ Frontend calls backend via `/api/*` rewrite — you normally use the frontend UR
 
 ## Quick Links — Cloud Services & Dashboards
 
-| Service | What it does | Dashboard |
-|---------|--------------|-----------|
-| **GitHub** | Source code, branches, PRs, Actions | [github.com/rupendra-bukke/Google-Antigravity](https://github.com/rupendra-bukke/Google-Antigravity) |
-| **Vercel** | Frontend hosting (Next.js) | [vercel.com/dashboard](https://vercel.com/dashboard) |
-| **Render** | Backend hosting (FastAPI) | [dashboard.render.com](https://dashboard.render.com) |
-| **Supabase** | User authentication (login) | [supabase.com/dashboard](https://supabase.com/dashboard) |
-| **Upstash** | Redis cache + checkpoint storage | [console.upstash.com](https://console.upstash.com) |
-| **Google AI Studio** | Gemini API key (AI panel) | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+> **Login info:** Update this section when you change accounts. Tell the agent: *"Update README login info for [service]"*.
+
+| Service | Dashboard | Account / username | Login email | Project / resource name |
+|---------|-----------|-------------------|-------------|-------------------------|
+| **GitHub** | [Repo](https://github.com/rupendra-bukke/Google-Antigravity) | `rupendra-bukke` | `bukke.rupendra@gmail.com` | `Google-Antigravity` |
+| **Vercel** | [Dashboard](https://vercel.com/dashboard) | `rupendra-bukkes-projects` (team) | `bukke.rupendra@gmail.com` *(confirm)* | `trade-craft-app` |
+| **Render** | [Dashboard](https://dashboard.render.com) | *[update me]* | *[update me]* | `stock-intelligence-api` (prod), `stock-intelligence-api-dev` (dev) |
+| **Supabase** | [Dashboard](https://supabase.com/dashboard) | *[update me]* | *[update me]* | *[update me — your project name]* |
+| **Upstash** | [Console](https://console.upstash.com) | *[update me]* | *[update me]* | Redis DB for checkpoints + cache |
+| **Google AI Studio** | [API Keys](https://aistudio.google.com/apikey) | Google account | `bukke.rupendra@gmail.com` *(confirm)* | Gemini API key → `GEMINI_API_KEY` on Render |
+
+### Trade-Craft app login (end users)
+
+This is **not** a cloud dashboard login — it is the email/password you use inside the app at `/login`.
+
+| Field | Value |
+|-------|--------|
+| **Login page (dev)** | [Dev Login](https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/login) |
+| **Login page (prod)** | [Prod Login](https://trade-craft-rb.vercel.app/login) |
+| **Test user email** | `rupendra.test@gmail.com` |
+| **Password** | *(set in Supabase → Authentication → Users — not stored in this repo)* |
+| **Managed in** | [Supabase Dashboard](https://supabase.com/dashboard) → Authentication → Users |
 
 ---
 
