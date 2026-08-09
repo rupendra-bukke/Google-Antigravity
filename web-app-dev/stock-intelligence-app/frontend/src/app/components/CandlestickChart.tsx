@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { createChart, ColorType } from "lightweight-charts";
+import { useEffect, useMemo, useRef } from "react";
+import { createChart, ColorType, type UTCTimestamp } from "lightweight-charts";
 
 interface OhlcBar {
     time: string;
@@ -16,19 +16,47 @@ interface CandlestickChartProps {
     isLoading: boolean;
 }
 
+function toChartTime(value: string): UTCTimestamp | null {
+    const parsed = Date.parse(value);
+    if (Number.isNaN(parsed)) return null;
+    return Math.floor(parsed / 1000) as UTCTimestamp;
+}
+
+function normalizeCandles(candles: OhlcBar[]) {
+    const byTime = new Map<number, OhlcBar>();
+
+    for (const candle of candles) {
+        const time = toChartTime(candle.time);
+        if (time === null) continue;
+        byTime.set(time, candle);
+    }
+
+    return Array.from(byTime.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([time, candle]) => ({
+            time: time as UTCTimestamp,
+            open: candle.open,
+            high: candle.high,
+            low: candle.low,
+            close: candle.close,
+        }));
+}
+
 export default function CandlestickChart({ candles, isLoading }: CandlestickChartProps) {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
 
+    const chartData = useMemo(() => normalizeCandles(candles), [candles]);
+    const hasData = chartData.length > 0;
+
     useEffect(() => {
-        if (!chartContainerRef.current || candles.length === 0) return;
+        const container = chartContainerRef.current;
+        if (!container || !hasData) return;
 
         if (chartRef.current) {
             chartRef.current.remove();
             chartRef.current = null;
         }
-
-        const container = chartContainerRef.current;
 
         const chart = createChart(container, {
             layout: {
@@ -41,7 +69,7 @@ export default function CandlestickChart({ candles, isLoading }: CandlestickChar
                 vertLines: { color: "rgba(75, 85, 99, 0.15)" },
                 horzLines: { color: "rgba(75, 85, 99, 0.15)" },
             },
-            width: container.clientWidth,
+            width: Math.max(container.clientWidth, 320),
             height: 400,
             crosshair: {
                 vertLine: { color: "rgba(99, 102, 241, 0.3)", width: 1, style: 2 },
@@ -68,17 +96,9 @@ export default function CandlestickChart({ candles, isLoading }: CandlestickChar
             wickUpColor: "#10b981",
         });
 
-        const formattedCandles = candles.map((c) => ({
-            time: Math.floor(new Date(c.time).getTime() / 1000) as never,
-            open: c.open,
-            high: c.high,
-            low: c.low,
-            close: c.close,
-        }));
+        candlestickSeries.setData(chartData);
 
-        candlestickSeries.setData(formattedCandles);
-
-        if (candles.length >= 20) {
+        if (chartData.length >= 20) {
             const emaLine = chart.addLineSeries({
                 color: "#818cf8",
                 lineWidth: 2,
@@ -86,16 +106,15 @@ export default function CandlestickChart({ candles, isLoading }: CandlestickChar
                 crosshairMarkerVisible: false,
             });
 
-            const closes = candles.map((c) => c.close);
-            const emaValues: { time: never; value: number }[] = [];
+            const emaValues: { time: UTCTimestamp; value: number }[] = [];
             const k = 2 / (20 + 1);
-            let emaVal = closes[0];
+            let emaVal = chartData[0].close;
 
-            for (let i = 0; i < closes.length; i++) {
-                emaVal = closes[i] * k + emaVal * (1 - k);
+            for (let i = 0; i < chartData.length; i++) {
+                emaVal = chartData[i].close * k + emaVal * (1 - k);
                 if (i >= 19) {
                     emaValues.push({
-                        time: Math.floor(new Date(candles[i].time).getTime() / 1000) as never,
+                        time: chartData[i].time,
                         value: Math.round(emaVal * 100) / 100,
                     });
                 }
@@ -106,21 +125,29 @@ export default function CandlestickChart({ candles, isLoading }: CandlestickChar
 
         chart.timeScale().fitContent();
 
-        const handleResize = () => {
-            if (chartRef.current && container) {
-                chartRef.current.applyOptions({ width: container.clientWidth });
-            }
+        const resizeChart = () => {
+            if (!chartRef.current || !container) return;
+            const width = Math.max(container.clientWidth, 320);
+            chartRef.current.applyOptions({ width });
         };
-        window.addEventListener("resize", handleResize);
+
+        resizeChart();
+
+        const observer = typeof ResizeObserver !== "undefined"
+            ? new ResizeObserver(() => resizeChart())
+            : null;
+        observer?.observe(container);
+        window.addEventListener("resize", resizeChart);
 
         return () => {
-            window.removeEventListener("resize", handleResize);
+            observer?.disconnect();
+            window.removeEventListener("resize", resizeChart);
             if (chartRef.current) {
                 chartRef.current.remove();
                 chartRef.current = null;
             }
         };
-    }, [candles]);
+    }, [chartData, hasData]);
 
     return (
         <div className="glass-card p-4 md:p-6 animate-fade-in">
@@ -146,17 +173,21 @@ export default function CandlestickChart({ candles, isLoading }: CandlestickChar
                 </div>
             </div>
 
-            {isLoading ? (
-                <div className="h-[400px] w-full rounded-xl bg-gray-800/50 shimmer flex items-center justify-center">
-                    <p className="text-sm text-gray-600">Loading chart…</p>
-                </div>
-            ) : candles.length === 0 ? (
-                <div className="h-[400px] w-full rounded-xl bg-gray-800/30 flex items-center justify-center">
-                    <p className="text-sm text-gray-500">No candlestick data available</p>
-                </div>
-            ) : (
-                <div ref={chartContainerRef} className="w-full rounded-xl overflow-hidden" />
-            )}
+            <div className="relative h-[400px] w-full rounded-xl overflow-hidden">
+                <div ref={chartContainerRef} className="absolute inset-0 w-full h-full" />
+
+                {isLoading && (
+                    <div className="absolute inset-0 z-10 bg-gray-900/70 backdrop-blur-[1px] flex items-center justify-center">
+                        <p className="text-sm text-gray-300">Loading chart…</p>
+                    </div>
+                )}
+
+                {!isLoading && !hasData && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-800/30">
+                        <p className="text-sm text-gray-500">No candlestick data available</p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

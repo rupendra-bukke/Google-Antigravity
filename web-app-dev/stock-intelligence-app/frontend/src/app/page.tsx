@@ -185,7 +185,10 @@ export default function Dashboard() {
             const res = await authedFetch(
                 `${API_BASE}/v1/analyze?symbol=${encodeURIComponent(symbol)}&include_candles=true`
             );
-            if (!res.ok) return;
+            if (!res.ok) {
+                setChartCandles([]);
+                return;
+            }
             const json: AnalyzeData = await res.json();
             setChartCandles(json.candles || []);
         } catch {
@@ -214,8 +217,11 @@ export default function Dashboard() {
     }, [selectedSymbol, fetchData, settings.dashboardRefreshSec]);
 
     useEffect(() => {
-        setChartCandles([]);
-        if (!settings.showCandlestickChart) return;
+        if (!settings.showCandlestickChart) {
+            setChartCandles([]);
+            setChartLoading(false);
+            return;
+        }
         void fetchChartData(selectedSymbol);
     }, [selectedSymbol, settings.showCandlestickChart, fetchChartData]);
 
@@ -226,13 +232,7 @@ export default function Dashboard() {
     };
 
     const toggleChart = () => {
-        const next = !settings.showCandlestickChart;
-        updateSettings({ showCandlestickChart: next });
-        if (next) {
-            void fetchChartData(selectedSymbol);
-        } else {
-            setChartCandles([]);
-        }
+        updateSettings({ showCandlestickChart: !settings.showCandlestickChart });
     };
 
     const loading = isLoading && !data;

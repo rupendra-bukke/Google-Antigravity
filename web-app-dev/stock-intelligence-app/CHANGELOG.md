@@ -11,7 +11,8 @@ Version format:
 
 ## Unreleased
 
-_No unreleased changes._
+### Fixed
+- Dashboard **Show chart** toggle now reliably loads and renders candlesticks (removed race that cleared fetched candles; chart container always mounts for lightweight-charts).
 
 ## [v2026.08.09-02] - 2026-08-09
 
