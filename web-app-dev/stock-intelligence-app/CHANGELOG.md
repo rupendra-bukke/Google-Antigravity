@@ -14,6 +14,7 @@ Version format:
 ### Changed
 - **Bloomberg-style terminal UI (Option C)** on dev: black/orange dense layout, IBM Plex Mono data fonts, flat panels, indicator table grid.
 - **Page header** redesigned: split brand zone with restored Trade-Craft logo, larger trademark title, and page context panel with module label + clock/actions.
+- **Logo assets** upgraded: 512/1024px PNG exports, retina `srcSet`, app icons, and scalable SVG master.
 - Replaced Terminal Gold (Option A) after user feedback.
 
 ### Added
