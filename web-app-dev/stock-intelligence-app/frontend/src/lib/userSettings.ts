@@ -1,3 +1,5 @@
+import { normalizeDashboardSymbol } from "@/lib/indices";
+
 export interface UserSettings {
     defaultSymbol: string;
     dashboardRefreshSec: number;
@@ -9,8 +11,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
 };
 
 const STORAGE_KEY = "trade-craft-settings";
-
-const VALID_SYMBOLS = new Set(["^NSEI", "^NSEBANK", "^CNXFINSERVICE", "^BSESN"]);
 const VALID_REFRESH = new Set([60, 120, 180, 300]);
 
 export function loadUserSettings(): UserSettings {
@@ -24,9 +24,7 @@ export function loadUserSettings(): UserSettings {
 
         const parsed = JSON.parse(raw) as Partial<UserSettings>;
         return {
-            defaultSymbol: VALID_SYMBOLS.has(parsed.defaultSymbol ?? "")
-                ? (parsed.defaultSymbol as string)
-                : DEFAULT_SETTINGS.defaultSymbol,
+            defaultSymbol: normalizeDashboardSymbol(parsed.defaultSymbol),
             dashboardRefreshSec: VALID_REFRESH.has(parsed.dashboardRefreshSec ?? 0)
                 ? (parsed.dashboardRefreshSec as number)
                 : DEFAULT_SETTINGS.dashboardRefreshSec,
@@ -38,7 +36,13 @@ export function loadUserSettings(): UserSettings {
 
 export function saveUserSettings(settings: UserSettings): void {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+            ...settings,
+            defaultSymbol: normalizeDashboardSymbol(settings.defaultSymbol),
+        })
+    );
 }
 
 export function resetUserSettings(): UserSettings {

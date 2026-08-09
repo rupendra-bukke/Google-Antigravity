@@ -4,11 +4,11 @@ import { authedFetch } from "@/lib/authedFetch";
 import { useState, useEffect, useCallback, useMemo } from "react";
 
 const API_BASE = "/api";
+import { SYMBOL_LABELS } from "@/lib/indices";
+
 const TIMELINE_LABELS: Record<string, string> = {
-    "^NSEI": "Nifty 50",
-    "^NSEBANK": "Bank Nifty",
+    ...SYMBOL_LABELS,
     "^CNXFINSERVICE": "Fin Nifty",
-    "^BSESN": "Sensex",
 };
 
 interface CheckpointData {

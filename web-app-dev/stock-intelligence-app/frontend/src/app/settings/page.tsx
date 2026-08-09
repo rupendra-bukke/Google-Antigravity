@@ -1,15 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DASHBOARD_INDICES } from "@/lib/indices";
 import { useSettings } from "../context/SettingsContext";
 import { useSymbol } from "../context/SymbolContext";
-
-const INDEX_OPTIONS = [
-    { label: "NIFTY 50", symbol: "^NSEI" },
-    { label: "Bank NIFTY", symbol: "^NSEBANK" },
-    { label: "FinNIFTY", symbol: "^CNXFINSERVICE" },
-    { label: "SENSEX", symbol: "^BSESN" },
-];
 
 const REFRESH_OPTIONS = [
     { label: "1 minute", value: 60 },
@@ -61,7 +55,7 @@ export default function SettingsPage() {
                         Which index opens when you visit the dashboard.
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {INDEX_OPTIONS.map((option) => {
+                        {DASHBOARD_INDICES.map((option) => {
                             const active = settings.defaultSymbol === option.symbol;
                             return (
                                 <button

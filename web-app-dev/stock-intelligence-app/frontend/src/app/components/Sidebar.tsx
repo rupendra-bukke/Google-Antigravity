@@ -5,11 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { useSymbol } from "../context/SymbolContext";
 
+import { SYMBOL_LABELS } from "@/lib/indices";
+
 const SYMBOL_META: Record<string, { name: string; initial: string }> = {
     "^NSEI": { name: "NIFTY 50", initial: "N" },
     "^NSEBANK": { name: "Bank NIFTY", initial: "B" },
     "^BSESN": { name: "SENSEX", initial: "S" },
-    "^CNXFINSERVICE": { name: "FINNIFTY", initial: "F" },
 };
 
 const navItems: Array<{

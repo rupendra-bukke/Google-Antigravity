@@ -73,7 +73,7 @@ This is **not** a cloud dashboard login — it is the email/password you use ins
 
 **Trade-Craft** is a full-stack **Indian index intraday market intelligence dashboard**.
 
-It monitors Nifty 50, Bank Nifty, FinNifty, and Sensex with:
+It monitors Nifty 50, Bank Nifty, and Sensex with:
 
 - Live technical indicators (EMA, RSI, VWAP, Bollinger Bands, MACD)
 - Rule-based multi-timeframe analysis
@@ -151,7 +151,7 @@ Memory tricks: `Build in dev, ship in main`
 
 - [ ] Login works
 - [ ] Dashboard loads
-- [ ] Index selector works (Nifty, Bank Nifty, FinNifty, Sensex)
+- [ ] Index selector works (Nifty 50, Bank Nifty, Sensex — 3 indices)
 - [ ] Watchlist loads
 - [ ] No red error panels
 

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { loadUserSettings } from "@/lib/userSettings";
+import { normalizeDashboardSymbol } from "@/lib/indices";
 
 interface SymbolContextType {
     selectedSymbol: string;
@@ -17,7 +18,7 @@ export function SymbolProvider({ children }: { children: ReactNode }) {
     const [selectedSymbol, setSelectedSymbol] = useState("^NSEI");
 
     useEffect(() => {
-        setSelectedSymbol(loadUserSettings().defaultSymbol);
+        setSelectedSymbol(normalizeDashboardSymbol(loadUserSettings().defaultSymbol));
     }, []);
 
     return (

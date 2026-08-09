@@ -153,7 +153,7 @@ Workflow: develop on `dev` → validate preview → merge to `main` → follow `
 Order of sections on the main dashboard (`frontend/src/app/page.tsx`):
 
 1. Header — branding, IST clock, manual refresh, build badge
-2. Index selector — Nifty 50, Bank Nifty, FinNifty, Sensex
+2. Index selector — Nifty 50, Bank Nifty, Sensex
 3. Market status banner — open/closed + holiday overlay
 4. Expiry banner — countdown to next expiry per index
 5. Stock header — live price + timestamp
@@ -175,8 +175,7 @@ These are intentional deferrals or unfinished items as of the latest commit:
 |-----|--------|
 | **No automated tests** | Manual smoke tests only (`py_compile`, `tsc --noEmit`, URL checks) |
 | **Auth docs stale** | Resolved in `v2026.08.09-01` — `README.md` and `ARCHITECTURE.md` updated |
-| **FinNifty not in index selector** | Resolved in `v2026.08.09-01` |
-| **Checkpoint capture scope** | Auto-capture only for `^NSEI` and `^NSEBANK`; Sensex/FinNifty manual only |
+| **Checkpoint capture scope** | Auto-capture only for `^NSEI` and `^NSEBANK`; Sensex manual only |
 | **Dead/orphan components** | Resolved in `v2026.08.09-01` — removed unused chart/decision components |
 | **History & Settings pages** | Nav stubs with "Coming soon" |
 | **Mobile app** | `stock-intelligence-mobile/` is a placeholder README only |
@@ -201,13 +200,13 @@ Prioritized by impact and dependency order. Each phase can be a separate `dev` �
 - [x] Add FinNifty to `IndexSelector.tsx` (API already supports it)
 - [x] Add GitHub Actions workflow for `tsc --noEmit` + `py_compile` on PR/push
 
-### Phase B — Feature Completion (Medium term)
+### Phase B — Feature Completion (Medium term) — in progress on `dev`
 
 **Goal:** Finish the UI promises already visible in the app.
 
-- [ ] **History page** — browse past checkpoint timelines by date; query Redis archives
-- [ ] **Settings page** — user preferences (default index, refresh interval, notification toggles)
-- [ ] **Extend checkpoint capture** — add Sensex (`^BSESN`) and FinNifty (`^CNXFINSERVICE`) to scheduler
+- [x] **History page** — browse past checkpoint timelines by date
+- [x] **Settings page** — default index + dashboard refresh interval (browser localStorage)
+- [ ] **Extend checkpoint capture** — add Sensex (`^BSESN`) to scheduler
 - [ ] **Re-enable candlestick chart** — optional toggle on dashboard (lazy-load to protect free tier)
 - [ ] **Watchlist expansion** — add more stocks beyond `JPPOWER.NS`; user-editable watchlist stored in Supabase DB
 - [ ] **Alerting** — email or push when AI signal changes at a checkpoint (Supabase Edge Functions or similar)

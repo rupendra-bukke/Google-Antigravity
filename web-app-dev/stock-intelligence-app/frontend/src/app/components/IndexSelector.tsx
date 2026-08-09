@@ -1,11 +1,6 @@
 "use client";
 
-const INDICES = [
-    { label: "NIFTY 50", symbol: "^NSEI", emoji: "🇮🇳" },
-    { label: "Bank NIFTY", symbol: "^NSEBANK", emoji: "🏦" },
-    { label: "FinNIFTY", symbol: "^CNXFINSERVICE", emoji: "📈" },
-    { label: "SENSEX", symbol: "^BSESN", emoji: "📊" },
-];
+import { DASHBOARD_INDICES } from "@/lib/indices";
 
 interface IndexSelectorProps {
     selected: string;
@@ -20,7 +15,7 @@ export default function IndexSelector({
 }: IndexSelectorProps) {
     return (
         <div className="flex flex-wrap gap-2">
-            {INDICES.map(({ label, symbol, emoji }) => {
+            {DASHBOARD_INDICES.map(({ label, symbol, emoji }) => {
                 const isActive = selected === symbol;
                 return (
                     <button
