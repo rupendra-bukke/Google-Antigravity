@@ -211,8 +211,8 @@ export default function SettingsPage() {
                         onClick={() => updateSettings({ showCandlestickChart: !settings.showCandlestickChart })}
                         className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left w-full sm:w-auto ${
                             settings.showCandlestickChart
-                                ? "border-brand-500/40 bg-brand-500/15 text-brand-300"
-                                : "border-white/10 bg-gray-900/40 text-gray-400"
+                                ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
+                                : "border-terminal-border bg-terminal-bg text-terminal-muted"
                         }`}
                     >
                         {settings.showCandlestickChart ? "Chart enabled on dashboard" : "Chart hidden (default)"}
@@ -254,7 +254,7 @@ export default function SettingsPage() {
                     <button
                         type="button"
                         onClick={handleSave}
-                        className="rounded-xl border border-brand-500/40 bg-brand-500/20 px-4 py-2.5 text-sm font-bold text-brand-200"
+                        className="btn-primary px-4 py-2 text-sm normal-case tracking-normal"
                     >
                         Apply to dashboard now
                     </button>
