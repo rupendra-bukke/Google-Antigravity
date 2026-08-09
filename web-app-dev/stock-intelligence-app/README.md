@@ -103,6 +103,8 @@ Open `http://localhost:3000`. If backend `AUTH_REQUIRED=false`, the dashboard lo
 - Checkpoint cron endpoints (`/checkpoints/cron-capture`, `/checkpoints/cron-reconcile`) use `X-Checkpoint-Cron-Secret`, not Supabase.
 - `GET /health` remains public.
 
+Login issues: see `AUTH_SETUP.md`.
+
 ## API Endpoints (Key)
 
 All `/api/v1/*` routes below require a valid Supabase bearer token unless `AUTH_REQUIRED=false` on the backend.

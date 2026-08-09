@@ -8,6 +8,10 @@ This file defines which docs are active source-of-truth and which are archive/hi
 - Purpose: single re-orientation doc — what was built, current state, gaps, and future roadmap.
 - Use when: returning after time away, onboarding yourself, planning next work, or explaining the project to someone new.
 
+0b. `AUTH_SETUP.md`
+- Purpose: fix login / Supabase configuration on Vercel, Render, and Supabase dashboard.
+- Use when: login shows "Load failed", auth works locally but not in production, or setting up auth for the first time.
+
 1. `README.md`
 - Purpose: project entry point, setup, architecture summary, API overview.
 - Use when: onboarding, setup, quick understanding of current app.
