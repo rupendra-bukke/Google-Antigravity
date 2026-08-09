@@ -5,12 +5,15 @@ Trade-Craft is a full-stack intraday market intelligence dashboard for Indian in
 - Frontend: Next.js (Vercel)
 - Backend: FastAPI (Render)
 - Cache/Store: Upstash Redis
+- Auth: Supabase (email/password login, JWT on API calls)
 - AI: Gemini (intraday + EOD outlook)
 - Market data: `yfinance` in deployed runtime, `tvDatafeed` optional locally if installed
 
 ## Current Product Scope
 
 - Index support: `^NSEI`, `^NSEBANK`, `^CNXFINSERVICE`, `^BSESN` (Nifty 50, Bank Nifty, FinNifty, Sensex)
+- Supabase login (`/login`) with protected dashboard and watchlist routes
+- Bearer-token auth on all `/api/v1/*` endpoints (cron endpoints use a separate secret)
 - Live/near-live technical analysis (EMA, RSI, VWAP, BB, MACD)
 - Advanced multi-timeframe analysis (`/advanced-analyze`)
 - AI decision panel (`/ai-decision`) with:
@@ -57,6 +60,8 @@ stock-intelligence-app/
 |   |-- src/app/
 |   |   |-- layout.tsx
 |   |   |-- page.tsx
+|   |   |-- login/page.tsx
+|   |   |-- watchlist/page.tsx
 |   |   |-- context/
 |   |   `-- components/
 |   `-- package.json
@@ -73,6 +78,7 @@ python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
+# Set GEMINI_API_KEY and Supabase vars; use AUTH_REQUIRED=false for local dev without login
 uvicorn main:app --reload --port 8000
 ```
 
@@ -81,12 +87,25 @@ uvicorn main:app --reload --port 8000
 ```powershell
 cd frontend
 npm install
+copy .env.local.example .env.local
+# Set BACKEND_URL=http://localhost:8000 and Supabase keys (or leave empty with AUTH_REQUIRED=false on backend)
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open `http://localhost:3000`. If backend `AUTH_REQUIRED=false`, the dashboard loads without login.
+
+## Authentication
+
+- Users sign in at `/login` with Supabase email/password.
+- `AppShell.tsx` redirects unauthenticated users to `/login`.
+- Frontend API calls use `authedFetch` (`frontend/src/lib/authedFetch.ts`) to attach `Authorization: Bearer <jwt>`.
+- Backend validates tokens via `backend/services/auth_guard.py` (Supabase `/auth/v1/user`).
+- Checkpoint cron endpoints (`/checkpoints/cron-capture`, `/checkpoints/cron-reconcile`) use `X-Checkpoint-Cron-Secret`, not Supabase.
+- `GET /health` remains public.
 
 ## API Endpoints (Key)
+
+All `/api/v1/*` routes below require a valid Supabase bearer token unless `AUTH_REQUIRED=false` on the backend.
 
 - `GET /health`
 - `GET /api/v1/analyze?symbol=^NSEI`
@@ -107,14 +126,20 @@ Open `http://localhost:3000`.
 ### Backend (Render/local)
 
 - `APP_ENV` (`development` or `production`)
-- `GEMINI_API_KEY`
+- `GEMINI_API_KEY` (required for AI panel)
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+- `AUTH_REQUIRED` (`true` in production; set `false` for local dev without login)
+- `CHECKPOINT_CRON_SECRET` (required for unattended checkpoint GitHub Actions)
 - `DEFAULT_SYMBOL` (optional)
 
 ### Frontend (Vercel/local)
 
 - `BACKEND_URL` (used by `next.config.mjs` rewrite for `/api/*`)
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
 ## Branch and Deploy Flow
 
@@ -131,5 +156,7 @@ Detailed docs:
 - `RELEASE_RUNBOOK.md`
 
 ## Documentation Map
+
+Start with `PROJECT_REFERENCE_AND_ROADMAP.md` for a full project overview and roadmap.
 
 Use `DOCS_INDEX.md` to know which files are active vs archived.

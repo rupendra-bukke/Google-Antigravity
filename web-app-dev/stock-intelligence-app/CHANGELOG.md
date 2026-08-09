@@ -11,13 +11,34 @@ Version format:
 
 ## Unreleased
 
+_No unreleased changes._
+
+## [v2026.08.09-01] - 2026-08-09
+
+### Added
+- FinNIFTY (`^CNXFINSERVICE`) added to dashboard index selector.
+- GitHub Actions CI workflow (`stock-intelligence-ci.yml`) for Python compile and TypeScript check.
+- `GEMINI_API_KEY` and `CHECKPOINT_CRON_SECRET` documented in `backend/.env.example`.
+- `BACKEND_URL` added to `frontend/.env.local.example`.
+
+### Changed
+- `README.md` and `ARCHITECTURE.md` updated for Supabase auth, protected routes, and env vars.
+- Removed unused frontend components: `CandlestickChart`, `AdvancedDecision`, `DecisionBadge`.
+
+## [v2026.03.30-01] - 2026-03-30
+
 ### Added
 - Secure checkpoint cron endpoints plus a repo-root GitHub Actions workflow now support unattended intraday timeline capture and end-of-day reconcile, even when no browser is open.
+- Strict 3 PM expiry breakout snapshots and expiry zero-to-hero panel.
+- Scheduled AI decision snapshots with EOD retention and backfill.
+- Supabase email/password login, protected app shell, and bearer auth on all `/api/v1/*` routes.
+- Watchlist market focus selector and improved focus refresh flow.
 
 ### Fixed
 - Checkpoint board now follows the selected dashboard index instead of staying hardcoded to Nifty 50.
 - Shared NSE trading-day logic now keeps EOD date selection and checkpoint TTL holiday-aware even when `exchange_calendars` is not installed.
 - Checkpoint capture and scheduler paths now skip non-trading days instead of risking stale holiday saves.
+- EOD AI fallback stabilized when cache is missing; EOD snapshots retained and backfilled.
 
 ### Changed
 - Active docs refreshed to match the deployed data-source strategy, live expiry APIs, selected-symbol timeline behavior, and latest production release reference.

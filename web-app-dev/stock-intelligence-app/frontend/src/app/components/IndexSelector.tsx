@@ -3,6 +3,7 @@
 const INDICES = [
     { label: "NIFTY 50", symbol: "^NSEI", emoji: "🇮🇳" },
     { label: "Bank NIFTY", symbol: "^NSEBANK", emoji: "🏦" },
+    { label: "FinNIFTY", symbol: "^CNXFINSERVICE", emoji: "📈" },
     { label: "SENSEX", symbol: "^BSESN", emoji: "📊" },
 ];
 

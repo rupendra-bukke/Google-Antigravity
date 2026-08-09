@@ -1,13 +1,15 @@
 # Trade-Craft Architecture (Current)
 
-Last updated: 2026-03-19
+Last updated: 2026-08-09
 Status: Active source-of-truth for technical behavior
 
 ## 1) System Overview
 
 ```text
-Frontend (Next.js on Vercel)
-  -> /api/* rewrite (next.config.mjs)
+Browser
+  -> Next.js (Vercel): /, /watchlist, /login
+  -> Supabase Auth (session + JWT)
+  -> /api/* rewrite (next.config.mjs) with Authorization: Bearer <jwt>
   -> Backend (FastAPI on Render)
   -> Upstash Redis (cache + checkpoint storage)
   -> External sources:
@@ -15,6 +17,7 @@ Frontend (Next.js on Vercel)
      - tvDatafeed (optional local source if installed)
      - NSE/BSE expiry APIs
      - Gemini API (AI analysis)
+     - Supabase Auth REST (/auth/v1/user for JWT validation)
 ```
 
 ## 2) Frontend Runtime Flow
@@ -22,8 +25,14 @@ Frontend (Next.js on Vercel)
 Main page file:
 - `frontend/src/app/page.tsx`
 
+Auth flow:
+- `frontend/src/app/context/AuthContext.tsx` — Supabase session state
+- `frontend/src/app/components/AppShell.tsx` — redirects unauthenticated users to `/login`
+- `frontend/src/lib/authedFetch.ts` — attaches bearer token to API calls
+- `frontend/src/app/login/page.tsx` — email/password sign-in
+
 Data fetch pattern:
-- Dashboard page fetches every 180 seconds (hidden tabs paused):
+- Dashboard page fetches every 180 seconds (hidden tabs paused) via `authedFetch`:
   - `/api/v1/analyze`
   - `/api/v1/advanced-analyze`
 - AI panel fetches `/api/v1/ai-decision` on its own checkpoint-aware cycle.
@@ -47,6 +56,12 @@ Current UI order:
 
 Router prefix:
 - `/api/v1`
+
+Auth:
+- Most `/api/v1/*` routes require `Authorization: Bearer <supabase_jwt>` via `backend/services/auth_guard.py`.
+- Set `AUTH_REQUIRED=false` to bypass auth for local development.
+- Cron endpoints use `X-Checkpoint-Cron-Secret` instead of Supabase.
+- `GET /health` is public.
 
 Primary endpoints:
 - `GET /analyze`
@@ -186,9 +201,12 @@ Outcome:
 Frontend:
 - Deployed on Vercel
 - `/api/*` rewritten to `BACKEND_URL`
+- Requires `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in production
 
 Backend:
 - Deployed on Render via `render.yaml`
+- Requires `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `AUTH_REQUIRED=true` in production
+- Requires `CHECKPOINT_CRON_SECRET` for GitHub Actions checkpoint automation
 
 Branch strategy:
 - `dev` for changes and preview validation

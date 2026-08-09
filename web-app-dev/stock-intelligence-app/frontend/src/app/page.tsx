@@ -5,9 +5,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useSymbol } from "./context/SymbolContext";
 import StockHeader from "./components/StockHeader";
 import IndexSelector from "./components/IndexSelector";
-import CandlestickChart from "./components/CandlestickChart";
-
-import DecisionBadge from "./components/DecisionBadge"; // kept for now — unused after removal below
 
 import AIDecision from "./components/AIDecision";
 import ExpiryZeroHeroPanel from "./components/ExpiryZeroHeroPanel";
