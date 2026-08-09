@@ -18,5 +18,5 @@ Use template:
 - `RELEASE_NOTE_TEMPLATE.md`
 
 Latest release file:
-- `v2026.03.12-01.md`
+- `v2026.08.09-01.md`
 

@@ -153,7 +153,7 @@ Workflow: develop on `dev` → validate preview → merge to `main` → follow `
 Order of sections on the main dashboard (`frontend/src/app/page.tsx`):
 
 1. Header — branding, IST clock, manual refresh, build badge
-2. Index selector — Nifty 50, Bank Nifty, Sensex
+2. Index selector — Nifty 50, Bank Nifty, FinNifty, Sensex
 3. Market status banner — open/closed + holiday overlay
 4. Expiry banner — countdown to next expiry per index
 5. Stock header — live price + timestamp
@@ -174,14 +174,14 @@ These are intentional deferrals or unfinished items as of the latest commit:
 | Gap | Status |
 |-----|--------|
 | **No automated tests** | Manual smoke tests only (`py_compile`, `tsc --noEmit`, URL checks) |
-| **Auth docs stale** | `README.md` and `ARCHITECTURE.md` predate Supabase auth |
-| **FinNifty not in index selector** | API supports `^CNXFINSERVICE` but UI shows only 3 indices |
+| **Auth docs stale** | Resolved in `v2026.08.09-01` — `README.md` and `ARCHITECTURE.md` updated |
+| **FinNifty not in index selector** | Resolved in `v2026.08.09-01` |
 | **Checkpoint capture scope** | Auto-capture only for `^NSEI` and `^NSEBANK`; Sensex/FinNifty manual only |
-| **Dead/orphan components** | `CandlestickChart.tsx`, `AdvancedDecision.tsx`, `DecisionBadge.tsx` exist but unused |
+| **Dead/orphan components** | Resolved in `v2026.08.09-01` — removed unused chart/decision components |
 | **History & Settings pages** | Nav stubs with "Coming soon" |
 | **Mobile app** | `stock-intelligence-mobile/` is a placeholder README only |
-| **Unreleased changelog items** | Checkpoint automation docs in `CHANGELOG.md` `## Unreleased` not yet versioned |
-| **No CI for lint/build** | Only checkpoint-capture GitHub Actions workflow exists |
+| **Unreleased changelog items** | Resolved — versioned as `v2026.03.30-01` and `v2026.08.09-01` |
+| **No CI for lint/build** | Resolved in `v2026.08.09-01` — `stock-intelligence-ci.yml` added |
 | **Render cold start** | Free tier sleeps after ~15 min idle; first request takes ~30s |
 
 ---
@@ -190,16 +190,16 @@ These are intentional deferrals or unfinished items as of the latest commit:
 
 Prioritized by impact and dependency order. Each phase can be a separate `dev` → `main` release cycle.
 
-### Phase A — Stabilize & Document (Short term)
+### Phase A — Stabilize & Document (Short term) ✅ Completed in `v2026.08.09-01`
 
 **Goal:** Bring docs and tooling in line with what is actually deployed.
 
-- [ ] Update `README.md` and `ARCHITECTURE.md` for Supabase auth layer
-- [ ] Version and release current `CHANGELOG.md` unreleased items (`v2026.03.30-01` or similar)
-- [ ] Add `GEMINI_API_KEY` to `backend/.env.example`
-- [ ] Wire or remove dead components (`CandlestickChart`, `AdvancedDecision`, `DecisionBadge`)
-- [ ] Add FinNifty to `IndexSelector.tsx` (API already supports it)
-- [ ] Add GitHub Actions workflow for `tsc --noEmit` + `py_compile` on PR/push
+- [x] Update `README.md` and `ARCHITECTURE.md` for Supabase auth layer
+- [x] Version and release current `CHANGELOG.md` unreleased items (`v2026.03.30-01` + `v2026.08.09-01`)
+- [x] Add `GEMINI_API_KEY` to `backend/.env.example`
+- [x] Wire or remove dead components (`CandlestickChart`, `AdvancedDecision`, `DecisionBadge`)
+- [x] Add FinNifty to `IndexSelector.tsx` (API already supports it)
+- [x] Add GitHub Actions workflow for `tsc --noEmit` + `py_compile` on PR/push
 
 ### Phase B — Feature Completion (Medium term)
 
@@ -290,7 +290,8 @@ Open `http://localhost:3000`. With `AUTH_REQUIRED=false`, no login needed locall
 | `v2026.03.08-01` | Mar 8 | EOD checkpoint reconcile automation |
 | `v2026.03.12-01` | Mar 12 | Watchlist MVP; memory optimizations; polling throttle |
 | `v2026.03.13-01` | Mar 13 | Live NSE/BSE expiry calendar API |
-| *(unreleased)* | Mar 19–30 | Checkpoint automation, AI snapshots, expiry zero-hero, Supabase auth |
+| *(unreleased)* | Mar 19–30 | Checkpoint automation, AI snapshots, expiry zero-hero, Supabase auth → **`v2026.03.30-01`** |
+| `v2026.08.09-01` | Aug 9 | Phase A stabilization: auth docs, FinNifty selector, CI, cleanup |
 
 Full details: `CHANGELOG.md` and `releases/v*.md`.
 
