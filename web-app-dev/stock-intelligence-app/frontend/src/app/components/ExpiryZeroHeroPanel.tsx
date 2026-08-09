@@ -1,5 +1,6 @@
 "use client";
 
+import { useExpiryCalendar } from "../context/ExpiryCalendarContext";
 import { authedFetch } from "@/lib/authedFetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -65,7 +66,6 @@ interface ZeroHeroPlan {
 const EXPIRY_INDICES: ExpirySpec[] = [
     { abbr: "NIFTY", name: "Nifty 50", exchange: "NSE", expiryDay: 2, fallbackMode: "weekly" },
     { abbr: "BANKNIFTY", name: "Bank Nifty", exchange: "NSE", expiryDay: 2, fallbackMode: "monthly_last" },
-    { abbr: "FINNIFTY", name: "Fin Nifty", exchange: "NSE", expiryDay: 2, fallbackMode: "monthly_last" },
     { abbr: "SENSEX", name: "Sensex", exchange: "BSE", expiryDay: 4, fallbackMode: "weekly" },
 ];
 
@@ -264,39 +264,14 @@ function normalizePlan(raw: any, idx: ExpirySpec): ZeroHeroPlan {
 
 export default function ExpiryZeroHeroPanel() {
     const [istClock, setIstClock] = useState<IstClock>(getIstClock());
+    const { cardsByAbbr: calendarByIndex } = useExpiryCalendar();
     const [plansByIndex, setPlansByIndex] = useState<Record<string, ZeroHeroPlan>>({});
-    const [calendarByIndex, setCalendarByIndex] = useState<Record<string, ExpiryCalendarCard>>({});
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const inFlightRef = useRef(false);
 
     useEffect(() => {
         const timer = setInterval(() => setIstClock(getIstClock()), 60_000);
-        return () => clearInterval(timer);
-    }, []);
-
-    useEffect(() => {
-        const fetchCalendar = async () => {
-            try {
-                const res = await authedFetch("/api/v1/expiry-calendar", { cache: "no-store" });
-                if (!res.ok) return;
-                const data: ExpiryCalendarResponse = await res.json();
-                const cards = Array.isArray(data.cards) ? data.cards : [];
-                const nextMap: Record<string, ExpiryCalendarCard> = {};
-                for (const card of cards) {
-                    if (!card || typeof card.abbr !== "string" || typeof card.next_expiry !== "string") continue;
-                    nextMap[card.abbr.toUpperCase()] = card;
-                }
-                if (Object.keys(nextMap).length > 0) {
-                    setCalendarByIndex(nextMap);
-                }
-            } catch {
-                // Fallback to local weekday logic.
-            }
-        };
-
-        void fetchCalendar();
-        const timer = setInterval(() => void fetchCalendar(), 60 * 60 * 1000);
         return () => clearInterval(timer);
     }, []);
 
@@ -309,7 +284,9 @@ export default function ExpiryZeroHeroPanel() {
             if (live) {
                 const parsed = parseIsoDate(live.next_expiry);
                 if (parsed) {
-                    const days = Number.isFinite(live.days_to_next) ? live.days_to_next : daysBetween(today, parsed);
+                    const days = typeof live.days_to_next === "number"
+                        ? live.days_to_next
+                        : daysBetween(today, parsed);
                     return { ...idx, nextExpiry: parsed, days, isToday: Boolean(live.expiry_today) || days === 0 };
                 }
             }
@@ -373,7 +350,7 @@ export default function ExpiryZeroHeroPanel() {
         const timer = setInterval(() => {
             if (typeof document !== "undefined" && document.hidden) return;
             void fetchPlans();
-        }, 60_000);
+        }, 180_000);
         return () => clearInterval(timer);
     }, [fetchPlans, todayExpiries.length]);
 

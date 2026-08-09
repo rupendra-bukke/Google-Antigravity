@@ -133,7 +133,6 @@ export default function Dashboard() {
     const { selectedSymbol, setSelectedSymbol } = useSymbol();
     const { settings } = useSettings();
     const [data, setData] = useState<AnalyzeData | null>(null);
-    const [advancedData, setAdvancedData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lastRefresh, setLastRefresh] = useState<number>(0);
@@ -143,11 +142,9 @@ export default function Dashboard() {
             setIsLoading(true);
             setError(null);
 
-            // Fetch both endpoints in parallel
-            const [basicRes, advRes] = await Promise.all([
-                authedFetch(`${API_BASE}/v1/analyze?symbol=${encodeURIComponent(symbol)}`),
-                authedFetch(`${API_BASE}/v1/advanced-analyze?symbol=${encodeURIComponent(symbol)}`),
-            ]);
+            const basicRes = await authedFetch(
+                `${API_BASE}/v1/analyze?symbol=${encodeURIComponent(symbol)}&include_candles=false`
+            );
 
             if (!basicRes.ok) {
                 const errBody = await basicRes.json().catch(() => ({}));
@@ -158,11 +155,6 @@ export default function Dashboard() {
 
             const basicJson: AnalyzeData = await basicRes.json();
             setData(basicJson);
-
-            if (advRes.ok) {
-                const advJson = await advRes.json();
-                setAdvancedData(advJson);
-            }
 
             setLastRefresh(Date.now());
         } catch (err: unknown) {
@@ -186,7 +178,6 @@ export default function Dashboard() {
 
     const handleSymbolChange = (symbol: string) => {
         setData(null);
-        setAdvancedData(null);
         setSelectedSymbol(symbol);
     };
 
@@ -321,10 +312,7 @@ export default function Dashboard() {
             {/* ── Market Status Banner — uses frontend clock so it works even when backend is down ── */}
             {(() => {
                 const { isOpen, message } = getNseMarketStatus();
-                // Prefer backend's message when available (it may include holiday names)
-                const finalMsg = advancedData?.market_message || message;
-                const finalOpen = advancedData ? advancedData.is_market_open : isOpen;
-                return <MarketStatusBanner isOpen={finalOpen} message={finalMsg} />;
+                return <MarketStatusBanner isOpen={isOpen} message={message} />;
             })()}
 
             {/* ── Option Expiry Banner ── */}

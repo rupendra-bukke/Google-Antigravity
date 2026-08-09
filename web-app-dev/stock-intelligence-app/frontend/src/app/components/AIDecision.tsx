@@ -1,6 +1,7 @@
 "use client";
 
 import { authedFetch } from "@/lib/authedFetch";
+import { SYMBOL_LABELS } from "@/lib/indices";
 import { useState, useEffect, useCallback } from "react";
 
 type AnalysisStatus = "full" | "repaired" | "fallback";
@@ -408,6 +409,7 @@ export default function AIDecision({ symbol }: { symbol: string }) {
                 ? `Saved snapshot ${intraday.active_checkpoint_time_ist || "--"}`
                 : "Saved AI | News Context";
     const { shownId, pendingId } = getSnapshotTracker(data);
+    const label = SYMBOL_LABELS[symbol] || symbol;
 
     return (
         <div
@@ -422,7 +424,7 @@ export default function AIDecision({ symbol }: { symbol: string }) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.8rem", gap: "0.75rem", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
                     <span style={{ fontSize: "0.66rem", fontWeight: 800, color: isEOD ? "#fb923c" : "#818cf8", textTransform: "uppercase", letterSpacing: "0.16em" }}>
-                        {isEOD ? "NIFTY 50 | Next Day Outlook" : "NIFTY 50 | AI Price Action Analysis"}
+                        {isEOD ? `${label} | Next Day Outlook` : `${label} | AI Price Action Analysis`}
                     </span>
                     <span
                         style={{

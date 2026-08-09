@@ -4,6 +4,7 @@ import "./globals.css";
 import AppShell from "./components/AppShell";
 import { AuthProvider } from "./context/AuthContext";
 import { SettingsProvider } from "./context/SettingsContext";
+import { ExpiryCalendarProvider } from "./context/ExpiryCalendarContext";
 import { SymbolProvider } from "./context/SymbolContext";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -46,9 +47,11 @@ export default function RootLayout({
             <body className={`${inter.variable} font-sans relative`}>
                 <AuthProvider>
                     <SettingsProvider>
-                        <SymbolProvider>
-                            <AppShell>{children}</AppShell>
-                        </SymbolProvider>
+                        <ExpiryCalendarProvider>
+                            <SymbolProvider>
+                                <AppShell>{children}</AppShell>
+                            </SymbolProvider>
+                        </ExpiryCalendarProvider>
                     </SettingsProvider>
                 </AuthProvider>
             </body>

@@ -1,6 +1,7 @@
 "use client";
 
 import { authedFetch } from "@/lib/authedFetch";
+import { usePageVisible } from "@/hooks/usePageVisible";
 import { useState, useEffect, useCallback, useMemo } from "react";
 
 const API_BASE = "/api";
@@ -8,7 +9,6 @@ import { SYMBOL_LABELS } from "@/lib/indices";
 
 const TIMELINE_LABELS: Record<string, string> = {
     ...SYMBOL_LABELS,
-    "^CNXFINSERVICE": "Fin Nifty",
 };
 
 interface CheckpointData {
@@ -538,11 +538,13 @@ export default function CheckpointBoard({
     const [boardDate, setBoardDate] = useState<string | null>(null);
     const timelineLabel = TIMELINE_LABELS[symbol] || symbol;
     const isHistory = mode === "history";
+    const pageVisible = usePageVisible();
 
     const fetchPanels = useCallback(async () => {
         try {
             const params = new URLSearchParams({ symbol });
             if (date) params.set("date", date);
+            if (isHistory) params.set("allow_catchup", "false");
             const res = await authedFetch(`${API_BASE}/v1/checkpoints?${params.toString()}`);
             if (!res.ok) return;
             const json = await res.json();
@@ -567,6 +569,7 @@ export default function CheckpointBoard({
 
     useEffect(() => {
         const run = () => {
+            if (!pageVisible) return;
             if (!isHistory && typeof document !== "undefined" && document.hidden) return;
             fetchPanels();
         };
@@ -574,7 +577,7 @@ export default function CheckpointBoard({
         if (isHistory) return;
         const interval = setInterval(run, catchingUp ? 30_000 : 120_000);
         return () => clearInterval(interval);
-    }, [fetchPanels, catchingUp, isHistory]);
+    }, [fetchPanels, catchingUp, isHistory, pageVisible]);
 
     const latestIndex = panels.length - 1 - [...panels].reverse().findIndex((p) => p.data);
     const effectiveLatestIndex = latestIndex >= 0 ? latestIndex : -1;

@@ -40,7 +40,7 @@ router = APIRouter(prefix="/api/v1/checkpoints", tags=["checkpoints"])
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
-SYMBOLS = ["^NSEI", "^NSEBANK"]
+SYMBOLS = ["^NSEI", "^NSEBANK", "^BSESN"]
 
 
 def _require_cron_secret(x_checkpoint_cron_secret: str | None) -> None:
@@ -151,6 +151,7 @@ async def get_checkpoints(
     background_tasks: BackgroundTasks,
     symbol: str = Query(default="^NSEI"),
     date: str = Query(default=None),
+    allow_catchup: bool = Query(default=True),
 ):
     """
     Return all 7 checkpoint snapshots for a given day.
@@ -172,7 +173,7 @@ async def get_checkpoints(
     is_market_day = _is_nse_trading_day(now_ist.date())
     missing_ids = []
 
-    if is_today and is_market_day:
+    if allow_catchup and is_today and is_market_day:
         current_hhmm = now_ist.strftime("%H%M")
         missing_ids = [
             p["id"] for p in panels

@@ -180,7 +180,7 @@ export default function WatchlistPage() {
 
     useEffect(() => {
         if (!selectedSymbol) return;
-        fetchFocus(selectedSymbol, false, true);
+        fetchFocus(selectedSymbol, false, false);
     }, [selectedSymbol, fetchFocus]);
 
     useEffect(() => {

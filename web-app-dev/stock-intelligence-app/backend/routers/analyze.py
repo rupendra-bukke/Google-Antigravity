@@ -397,8 +397,10 @@ async def _build_analyze_payload(sym: str, include_candles: bool = True, max_can
 async def list_gemini_models():
     """
     Diagnostic: Lists all Gemini models available for the configured API key.
-    Visit /api/v1/gemini-models to see exact model IDs to use.
+    Disabled in production to avoid accidental API usage.
     """
+    if settings.app_env == "production":
+        raise HTTPException(status_code=404, detail="Not found")
     import httpx
     from config import settings
     api_key = settings.gemini_api_key
@@ -424,8 +426,10 @@ async def list_gemini_models():
 async def gemini_test():
     """
     Diagnostic: Calls Gemini with a simple test prompt and returns the RAW response text.
-    Use this to see exactly what format Gemini returns (JSON, markdown-wrapped, plain text etc.)
+    Disabled in production to avoid accidental API usage.
     """
+    if settings.app_env == "production":
+        raise HTTPException(status_code=404, detail="Not found")
     import httpx
     from config import settings
     from services.ai_decision import GEMINI_MODELS, GEMINI_BASE
@@ -502,12 +506,15 @@ def calculate_indicator_signals(price, indicators):
 
 
 @router.get("/analyze", response_model=AnalyzeResponse)
-async def analyze(symbol: str = Query(default=None)):
+async def analyze(
+    symbol: str = Query(default=None),
+    include_candles: bool = Query(default=False),
+):
     """Analyze endpoint using 3m timeframe for core indicators and signals."""
     sym = symbol or settings.default_symbol
 
     try:
-        payload = await _build_analyze_payload(sym)
+        payload = await _build_analyze_payload(sym, include_candles=include_candles)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:

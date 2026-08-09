@@ -1,6 +1,6 @@
 "use client";
 
-import { authedFetch } from "@/lib/authedFetch";
+import { useExpiryCalendar } from "../context/ExpiryCalendarContext";
 import { useEffect, useMemo, useState } from "react";
 
 interface IndexConfig {
@@ -56,17 +56,6 @@ const INDICES: IndexConfig[] = [
         bg: "rgba(6,182,212,0.07)",
         border: "rgba(6,182,212,0.18)",
         glow: "rgba(6,182,212,0.25)",
-    },
-    {
-        name: "Fin Nifty",
-        abbr: "FINNIFTY",
-        exchange: "NSE",
-        expiryDay: 2,
-        fallbackMode: "monthly_last",
-        color: "#34d399",
-        bg: "rgba(16,185,129,0.07)",
-        border: "rgba(16,185,129,0.18)",
-        glow: "rgba(16,185,129,0.25)",
     },
     {
         name: "Sensex",
@@ -148,35 +137,10 @@ function parseIsoDate(value: string): Date | null {
 
 export default function ExpiryBanner() {
     const [today, setToday] = useState<Date>(getISTToday);
-    const [liveByIndex, setLiveByIndex] = useState<Record<string, ExpiryCalendarCard>>({});
+    const { cardsByAbbr: liveByIndex } = useExpiryCalendar();
 
     useEffect(() => {
         const timer = setInterval(() => setToday(getISTToday()), 60_000);
-        return () => clearInterval(timer);
-    }, []);
-
-    useEffect(() => {
-        const fetchCalendar = async () => {
-            try {
-                const res = await authedFetch("/api/v1/expiry-calendar", { cache: "no-store" });
-                if (!res.ok) return;
-                const data: ExpiryCalendarResponse = await res.json();
-                const cards = Array.isArray(data.cards) ? data.cards : [];
-                const nextMap: Record<string, ExpiryCalendarCard> = {};
-                for (const card of cards) {
-                    if (!card || typeof card.abbr !== "string" || typeof card.next_expiry !== "string") continue;
-                    nextMap[card.abbr.toUpperCase()] = card;
-                }
-                if (Object.keys(nextMap).length > 0) {
-                    setLiveByIndex(nextMap);
-                }
-            } catch {
-                // Silent fallback to local weekday rules.
-            }
-        };
-
-        void fetchCalendar();
-        const timer = setInterval(() => void fetchCalendar(), 60 * 60 * 1000);
         return () => clearInterval(timer);
     }, []);
 
@@ -187,7 +151,9 @@ export default function ExpiryBanner() {
                 if (live) {
                     const expiry = parseIsoDate(live.next_expiry);
                     if (expiry) {
-                        const days = Number.isFinite(live.days_to_next) ? live.days_to_next : daysBetween(today, expiry);
+                        const days = typeof live.days_to_next === "number"
+                            ? live.days_to_next
+                            : daysBetween(today, expiry);
                         const monthly = (live.expiry_type || "").toUpperCase() === "MONTHLY";
                         return { ...idx, expiry, days, monthly };
                     }
