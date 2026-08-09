@@ -4,6 +4,10 @@ This file defines which docs are active source-of-truth and which are archive/hi
 
 ## Active Docs (Use These)
 
+0. `PROJECT_REFERENCE_AND_ROADMAP.md`
+- Purpose: single re-orientation doc — what was built, current state, gaps, and future roadmap.
+- Use when: returning after time away, onboarding yourself, planning next work, or explaining the project to someone new.
+
 1. `README.md`
 - Purpose: project entry point, setup, architecture summary, API overview.
 - Use when: onboarding, setup, quick understanding of current app.
@@ -53,6 +57,7 @@ This file defines which docs are active source-of-truth and which are archive/hi
 
 ## Recommended Reference Order
 
+0. `PROJECT_REFERENCE_AND_ROADMAP.md`
 1. `BEGINNER_SYSTEM_GUIDE.md`
 2. `WORKFLOW_FROM_SCRATCH.md`
 3. `FLOW_QUICK_REF.md`
