@@ -3,6 +3,7 @@
 import { authedFetch } from "@/lib/authedFetch";
 import { useState, useEffect, useCallback } from "react";
 import { useSymbol } from "./context/SymbolContext";
+import { useSettings } from "./context/SettingsContext";
 import StockHeader from "./components/StockHeader";
 import IndexSelector from "./components/IndexSelector";
 
@@ -130,6 +131,7 @@ function getNseMarketStatus(): { isOpen: boolean; message: string } {
 
 export default function Dashboard() {
     const { selectedSymbol, setSelectedSymbol } = useSymbol();
+    const { settings } = useSettings();
     const [data, setData] = useState<AnalyzeData | null>(null);
     const [advancedData, setAdvancedData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -178,9 +180,9 @@ export default function Dashboard() {
             fetchData(selectedSymbol);
         };
         run();
-        const interval = setInterval(run, 180_000);
+        const interval = setInterval(run, settings.dashboardRefreshSec * 1000);
         return () => clearInterval(interval);
-    }, [selectedSymbol, fetchData]);
+    }, [selectedSymbol, fetchData, settings.dashboardRefreshSec]);
 
     const handleSymbolChange = (symbol: string) => {
         setData(null);

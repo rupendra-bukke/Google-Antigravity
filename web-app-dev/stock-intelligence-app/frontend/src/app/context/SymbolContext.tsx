@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { loadUserSettings } from "@/lib/userSettings";
 
 interface SymbolContextType {
     selectedSymbol: string;
@@ -14,6 +15,11 @@ const SymbolContext = createContext<SymbolContextType>({
 
 export function SymbolProvider({ children }: { children: ReactNode }) {
     const [selectedSymbol, setSelectedSymbol] = useState("^NSEI");
+
+    useEffect(() => {
+        setSelectedSymbol(loadUserSettings().defaultSymbol);
+    }, []);
+
     return (
         <SymbolContext.Provider value={{ selectedSymbol, setSelectedSymbol }}>
             {children}

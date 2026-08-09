@@ -24,6 +24,8 @@
 | Login | [Dev Login](https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/login) | [Prod Login](https://trade-craft-rb.vercel.app/login) |
 | Dashboard | [Dev Dashboard](https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/) | [Prod Dashboard](https://trade-craft-rb.vercel.app/) |
 | Watchlist | [Dev Watchlist](https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/watchlist) | [Prod Watchlist](https://trade-craft-rb.vercel.app/watchlist) |
+| History | [Dev History](https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/history) | [Prod History](https://trade-craft-rb.vercel.app/history) |
+| Settings | [Dev Settings](https://trade-craft-app-git-dev-rupendra-bukkes-projects.vercel.app/settings) | [Prod Settings](https://trade-craft-rb.vercel.app/settings) |
 
 ---
 

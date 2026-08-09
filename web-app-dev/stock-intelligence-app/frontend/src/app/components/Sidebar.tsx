@@ -21,8 +21,8 @@ const navItems: Array<{
 }> = [
     { label: "Dashboard", icon: "📊", id: "dashboard", path: "/" },
     { label: "Watchlist", icon: "👁️", id: "watchlist", path: "/watchlist" },
-    { label: "History", icon: "📈", id: "history", comingSoon: true },
-    { label: "Settings", icon: "⚙️", id: "settings", comingSoon: true },
+    { label: "History", icon: "📈", id: "history", path: "/history" },
+    { label: "Settings", icon: "⚙️", id: "settings", path: "/settings" },
 ];
 
 export default function Sidebar() {
@@ -35,7 +35,14 @@ export default function Sidebar() {
     const [showToast, setShowToast] = useState<string | null>(null);
 
     const meta = SYMBOL_META[selectedSymbol] || { name: selectedSymbol, initial: "?" };
-    const activeTab = pathname === "/watchlist" ? "watchlist" : "dashboard";
+    const activeTab =
+        pathname === "/watchlist"
+            ? "watchlist"
+            : pathname === "/history"
+              ? "history"
+              : pathname === "/settings"
+                ? "settings"
+                : "dashboard";
 
     const handleNavClick = (id: string, comingSoon?: boolean, path?: string) => {
         if (comingSoon) {

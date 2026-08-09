@@ -163,7 +163,7 @@ Order of sections on the main dashboard (`frontend/src/app/page.tsx`):
 9. Checkpoint timeline — 7 intraday cards + win/loss review
 10. Footer — last refresh time
 
-Sidebar navigation: **Dashboard** (live), **Watchlist** (live), **History** (coming soon), **Settings** (coming soon).
+Sidebar navigation: **Dashboard** (live), **Watchlist** (live), **History** (live), **Settings** (live).
 
 ---
 

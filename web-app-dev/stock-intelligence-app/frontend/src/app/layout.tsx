@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import AppShell from "./components/AppShell";
 import { AuthProvider } from "./context/AuthContext";
+import { SettingsProvider } from "./context/SettingsContext";
 import { SymbolProvider } from "./context/SymbolContext";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -44,9 +45,11 @@ export default function RootLayout({
         <html lang="en" className="dark">
             <body className={`${inter.variable} font-sans relative`}>
                 <AuthProvider>
-                    <SymbolProvider>
-                        <AppShell>{children}</AppShell>
-                    </SymbolProvider>
+                    <SettingsProvider>
+                        <SymbolProvider>
+                            <AppShell>{children}</AppShell>
+                        </SymbolProvider>
+                    </SettingsProvider>
                 </AuthProvider>
             </body>
         </html>

@@ -522,29 +522,40 @@ function EvalResultPanel({ rows, boardDate }: { rows: EvalRow[]; boardDate: stri
     );
 }
 
-export default function CheckpointBoard({ symbol }: { symbol: string }) {
+export default function CheckpointBoard({
+    symbol,
+    date = null,
+    mode = "live",
+}: {
+    symbol: string;
+    date?: string | null;
+    mode?: "live" | "history";
+}) {
     const [panels, setPanels] = useState<Panel[]>([]);
     const [eodClose, setEodClose] = useState<EodCloseData | null>(null);
     const [loading, setLoading] = useState(true);
     const [catchingUp, setCatchingUp] = useState(false);
     const [boardDate, setBoardDate] = useState<string | null>(null);
     const timelineLabel = TIMELINE_LABELS[symbol] || symbol;
+    const isHistory = mode === "history";
 
     const fetchPanels = useCallback(async () => {
         try {
-            const res = await authedFetch(`${API_BASE}/v1/checkpoints?symbol=${encodeURIComponent(symbol)}`);
+            const params = new URLSearchParams({ symbol });
+            if (date) params.set("date", date);
+            const res = await authedFetch(`${API_BASE}/v1/checkpoints?${params.toString()}`);
             if (!res.ok) return;
             const json = await res.json();
             setPanels(json.panels || []);
             setEodClose(json.eod_close ?? null);
             setBoardDate(json.date ?? null);
-            setCatchingUp(json.catchup_triggered === true);
+            setCatchingUp(!isHistory && json.catchup_triggered === true);
         } catch (err) {
             console.error("Failed to fetch checkpoints:", err);
         } finally {
             setLoading(false);
         }
-    }, [symbol]);
+    }, [symbol, date, isHistory]);
 
     useEffect(() => {
         setPanels([]);
@@ -552,17 +563,18 @@ export default function CheckpointBoard({ symbol }: { symbol: string }) {
         setBoardDate(null);
         setCatchingUp(false);
         setLoading(true);
-    }, [symbol]);
+    }, [symbol, date]);
 
     useEffect(() => {
         const run = () => {
-            if (typeof document !== "undefined" && document.hidden) return;
+            if (!isHistory && typeof document !== "undefined" && document.hidden) return;
             fetchPanels();
         };
         run();
+        if (isHistory) return;
         const interval = setInterval(run, catchingUp ? 30_000 : 120_000);
         return () => clearInterval(interval);
-    }, [fetchPanels, catchingUp]);
+    }, [fetchPanels, catchingUp, isHistory]);
 
     const latestIndex = panels.length - 1 - [...panels].reverse().findIndex((p) => p.data);
     const effectiveLatestIndex = latestIndex >= 0 ? latestIndex : -1;
@@ -573,7 +585,7 @@ export default function CheckpointBoard({ symbol }: { symbol: string }) {
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1.5rem" }}>
                 <div style={{ width: "3px", height: "18px", background: "#d4af37", borderRadius: "2px" }} />
                 <h2 style={{ fontSize: "0.75rem", fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.2em", margin: 0 }}>
-                    {timelineLabel} Market Timeline
+                    {isHistory ? "Historical Timeline" : `${timelineLabel} Market Timeline`}
                 </h2>
                 <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, rgba(148,163,184,0.1), transparent)" }} />
                 {catchingUp ? (
