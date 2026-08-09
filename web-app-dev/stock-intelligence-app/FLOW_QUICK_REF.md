@@ -12,6 +12,7 @@ Project path:
 ## Checkpoint Automation
 
 - Repo-root workflow: `.github/workflows/stock-intelligence-checkpoint-capture.yml`
+- Keepalive workflow: `.github/workflows/stock-intelligence-keepalive.yml` (Mon/Wed/Fri — pings Render, Supabase Auth, Upstash Redis)
 - Render env key on both services: `CHECKPOINT_CRON_SECRET`
 - GitHub repository secrets required:
   - `CHECKPOINT_CRON_DEV_BASE_URL`

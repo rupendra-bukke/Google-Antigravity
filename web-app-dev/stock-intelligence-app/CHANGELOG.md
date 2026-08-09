@@ -11,7 +11,9 @@ Version format:
 
 ## Unreleased
 
-_No unreleased changes._
+### Added
+- GitHub Actions keepalive workflow (Mon/Wed/Fri) to ping Render, Supabase Auth, and Upstash Redis during long breaks from manual app usage.
+- Secure backend endpoint `GET /health/keepalive` (cron secret) for free-tier service warm-up.
 
 ## [v2026.08.09-03] - 2026-08-09
 

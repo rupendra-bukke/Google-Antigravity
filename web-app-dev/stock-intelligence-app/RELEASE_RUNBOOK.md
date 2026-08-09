@@ -82,7 +82,7 @@ This document captures the DEV -> PROD release flow for `stock-intelligence-app`
   - `BACKEND_URL`
   - `NEXT_PUBLIC_APP_VERSION`
   - `NEXT_PUBLIC_APP_CHANNEL`
-- GitHub Actions repo secrets for repo-root workflow `.github/workflows/stock-intelligence-checkpoint-capture.yml`:
+- GitHub Actions repo secrets for repo-root workflows `.github/workflows/stock-intelligence-checkpoint-capture.yml` and `.github/workflows/stock-intelligence-keepalive.yml`:
   - `CHECKPOINT_CRON_DEV_BASE_URL` = dev backend root URL
   - `CHECKPOINT_CRON_DEV_SECRET` = same value as dev backend `CHECKPOINT_CRON_SECRET`
   - `CHECKPOINT_CRON_PROD_BASE_URL` = prod backend root URL
@@ -91,6 +91,11 @@ This document captures the DEV -> PROD release flow for `stock-intelligence-app`
 
 5.1 Current unattended checkpoint automation reference
 - Workflow file: repo-root `.github/workflows/stock-intelligence-checkpoint-capture.yml`
+- Keepalive workflow: repo-root `.github/workflows/stock-intelligence-keepalive.yml`
+  - Schedule: Mon/Wed/Fri 04:15 UTC
+  - Endpoint: `GET /health/keepalive` with header `X-Checkpoint-Cron-Secret`
+  - Reuses the same four `CHECKPOINT_CRON_*` repository secrets (no extra setup)
+  - Manual test: GitHub Actions → **Stock Intelligence Keepalive** → **Run workflow**
 - GitHub Actions secrets must be added under `Repository secrets`, not `Environment secrets`.
 - Current Render env naming stays the same in both services:
   - `stock-intelligence-api-dev` -> `CHECKPOINT_CRON_SECRET`

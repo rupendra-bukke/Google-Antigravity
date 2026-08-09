@@ -316,6 +316,9 @@ Details: [PROJECT_REFERENCE_AND_ROADMAP.md](./PROJECT_REFERENCE_AND_ROADMAP.md)
 |----------|------|---------|
 | Stock Intelligence CI | `.github/workflows/stock-intelligence-ci.yml` | Python + TypeScript checks on push/PR |
 | Checkpoint Capture | `.github/workflows/stock-intelligence-checkpoint-capture.yml` | Unattended intraday timeline snapshots |
+| Keepalive | `.github/workflows/stock-intelligence-keepalive.yml` | Mon/Wed/Fri ping of Render + Supabase + Upstash (no new secrets) |
+
+The keepalive workflow reuses the same four `CHECKPOINT_CRON_*` GitHub secrets. It calls `GET /health/keepalive` on each Render backend, which pings Supabase Auth and touches Upstash Redis using env vars already configured on Render.
 
 ---
 

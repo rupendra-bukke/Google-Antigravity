@@ -1,11 +1,12 @@
 """FastAPI application entry point with checkpoint scheduler."""
 
+import hmac
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
@@ -21,6 +22,7 @@ from routers.checkpoints import (
     run_checkpoint_for_all_symbols,
 )
 from services.market_data import is_nse_trading_day
+from services.keepalive import ping_supabase_auth, ping_upstash_redis
 
 IST = timezone(timedelta(hours=5, minutes=30))
 scheduler = AsyncIOScheduler(timezone="Asia/Kolkata")
@@ -191,6 +193,16 @@ app.include_router(analyze_router)
 app.include_router(checkpoints_router)
 
 
+def _require_cron_secret(x_checkpoint_cron_secret: str | None) -> None:
+    expected = (settings.checkpoint_cron_secret or "").strip()
+    provided = (x_checkpoint_cron_secret or "").strip()
+
+    if not expected:
+        raise HTTPException(status_code=503, detail="CHECKPOINT_CRON_SECRET is not configured.")
+    if not provided or not hmac.compare_digest(provided, expected):
+        raise HTTPException(status_code=401, detail="Invalid checkpoint cron secret.")
+
+
 @app.get("/health", tags=["system"])
 async def health_check():
     now_ist = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S IST")
@@ -208,4 +220,33 @@ async def health_check():
             for job in scheduler.get_jobs()
         ],
         "server_time_ist": now_ist,
+    }
+
+
+@app.get("/health/keepalive", tags=["system"])
+async def health_keepalive(
+    x_checkpoint_cron_secret: str | None = Header(default=None, alias="X-Checkpoint-Cron-Secret"),
+):
+    """
+    Secure keepalive for GitHub Actions.
+
+    Wakes Render, pings Supabase Auth, and touches Upstash Redis so free-tier
+    services stay active during long breaks from manual app usage.
+    """
+    _require_cron_secret(x_checkpoint_cron_secret)
+
+    supabase = await ping_supabase_auth()
+    upstash = await ping_upstash_redis()
+    checks = [supabase, upstash]
+    required_checks = [item for item in checks if not item.get("skipped")]
+    ok = all(item.get("ok") for item in required_checks) if required_checks else False
+
+    return {
+        "status": "ok" if ok else "degraded",
+        "purpose": "free-tier keepalive",
+        "server_time_ist": datetime.now(IST).isoformat(),
+        "checks": {
+            "supabase_auth": supabase,
+            "upstash_redis": upstash,
+        },
     }
