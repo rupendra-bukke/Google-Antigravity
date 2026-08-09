@@ -206,9 +206,9 @@ Prioritized by impact and dependency order. Each phase can be a separate `dev` �
 
 - [x] **History page** — browse past checkpoint timelines by date
 - [x] **Settings page** — default index + dashboard refresh interval (browser localStorage)
-- [ ] **Extend checkpoint capture** — add Sensex (`^BSESN`) to scheduler
-- [ ] **Re-enable candlestick chart** — optional toggle on dashboard (lazy-load to protect free tier)
-- [ ] **Watchlist expansion** — add more stocks beyond `JPPOWER.NS`; user-editable watchlist stored in Supabase DB
+- [x] **Extend checkpoint capture** — add Sensex (`^BSESN`) to scheduler
+- [x] **Re-enable candlestick chart** — optional toggle on dashboard (lazy-load to protect free tier)
+- [x] **Watchlist expansion** — more stocks + user-editable watchlist via browser localStorage (Supabase DB deferred to Phase C)
 - [ ] **Alerting** — email or push when AI signal changes at a checkpoint (Supabase Edge Functions or similar)
 
 ### Phase C — Data & AI Improvements (Medium term)

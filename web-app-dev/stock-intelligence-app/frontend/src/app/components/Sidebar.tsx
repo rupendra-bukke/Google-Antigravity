@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { useSymbol } from "../context/SymbolContext";
 
-import { SYMBOL_LABELS } from "@/lib/indices";
+import BuildBadge from "./BuildBadge";
 
 const SYMBOL_META: Record<string, { name: string; initial: string }> = {
     "^NSEI": { name: "NIFTY 50", initial: "N" },
@@ -161,7 +161,10 @@ export default function Sidebar() {
                     </div>
                 </div>
 
-                <div className="p-4 pt-0">
+                <div className="p-4 pt-0 space-y-3">
+                    <div className="px-4">
+                        <BuildBadge className="w-full text-center" />
+                    </div>
                     <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-gray-800/20 to-gray-800/40 text-center border border-gray-800/30">
                         <p className="text-[9px] text-gray-600 font-semibold uppercase tracking-widest">Designed by</p>
                         <p className="text-[11px] font-bold bg-gradient-to-r from-brand-400 to-emerald-400 bg-clip-text text-transparent mt-0.5">

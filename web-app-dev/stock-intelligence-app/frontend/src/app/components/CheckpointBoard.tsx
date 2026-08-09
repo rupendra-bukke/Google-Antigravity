@@ -3,6 +3,7 @@
 import { authedFetch } from "@/lib/authedFetch";
 import { onDashboardRefresh } from "@/lib/dashboardRefresh";
 import { usePageVisible } from "@/hooks/usePageVisible";
+import { useSettings } from "../context/SettingsContext";
 import { useState, useEffect, useCallback, useMemo } from "react";
 
 const API_BASE = "/api";
@@ -540,6 +541,8 @@ export default function CheckpointBoard({
     const timelineLabel = TIMELINE_LABELS[symbol] || symbol;
     const isHistory = mode === "history";
     const pageVisible = usePageVisible();
+    const { settings } = useSettings();
+    const refreshMs = (catchingUp ? settings.checkpointCatchupSec : settings.checkpointRefreshSec) * 1000;
 
     const fetchPanels = useCallback(async () => {
         try {
@@ -576,9 +579,9 @@ export default function CheckpointBoard({
         };
         run();
         if (isHistory) return;
-        const interval = setInterval(run, catchingUp ? 30_000 : 120_000);
+        const interval = setInterval(run, refreshMs);
         return () => clearInterval(interval);
-    }, [fetchPanels, catchingUp, isHistory, pageVisible]);
+    }, [fetchPanels, catchingUp, isHistory, pageVisible, refreshMs]);
 
     useEffect(() => {
         if (isHistory) return;

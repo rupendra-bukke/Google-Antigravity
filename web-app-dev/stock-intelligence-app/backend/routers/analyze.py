@@ -110,6 +110,11 @@ MARKET_FOCUS_OPTIONS = [
     {"symbol": "^NSEBANK", "label": "BANK NIFTY", "kind": "index"},
     {"symbol": "^BSESN", "label": "SENSEX", "kind": "index"},
     {"symbol": "JPPOWER.NS", "label": "JAIPRAKASH POWER", "kind": "stock"},
+    {"symbol": "RELIANCE.NS", "label": "RELIANCE", "kind": "stock"},
+    {"symbol": "TCS.NS", "label": "TCS", "kind": "stock"},
+    {"symbol": "HDFCBANK.NS", "label": "HDFC BANK", "kind": "stock"},
+    {"symbol": "INFY.NS", "label": "INFOSYS", "kind": "stock"},
+    {"symbol": "SBIN.NS", "label": "SBI", "kind": "stock"},
 ]
 MARKET_FOCUS_BY_SYMBOL = {item["symbol"]: item for item in MARKET_FOCUS_OPTIONS}
 ANALYZE_CACHE_KEY_PREFIX = "analyze_v2:"

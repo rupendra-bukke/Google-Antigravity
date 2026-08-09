@@ -11,7 +11,15 @@ Version format:
 
 ## Unreleased
 
-_No unreleased changes._
+### Added
+- Shared build badge in sidebar (visible on all authenticated pages).
+- Settings: checkpoint timeline refresh intervals, catch-up polling, candlestick chart toggle, and watchlist symbol picker.
+- Optional lazy-loaded candlestick chart on dashboard (`Show chart` toggle; candles fetched only when enabled).
+- Watchlist pool expanded with RELIANCE, TCS, HDFC Bank, Infosys, and SBI.
+
+### Changed
+- Checkpoint board polling now respects user settings instead of hardcoded 120s / 30s.
+- Watchlist page filters symbols based on Settings preferences (localStorage, free-tier friendly).
 
 ## [v2026.08.09-01] - 2026-08-09
 

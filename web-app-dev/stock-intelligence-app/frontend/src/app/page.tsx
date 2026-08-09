@@ -1,11 +1,13 @@
 "use client";
 
 import { authedFetch } from "@/lib/authedFetch";
+import dynamic from "next/dynamic";
 import { useState, useEffect, useCallback } from "react";
 import { useSymbol } from "./context/SymbolContext";
 import { useSettings } from "./context/SettingsContext";
 import StockHeader from "./components/StockHeader";
 import IndexSelector from "./components/IndexSelector";
+import BuildBadge from "./components/BuildBadge";
 
 import AIDecision from "./components/AIDecision";
 import ExpiryZeroHeroPanel from "./components/ExpiryZeroHeroPanel";
@@ -15,6 +17,15 @@ import DashboardSyncBar from "./components/DashboardSyncBar";
 import ISTClock from "./components/ISTClock";
 import ExpiryBanner from "./components/ExpiryBanner";
 import { triggerDashboardRefresh } from "@/lib/dashboardRefresh";
+
+const CandlestickChart = dynamic(() => import("./components/CandlestickChart"), {
+    ssr: false,
+    loading: () => (
+        <div className="glass-card p-6 h-[400px] flex items-center justify-center text-sm text-gray-500">
+            Loading chart module…
+        </div>
+    ),
+});
 
 
 /* ── Types ── */
@@ -66,18 +77,6 @@ interface AnalyzeData {
 
 // Use relative path — proxied to backend via next.config.mjs rewrites
 const API_BASE = "/api";
-const APP_BRANCH =
-    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF ||
-    process.env.NEXT_PUBLIC_GIT_BRANCH ||
-    "";
-const APP_CHANNEL_RAW = process.env.NEXT_PUBLIC_APP_CHANNEL || APP_BRANCH;
-const APP_CHANNEL = /^(main|master|prod|production)$/i.test(APP_CHANNEL_RAW) ? "Main" : "Dev";
-const APP_GIT_SHA =
-    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ||
-    process.env.NEXT_PUBLIC_GIT_SHA ||
-    "";
-const BUILD_COMMIT = APP_GIT_SHA ? APP_GIT_SHA.slice(0, 7).toUpperCase() : "LOCAL";
-const BUILD_LABEL = `${APP_CHANNEL} | ${BUILD_COMMIT}`;
 
 /* ── Frontend NSE Market Status (does NOT need backend) ── */
 function getNseMarketStatus(): { isOpen: boolean; message: string } {
@@ -133,8 +132,10 @@ function getNseMarketStatus(): { isOpen: boolean; message: string } {
 
 export default function Dashboard() {
     const { selectedSymbol, setSelectedSymbol } = useSymbol();
-    const { settings } = useSettings();
+    const { settings, updateSettings } = useSettings();
     const [data, setData] = useState<AnalyzeData | null>(null);
+    const [chartCandles, setChartCandles] = useState<OhlcBar[]>([]);
+    const [chartLoading, setChartLoading] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -178,10 +179,29 @@ export default function Dashboard() {
         }
     }, []);
 
+    const fetchChartData = useCallback(async (symbol: string) => {
+        setChartLoading(true);
+        try {
+            const res = await authedFetch(
+                `${API_BASE}/v1/analyze?symbol=${encodeURIComponent(symbol)}&include_candles=true`
+            );
+            if (!res.ok) return;
+            const json: AnalyzeData = await res.json();
+            setChartCandles(json.candles || []);
+        } catch {
+            setChartCandles([]);
+        } finally {
+            setChartLoading(false);
+        }
+    }, []);
+
     const handleSyncAll = useCallback(() => {
         void fetchData(selectedSymbol, { silent: true });
+        if (settings.showCandlestickChart) {
+            void fetchChartData(selectedSymbol);
+        }
         triggerDashboardRefresh();
-    }, [fetchData, selectedSymbol]);
+    }, [fetchData, fetchChartData, selectedSymbol, settings.showCandlestickChart]);
 
     useEffect(() => {
         const run = () => {
@@ -193,9 +213,26 @@ export default function Dashboard() {
         return () => clearInterval(interval);
     }, [selectedSymbol, fetchData, settings.dashboardRefreshSec]);
 
+    useEffect(() => {
+        setChartCandles([]);
+        if (!settings.showCandlestickChart) return;
+        void fetchChartData(selectedSymbol);
+    }, [selectedSymbol, settings.showCandlestickChart, fetchChartData]);
+
     const handleSymbolChange = (symbol: string) => {
         setData(null);
+        setChartCandles([]);
         setSelectedSymbol(symbol);
+    };
+
+    const toggleChart = () => {
+        const next = !settings.showCandlestickChart;
+        updateSettings({ showCandlestickChart: next });
+        if (next) {
+            void fetchChartData(selectedSymbol);
+        } else {
+            setChartCandles([]);
+        }
     };
 
     const loading = isLoading && !data;
@@ -259,8 +296,19 @@ export default function Dashboard() {
             {/* ── Controls Row ── */}
             <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="px-2.5 py-1 rounded-md border border-brand-500/20 bg-brand-500/5 text-[10px] font-bold tracking-[0.08em] uppercase text-brand-300">
-                        Build: {BUILD_LABEL}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <BuildBadge className="md:hidden" />
+                        <button
+                            type="button"
+                            onClick={toggleChart}
+                            className={`rounded-xl border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] ${
+                                settings.showCandlestickChart
+                                    ? "border-brand-500/40 bg-brand-500/15 text-brand-300"
+                                    : "border-white/10 bg-gray-900/40 text-gray-400"
+                            }`}
+                        >
+                            {settings.showCandlestickChart ? "Hide chart" : "Show chart"}
+                        </button>
                     </div>
                     <IndexSelector
                         selected={selectedSymbol}
@@ -321,6 +369,10 @@ export default function Dashboard() {
             {/* ── AI Price Action Decision ── */}
             <AIDecision symbol={selectedSymbol} />
             <ExpiryZeroHeroPanel />
+
+            {settings.showCandlestickChart && (
+                <CandlestickChart candles={chartCandles} isLoading={chartLoading} />
+            )}
 
             {/* ── Compact Indicators Strip ── */}
             <div>

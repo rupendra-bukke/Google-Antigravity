@@ -1,6 +1,7 @@
 "use client";
 
 import { authedFetch } from "@/lib/authedFetch";
+import { useSettings } from "../context/SettingsContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type AssetKind = "index" | "stock";
@@ -117,6 +118,7 @@ function confidenceColor(confidence: Confidence): string {
 }
 
 export default function WatchlistPage() {
+    const { settings } = useSettings();
     const [options, setOptions] = useState<FocusOption[]>([]);
     const [selectedSymbol, setSelectedSymbol] = useState<string>("");
     const [note, setNote] = useState<string>("");
@@ -125,9 +127,14 @@ export default function WatchlistPage() {
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const visibleOptions = useMemo(
+        () => options.filter((item) => settings.watchlistSymbols.includes(item.symbol)),
+        [options, settings.watchlistSymbols]
+    );
+
     const selectedOption = useMemo(
-        () => options.find((item) => item.symbol === selectedSymbol) ?? null,
-        [options, selectedSymbol]
+        () => visibleOptions.find((item) => item.symbol === selectedSymbol) ?? null,
+        [visibleOptions, selectedSymbol]
     );
 
     const fetchOptions = useCallback(async () => {
@@ -138,8 +145,23 @@ export default function WatchlistPage() {
         const json = (await res.json()) as FocusOptionsResponse;
         setOptions(json.items || []);
         setNote(json.note || "");
-        setSelectedSymbol((current) => current || json.default_symbol || json.items?.[0]?.symbol || "^NSEI");
-    }, []);
+        const enabled = (json.items || []).filter((item) =>
+            settings.watchlistSymbols.includes(item.symbol)
+        );
+        const fallback = enabled[0]?.symbol || json.default_symbol || json.items?.[0]?.symbol || "^NSEI";
+        setSelectedSymbol((current) => {
+            if (current && settings.watchlistSymbols.includes(current)) return current;
+            return fallback;
+        });
+    }, [settings.watchlistSymbols]);
+
+    useEffect(() => {
+        if (!selectedSymbol) return;
+        if (!settings.watchlistSymbols.includes(selectedSymbol)) {
+            const next = visibleOptions[0]?.symbol;
+            if (next) setSelectedSymbol(next);
+        }
+    }, [selectedSymbol, settings.watchlistSymbols, visibleOptions]);
 
     const fetchFocus = useCallback(async (symbol: string, silent = false, forceRefresh = false) => {
         if (!symbol) return;
@@ -205,7 +227,7 @@ export default function WatchlistPage() {
                     <p className="text-[0.72rem] font-extrabold text-brand-300 uppercase tracking-[0.18em]">Watchlist Focus</p>
                     <h2 className="text-2xl md:text-3xl font-black text-white mt-1">Today, Next Day, Next Week</h2>
                     <p className="text-xs text-gray-400 mt-1 max-w-2xl">
-                        Selector-based focus view for headline indices plus Jaiprakash Power Ventures. Built to stay light on free-tier usage.
+                        Selector-based focus view for indices and NSE stocks. Customize symbols in Settings. Built to stay light on free-tier usage.
                     </p>
                 </div>
                 <button
@@ -230,7 +252,7 @@ export default function WatchlistPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2 mt-4">
-                    {options.map((item) => {
+                    {visibleOptions.map((item) => {
                         const active = item.symbol === selectedSymbol;
                         return (
                             <button
