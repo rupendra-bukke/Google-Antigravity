@@ -61,40 +61,41 @@
         @apply bg-terminal-panel border border-terminal-border overflow-hidden;
     }
 
-    .terminal-header-rail {
-        @apply flex items-stretch justify-between border-b border-terminal-border bg-terminal-bg;
+    .terminal-header-inner {
+        @apply flex flex-col md:flex-row md:items-stretch;
     }
 
-    .terminal-header-brand {
-        @apply flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5;
+    .terminal-header-brand-zone {
+        @apply flex items-center border-b border-terminal-border bg-terminal-bg/70 px-4 py-3 md:border-b-0 md:border-r md:py-4;
+        border-left: 3px solid theme("colors.bb.orange");
     }
 
-    .terminal-header-mark {
-        @apply inline-flex h-4 w-4 shrink-0 items-center justify-center bg-bb-orange text-[8px] font-bold text-black font-data;
+    .terminal-header-page-zone {
+        @apply flex min-w-0 flex-1 flex-col justify-center px-4 py-3 md:py-4;
     }
 
-    .terminal-header-product {
-        @apply text-[10px] font-data font-semibold uppercase tracking-[0.14em] text-terminal-muted;
+    .terminal-header-top-row {
+        @apply flex items-start justify-between gap-3;
     }
 
     .terminal-header-module {
-        @apply truncate text-[10px] font-data font-bold uppercase tracking-[0.14em] text-bb-orange;
+        @apply mb-1 inline-flex items-center gap-1.5 text-[10px] font-data font-bold uppercase tracking-[0.18em] text-bb-orange;
+    }
+
+    .terminal-header-module-dot {
+        @apply inline-block h-1.5 w-1.5 shrink-0 bg-bb-orange;
     }
 
     .terminal-header-actions {
-        @apply flex shrink-0 items-stretch border-l border-terminal-border;
-    }
-
-    .terminal-header-body {
-        @apply px-3 py-2.5 md:py-3;
+        @apply flex shrink-0 items-stretch;
     }
 
     .terminal-header-title {
-        @apply text-lg font-semibold tracking-tight text-white md:text-xl;
+        @apply text-base font-semibold tracking-tight text-white md:text-lg;
     }
 
     .terminal-header-desc {
-        @apply mt-1 max-w-3xl text-[12px] leading-relaxed text-terminal-muted;
+        @apply mt-1.5 max-w-3xl text-[12px] leading-relaxed text-terminal-muted;
     }
 
     .nav-item-active {

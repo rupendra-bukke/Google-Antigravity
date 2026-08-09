@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
+import TradeCraftBrand from "./TradeCraftBrand";
 
 interface PageHeaderProps {
-    /** Short module label shown in the top rail, e.g. "Dashboard" */
+    /** Short module label shown above the page title, e.g. "Dashboard" */
     module?: string;
     title: string;
     description?: string;
@@ -18,21 +19,24 @@ export default function PageHeader({
 
     return (
         <header className="terminal-header">
-            <div className="terminal-header-rail">
-                <div className="terminal-header-brand">
-                    <span className="terminal-header-mark" aria-hidden>
-                        TC
-                    </span>
-                    <span className="terminal-header-product">Trade-Craft</span>
-                    <span className="text-terminal-border select-none">/</span>
-                    <span className="terminal-header-module">{moduleLabel}</span>
+            <div className="terminal-header-inner">
+                <div className="terminal-header-brand-zone">
+                    <TradeCraftBrand size="lg" />
                 </div>
-                {actions && <div className="terminal-header-actions">{actions}</div>}
-            </div>
 
-            <div className="terminal-header-body">
-                <h1 className="terminal-header-title">{title}</h1>
-                {description && <p className="terminal-header-desc">{description}</p>}
+                <div className="terminal-header-page-zone">
+                    <div className="terminal-header-top-row">
+                        <div className="min-w-0 flex-1">
+                            <p className="terminal-header-module">
+                                <span className="terminal-header-module-dot" aria-hidden />
+                                {moduleLabel}
+                            </p>
+                            <h1 className="terminal-header-title">{title}</h1>
+                        </div>
+                        {actions && <div className="terminal-header-actions">{actions}</div>}
+                    </div>
+                    {description && <p className="terminal-header-desc">{description}</p>}
+                </div>
             </div>
         </header>
     );

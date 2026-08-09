@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { useSymbol } from "../context/SymbolContext";
 import BuildBadge from "./BuildBadge";
+import TradeCraftBrand from "./TradeCraftBrand";
 import {
     IconDashboard,
     IconHistory,
@@ -72,9 +73,8 @@ export default function Sidebar() {
                 `}
             >
                 <div className="border-b-2 border-b-bb-orange px-3 py-2.5">
-                    <p className="text-[9px] font-mono font-bold text-bb-orange uppercase tracking-[0.2em]">Trade-Craft</p>
-                    <p className="text-[11px] font-mono font-bold text-white uppercase mt-0.5">Terminal</p>
-                    <p className="text-[10px] font-mono text-terminal-muted mt-1 truncate">{meta}</p>
+                    <TradeCraftBrand size="sm" showTagline={false} />
+                    <p className="text-[10px] font-mono text-terminal-muted mt-2 truncate">{meta}</p>
                 </div>
 
                 <nav className="flex-1 py-1">

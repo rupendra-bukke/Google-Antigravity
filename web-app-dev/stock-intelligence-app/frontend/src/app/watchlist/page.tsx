@@ -231,7 +231,7 @@ export default function WatchlistPage() {
                     <button
                         onClick={() => selectedSymbol && fetchFocus(selectedSymbol, true, true)}
                         disabled={refreshing || !selectedSymbol}
-                        className="btn-primary h-full rounded-none border-0 border-l border-terminal-border px-4"
+                        className="btn-primary h-full rounded-none border border-terminal-border px-4"
                     >
                         {refreshing ? "Refreshing..." : "Refresh"}
                     </button>
