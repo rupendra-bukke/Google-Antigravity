@@ -11,6 +11,10 @@ Version format:
 
 ## Unreleased
 
+### Added
+- GitHub Actions workflow `stock-intelligence-ai-snapshot.yml` (10:00 / 14:30 / 15:30 IST) to wake Render and capture AI snapshots on prod + dev.
+- Startup backfill for missed intraday AI snapshots when Render free tier was asleep.
+
 ## [v2026.08.09-06] - 2026-08-09
 
 ### Added

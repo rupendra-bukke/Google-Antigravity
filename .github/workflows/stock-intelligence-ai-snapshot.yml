@@ -1,0 +1,148 @@
+name: Stock Intelligence AI Snapshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: Which backend to call
+        required: true
+        default: both
+        type: choice
+        options:
+          - dev
+          - prod
+          - both
+      snapshot_id:
+        description: AI snapshot slot
+        required: true
+        default: "1000"
+        type: choice
+        options:
+          - "1000"
+          - "1430"
+          - eod
+      force:
+        description: Regenerate even if snapshot exists
+        required: true
+        default: false
+        type: boolean
+
+  schedule:
+    # 04:30 UTC = 10:00 IST — morning AI snapshot
+    - cron: "30 4 * * 1-5"
+    # 09:00 UTC = 14:30 IST — afternoon AI snapshot
+    - cron: "0 9 * * 1-5"
+    # 10:00 UTC = 15:30 IST — EOD AI outlook
+    - cron: "0 10 * * 1-5"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stock-intelligence-ai-snapshot
+  cancel-in-progress: false
+
+jobs:
+  ai-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Resolve request
+        id: resolve
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${EVENT_NAME}" == "schedule" ]]; then
+            echo "targets=prod,dev" >> "$GITHUB_OUTPUT"
+            echo "force=false" >> "$GITHUB_OUTPUT"
+            case "${EVENT_SCHEDULE}" in
+              "30 4 * * 1-5") echo "snapshot_id=1000" >> "$GITHUB_OUTPUT" ;;
+              "0 9 * * 1-5") echo "snapshot_id=1430" >> "$GITHUB_OUTPUT" ;;
+              "0 10 * * 1-5") echo "snapshot_id=eod" >> "$GITHUB_OUTPUT" ;;
+              *) echo "Unsupported schedule: ${EVENT_SCHEDULE}"; exit 1 ;;
+            esac
+          else
+            echo "targets=${{ inputs.target_env }}" >> "$GITHUB_OUTPUT"
+            echo "snapshot_id=${{ inputs.snapshot_id }}" >> "$GITHUB_OUTPUT"
+            echo "force=${{ inputs.force }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Call AI snapshot on backends
+        shell: bash
+        env:
+          DEV_BASE_URL: ${{ secrets.CHECKPOINT_CRON_DEV_BASE_URL }}
+          DEV_SECRET: ${{ secrets.CHECKPOINT_CRON_DEV_SECRET }}
+          PROD_BASE_URL: ${{ secrets.CHECKPOINT_CRON_PROD_BASE_URL }}
+          PROD_SECRET: ${{ secrets.CHECKPOINT_CRON_PROD_SECRET }}
+          TARGETS: ${{ steps.resolve.outputs.targets }}
+          SNAPSHOT_ID: ${{ steps.resolve.outputs.snapshot_id }}
+          FORCE: ${{ steps.resolve.outputs.force }}
+        run: |
+          set -euo pipefail
+
+          call_target() {
+            local label="$1"
+            local base_url="$2"
+            local secret="$3"
+
+            base_url="${base_url%/}"
+            if [[ -z "${base_url}" || -z "${secret}" ]]; then
+              echo "[${label}] skipped — missing base URL or secret"
+              return 0
+            fi
+
+            echo "[${label}] waking ${base_url}/health"
+            for attempt in 1 2 3 4 5 6; do
+              health_code=$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 60 "${base_url}/health" || true)
+              if [[ "${health_code}" == "200" ]]; then
+                break
+              fi
+              echo "[${label}] wake attempt ${attempt} -> HTTP ${health_code}"
+              sleep 20
+            done
+
+            if [[ "${health_code}" != "200" ]]; then
+              echo "[${label}] backend did not wake"
+              return 1
+            fi
+
+            if [[ "${SNAPSHOT_ID}" == "eod" ]]; then
+              url="${base_url}/api/v1/ai-snapshot/cron-eod?force=${FORCE}"
+            else
+              url="${base_url}/api/v1/ai-snapshot/cron-generate?snapshot_id=${SNAPSHOT_ID}&force=${FORCE}"
+            fi
+
+            echo "[${label}] GET ${url}"
+            for attempt in 1 2 3; do
+              http_code=$(curl -sS -o /tmp/ai-snapshot.json -w "%{http_code}" --max-time 180 \
+                -H "X-Checkpoint-Cron-Secret: ${secret}" \
+                -H "Accept: application/json" \
+                "${url}" || true)
+              echo "[${label}] attempt ${attempt} -> HTTP ${http_code}"
+              cat /tmp/ai-snapshot.json || true
+              echo ""
+              if [[ "${http_code}" == "200" ]]; then
+                return 0
+              fi
+              sleep 30
+            done
+            return 1
+          }
+
+          IFS=',' read -ra TARGET_ARR <<< "${TARGETS}"
+          for target in "${TARGET_ARR[@]}"; do
+            case "${target}" in
+              dev) call_target "dev" "${DEV_BASE_URL}" "${DEV_SECRET}" ;;
+              prod) call_target "prod" "${PROD_BASE_URL}" "${PROD_SECRET}" ;;
+              both)
+                call_target "prod" "${PROD_BASE_URL}" "${PROD_SECRET}"
+                call_target "dev" "${DEV_BASE_URL}" "${DEV_SECRET}"
+                ;;
+              *) echo "Unknown target: ${target}"; exit 1 ;;
+            esac
+          done

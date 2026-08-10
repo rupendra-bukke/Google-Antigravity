@@ -902,6 +902,12 @@ def _build_intraday_snapshot_fallback(
     reason: str,
 ) -> dict:
     payload = _fallback(reason)
+    if any(
+        phrase in reason.lower()
+        for phrase in ("not ready yet", "pending", "10:00 ist", "first saved")
+    ):
+        payload["missing_confirmation"] = "Scheduled snapshot pending — updates at 10:00 & 14:30 IST"
+        payload["news_impact"] = reason
     payload.update(
         {
             "analysis_type": "INTRADAY",
@@ -1046,6 +1052,47 @@ async def ensure_latest_eod_snapshot_cache(now: datetime | None = None) -> dict:
             summary["fallback_symbols"].append(sym)
         else:
             summary["saved_symbols"].append(sym)
+
+    return summary
+
+
+async def ensure_missed_intraday_ai_snapshots(now: datetime | None = None) -> dict:
+    """
+    Backfill intraday AI snapshots when Render was asleep at 10:00 / 14:30 IST.
+    Runs on API startup after a user visit wakes the free-tier instance.
+    """
+    current_now = now or datetime.now(timezone.utc)
+    ist_now = current_now.astimezone(IST)
+
+    if not market_is_nse_trading_day(ist_now.date()):
+        return {"status": "skipped", "reason": "non_trading_day"}
+
+    date_str = ist_now.strftime("%Y-%m-%d")
+    hhmm = ist_now.hour * 100 + ist_now.minute
+    summary: dict = {"status": "ok", "date": date_str, "ran": [], "skipped": []}
+
+    for slot in AI_SNAPSHOT_WINDOWS:
+        if hhmm < slot["hhmm"]:
+            continue
+
+        probe_sym = AI_DECISION_SYMBOLS[0]
+        existing = _load_scheduled_ai_snapshot(date_str, probe_sym, slot["id"])
+        if existing and str(existing.get("analysis_status", "")).lower() != "fallback":
+            summary["skipped"].append(slot["id"])
+            continue
+
+        result = await run_ai_snapshot_for_all_symbols(slot["id"], now=current_now)
+        summary["ran"].append(
+            {
+                "snapshot_id": slot["id"],
+                "saved_symbols": result.get("saved_symbols", []),
+                "fallback_symbols": result.get("fallback_symbols", []),
+            }
+        )
+
+    if not summary["ran"] and not summary["skipped"]:
+        summary["status"] = "skipped"
+        summary["reason"] = "before_first_snapshot_window"
 
     return summary
 

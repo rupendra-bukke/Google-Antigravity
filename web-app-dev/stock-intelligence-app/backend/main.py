@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from routers.analyze import (
     ensure_latest_eod_snapshot_cache as ensure_latest_eod_cache_for_startup,
+    ensure_missed_intraday_ai_snapshots,
     router as analyze_router,
     run_ai_snapshot_for_all_symbols,
     run_eod_ai_for_all_symbols,
@@ -191,6 +192,14 @@ async def _run_startup_career_pulse_backfill():
     except Exception as exc:
         print(f"[CAREER-PULSE-BOOTSTRAP] failed: {exc}")
 
+
+async def _run_startup_ai_snapshot_backfill():
+    try:
+        summary = await ensure_missed_intraday_ai_snapshots()
+        print(f"[AI-SNAPSHOT-BOOTSTRAP] {summary}")
+    except Exception as exc:
+        print(f"[AI-SNAPSHOT-BOOTSTRAP] failed: {exc}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     env_label = "DEV" if settings.is_dev else "PROD"
@@ -204,6 +213,7 @@ async def lifespan(app: FastAPI):
     print("[SCHEDULER] external checkpoint wake/capture endpoints ready for GitHub Actions")
     await _run_startup_eod_backfill()
     await _run_startup_career_pulse_backfill()
+    await _run_startup_ai_snapshot_backfill()
     yield
     scheduler.shutdown()
     print("[SCHEDULER] stopped")
@@ -296,3 +306,48 @@ async def career_pulse_cron_generate(
     """Secure endpoint for GitHub Actions to generate the daily career pulse."""
     _require_cron_secret(x_checkpoint_cron_secret)
     return await generate_career_pulse(force=force)
+
+
+@app.get("/api/v1/ai-snapshot/cron-generate", tags=["ai-snapshot"])
+async def ai_snapshot_cron_generate(
+    snapshot_id: str = Query(..., description="1000 (morning) or 1430 (afternoon) IST"),
+    force: bool = Query(default=False),
+    x_checkpoint_cron_secret: str | None = Header(default=None, alias="X-Checkpoint-Cron-Secret"),
+):
+    """Secure endpoint for GitHub Actions to wake Render and capture scheduled AI snapshots."""
+    _require_cron_secret(x_checkpoint_cron_secret)
+
+    valid_ids = {"1000", "1430"}
+    if snapshot_id not in valid_ids:
+        raise HTTPException(status_code=400, detail=f"Invalid snapshot_id. Use one of: {sorted(valid_ids)}")
+
+    today_ist = datetime.now(IST).date()
+    if not is_nse_trading_day(today_ist):
+        return {"status": "skipped", "reason": "non_trading_day", "snapshot_id": snapshot_id}
+
+    date_str = today_ist.strftime("%Y-%m-%d")
+    if not force:
+        from routers.analyze import AI_DECISION_SYMBOLS, _load_scheduled_ai_snapshot
+
+        probe = _load_scheduled_ai_snapshot(date_str, AI_DECISION_SYMBOLS[0], snapshot_id)
+        if probe and str(probe.get("analysis_status", "")).lower() != "fallback":
+            return {"status": "skipped", "reason": "already_captured", "snapshot_id": snapshot_id, "date": date_str}
+
+    summary = await run_ai_snapshot_for_all_symbols(snapshot_id)
+    return {"status": "captured", **summary}
+
+
+@app.get("/api/v1/ai-snapshot/cron-eod", tags=["ai-snapshot"])
+async def ai_snapshot_cron_eod(
+    force: bool = Query(default=False),
+    x_checkpoint_cron_secret: str | None = Header(default=None, alias="X-Checkpoint-Cron-Secret"),
+):
+    """Secure endpoint for GitHub Actions to run EOD AI outlook at market close."""
+    _require_cron_secret(x_checkpoint_cron_secret)
+
+    today_ist = datetime.now(IST).date()
+    if not is_nse_trading_day(today_ist):
+        return {"status": "skipped", "reason": "non_trading_day"}
+
+    summary = await run_eod_ai_for_all_symbols()
+    return {"status": "captured", **summary}
