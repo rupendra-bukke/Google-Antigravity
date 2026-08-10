@@ -66,7 +66,8 @@ If GitHub `dev` has a newer commit but the dev URL still shows an older build ba
 2. Vercel may be **rate-limited** (common with multiple projects on one repo)
 3. Fix: wait ~24h and **Redeploy** in Vercel → `trade-craft-app`, or run `npm run dev` locally
 
-Full troubleshooting: `BRANCH_DEPLOY_FLOW.md` → section **4.1**
+Full troubleshooting: `BRANCH_DEPLOY_FLOW.md` → section **4.1**  
+Vercel stuck on old SHA: `VERCEL_DEPLOY_FIX.md`
 
 ## Release to Prod
 
