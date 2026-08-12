@@ -11,6 +11,11 @@ If GitHub shows a new commit but **prod** or **dev** URLs still show an old buil
 
 They deploy **independently**. GitHub can be latest while only one layer updated.
 
+If GitHub shows a new commit but the **sidebar badge** still shows an old SHA:
+
+1. **Backend-only commits** skip Vercel frontend builds (`ignoreCommand` in `vercel.json`). Render API updates; UI badge does not until the next **frontend** commit or a **manual Redeploy**.
+2. Check Render separately: `/health` → `git_commit` (API layer).
+
 ## Current expected state (check live)
 
 **GitHub:** `main` and `dev` → `2ebc723`

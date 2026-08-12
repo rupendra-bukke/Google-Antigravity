@@ -11,9 +11,14 @@ Version format:
 
 ## Unreleased
 
-### Added
-- GitHub Actions workflow `stock-intelligence-ai-snapshot.yml` (10:00 / 14:30 / 15:30 IST) to wake Render and capture AI snapshots on prod + dev.
-- Startup backfill for missed intraday AI snapshots when Render free tier was asleep.
+## [v2026.08.12-01] - 2026-08-12
+
+### Changed
+- Build badge shows release tag (`v2026.08.12-01`) plus Vercel commit SHA for easier prod/dev verification.
+- Force frontend deploy so Vercel picks up latest after backend-only releases.
+
+### Fixed
+- AI snapshot scheduling via GitHub Actions + startup backfill (included from `4a5cfc3`).
 
 ## [v2026.08.09-06] - 2026-08-09
 
