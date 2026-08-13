@@ -11,6 +11,11 @@ Version format:
 
 ## Unreleased
 
+## [v2026.08.13-02] - 2026-08-13
+
+### Changed
+- Trader journey sidebar abbreviations: **T** (Bank Nifty), **D** (Options), **M** (Trading).
+
 ## [v2026.08.13-01] - 2026-08-13
 
 ### Added

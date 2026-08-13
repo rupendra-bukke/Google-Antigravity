@@ -6,9 +6,9 @@ export interface TraderJourneyTrack {
 }
 
 export const DEFAULT_TRADER_JOURNEY: TraderJourneyTrack[] = [
-    { id: "bankNifty", label: "Bank Nifty", shortLabel: "BNF", startDate: "2022-02-25" },
-    { id: "options", label: "Options", shortLabel: "Opt", startDate: "2023-10-30" },
-    { id: "trading", label: "Trading", shortLabel: "Trd", startDate: "2024-08-30" },
+    { id: "bankNifty", label: "Bank Nifty", shortLabel: "T", startDate: "2022-02-25" },
+    { id: "options", label: "Options", shortLabel: "D", startDate: "2023-10-30" },
+    { id: "trading", label: "Trading", shortLabel: "M", startDate: "2024-08-30" },
 ];
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
