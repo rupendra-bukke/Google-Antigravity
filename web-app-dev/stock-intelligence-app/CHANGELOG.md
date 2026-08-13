@@ -11,6 +11,12 @@ Version format:
 
 ## Unreleased
 
+## [v2026.08.13-01] - 2026-08-13
+
+### Added
+- **Trader journey** experience tracker: Bank Nifty (from 25 Feb 2022), Options (from 30 Oct 2023), and Trading (from 30 Aug 2024).
+- Years auto-calculated to today in IST; shown in sidebar, Settings, Bank Nifty toolbar chip, and BANKNIFTY expiry card.
+
 ## [v2026.08.12-01] - 2026-08-12
 
 ### Changed

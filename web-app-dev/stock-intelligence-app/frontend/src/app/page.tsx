@@ -19,6 +19,7 @@ import DashboardSyncBar from "./components/DashboardSyncBar";
 import DataAIPulsePanel from "./components/DataAIPulsePanel";
 import ISTClock from "./components/ISTClock";
 import ExpiryBanner from "./components/ExpiryBanner";
+import TraderJourneyLine from "./components/TraderJourneyLine";
 import { triggerDashboardRefresh } from "@/lib/dashboardRefresh";
 
 const CandlestickChart = dynamic(() => import("./components/CandlestickChart"), {
@@ -266,11 +267,19 @@ export default function Dashboard() {
                             {settings.showCandlestickChart ? "Chart On" : "Chart Off"}
                         </button>
                     </div>
-                    <IndexSelector
-                        selected={selectedSymbol}
-                        onSelect={handleSymbolChange}
-                        disabled={isLoading}
-                    />
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <IndexSelector
+                            selected={selectedSymbol}
+                            onSelect={handleSymbolChange}
+                            disabled={isLoading}
+                        />
+                        {selectedSymbol === "^NSEBANK" && (
+                            <TraderJourneyLine
+                                trackId="bankNifty"
+                                className="text-[9px] border border-terminal-border bg-terminal-bg px-2 py-1"
+                            />
+                        )}
+                    </div>
                 </div>
 
                 <DashboardSyncBar

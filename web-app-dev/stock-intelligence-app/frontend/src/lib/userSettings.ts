@@ -1,4 +1,9 @@
 import { normalizeDashboardSymbol } from "@/lib/indices";
+import {
+    DEFAULT_TRADER_JOURNEY,
+    normalizeTraderJourneyFromStorage,
+    type TraderJourneyTrack,
+} from "@/lib/traderJourney";
 
 export interface UserSettings {
     defaultSymbol: string;
@@ -7,6 +12,7 @@ export interface UserSettings {
     checkpointCatchupSec: number;
     showCandlestickChart: boolean;
     watchlistSymbols: string[];
+    traderJourney: TraderJourneyTrack[];
 }
 
 export const DEFAULT_WATCHLIST_SYMBOLS = [
@@ -23,6 +29,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     checkpointCatchupSec: 30,
     showCandlestickChart: false,
     watchlistSymbols: [...DEFAULT_WATCHLIST_SYMBOLS],
+    traderJourney: [...DEFAULT_TRADER_JOURNEY],
 };
 
 const STORAGE_KEY = "trade-craft-settings";
@@ -61,6 +68,7 @@ export function loadUserSettings(): UserSettings {
                 : DEFAULT_SETTINGS.checkpointCatchupSec,
             showCandlestickChart: parsed.showCandlestickChart === true,
             watchlistSymbols: normalizeWatchlistSymbols(parsed.watchlistSymbols),
+            traderJourney: normalizeTraderJourneyFromStorage(parsed.traderJourney),
         };
     } catch {
         return { ...DEFAULT_SETTINGS };
