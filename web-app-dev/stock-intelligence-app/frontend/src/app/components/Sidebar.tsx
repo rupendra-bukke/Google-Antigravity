@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { useSymbol } from "../context/SymbolContext";
 import BuildBadge from "./BuildBadge";
 import TradeCraftBrand from "./TradeCraftBrand";
+import TraderJourneyLine from "./TraderJourneyLine";
 import {
     IconDashboard,
     IconHistory,
@@ -75,6 +76,7 @@ export default function Sidebar() {
                 <div className="border-b-2 border-b-bb-orange px-3 py-2.5">
                     <TradeCraftBrand size="sm" showTagline={false} />
                     <p className="text-[10px] font-mono text-terminal-muted mt-2 truncate">{meta}</p>
+                    <TraderJourneyLine className="text-[9px] mt-1 truncate" />
                 </div>
 
                 <nav className="flex-1 py-1">

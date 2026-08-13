@@ -1,6 +1,8 @@
 "use client";
 
+import { formatJourneyYears, yearsSince } from "@/lib/traderJourney";
 import { useExpiryCalendar } from "../context/ExpiryCalendarContext";
+import { useSettings } from "../context/SettingsContext";
 import { useEffect, useMemo, useState } from "react";
 
 interface IndexConfig {
@@ -138,6 +140,8 @@ function parseIsoDate(value: string): Date | null {
 export default function ExpiryBanner() {
     const [today, setToday] = useState<Date>(getISTToday);
     const { cardsByAbbr: liveByIndex } = useExpiryCalendar();
+    const { settings } = useSettings();
+    const bankNiftyJourney = settings.traderJourney.find((track) => track.id === "bankNifty");
 
     useEffect(() => {
         const timer = setInterval(() => setToday(getISTToday()), 60_000);
@@ -311,6 +315,20 @@ export default function ExpiryBanner() {
                             </div>
 
                             <div style={{ marginTop: "0.22rem", fontSize: "0.84rem", fontWeight: 700, color: "#e2e8f0" }}>{formatDate(c.expiry)}</div>
+
+                            {c.abbr === "BANKNIFTY" && bankNiftyJourney && (
+                                <div
+                                    style={{
+                                        marginTop: "0.28rem",
+                                        fontSize: "0.56rem",
+                                        fontWeight: 700,
+                                        color: "#67e8f9",
+                                        letterSpacing: "0.06em",
+                                    }}
+                                >
+                                    Experience {formatJourneyYears(yearsSince(bankNiftyJourney.startDate, today))}
+                                </div>
+                            )}
 
                             <div style={{ marginTop: "0.32rem", fontSize: "0.58rem", color: "#94a3b8", lineHeight: 1.45 }}>{urgencyHint(c.days)}</div>
 

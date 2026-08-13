@@ -1,5 +1,5 @@
 /** Bumped each release — visible even when Vercel env vars are unset. */
-export const APP_RELEASE = "v2026.08.12-01";
+export const APP_RELEASE = "v2026.08.13-01";
 
 const APP_BRANCH =
     process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF ||

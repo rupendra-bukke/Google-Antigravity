@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { authedFetch } from "@/lib/authedFetch";
 import { DASHBOARD_INDICES } from "@/lib/indices";
 import { DEFAULT_WATCHLIST_SYMBOLS } from "@/lib/userSettings";
+import { formatJourneyYears, yearsSince } from "@/lib/traderJourney";
 import { useSettings } from "../context/SettingsContext";
 import { useSymbol } from "../context/SymbolContext";
 import PageHeader from "../components/PageHeader";
@@ -251,6 +252,41 @@ export default function SettingsPage() {
                     </div>
                 </section>
 
+                <section className="space-y-3">
+                    <h2 className="text-sm font-bold text-white">Trader journey</h2>
+                    <p className="text-xs text-gray-500">
+                        Start dates for your trading experience. Years are calculated to today in IST and shown in the sidebar.
+                    </p>
+                    <div className="space-y-3">
+                        {settings.traderJourney.map((track) => (
+                            <div key={track.id} className="rounded-xl border border-terminal-border bg-terminal-bg px-3 py-2.5">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <span className="text-sm font-semibold text-gray-200">{track.label}</span>
+                                    <span className="text-xs font-mono text-bb-orange">
+                                        {formatJourneyYears(yearsSince(track.startDate))}
+                                    </span>
+                                </div>
+                                <label className="mt-2 block text-[10px] font-mono text-gray-500 uppercase tracking-wide">
+                                    Start date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={track.startDate}
+                                    onChange={(event) => {
+                                        const next = settings.traderJourney.map((item) =>
+                                            item.id === track.id
+                                                ? { ...item, startDate: event.target.value }
+                                                : item
+                                        );
+                                        updateSettings({ traderJourney: next });
+                                    }}
+                                    className="mt-1 w-full rounded-lg border border-terminal-border bg-black/30 px-2 py-1.5 text-sm text-gray-200 font-mono"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
                 <div className="flex flex-wrap gap-3 pt-2">
                     <button
                         type="button"
@@ -282,6 +318,13 @@ export default function SettingsPage() {
                     <p>Catch-up refresh: <span className="text-gray-200">{settings.checkpointCatchupSec}s</span></p>
                     <p>Chart on dashboard: <span className="text-gray-200">{settings.showCandlestickChart ? "Yes" : "No"}</span></p>
                     <p>Watchlist symbols: <span className="text-gray-200">{settings.watchlistSymbols.join(", ")}</span></p>
+                    <p>Trader journey:{" "}
+                        <span className="text-gray-200">
+                            {settings.traderJourney
+                                .map((track) => `${track.label} ${formatJourneyYears(yearsSince(track.startDate))}`)
+                                .join(" · ")}
+                        </span>
+                    </p>
                 </div>
             </div>
         </div>
