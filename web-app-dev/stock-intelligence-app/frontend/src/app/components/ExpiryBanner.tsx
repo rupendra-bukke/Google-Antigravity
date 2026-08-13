@@ -1,6 +1,6 @@
 "use client";
 
-import { formatJourneyYears, yearsSince } from "@/lib/traderJourney";
+import { formatJourneyStartDate, formatJourneyYears, yearsSince } from "@/lib/traderJourney";
 import { useExpiryCalendar } from "../context/ExpiryCalendarContext";
 import { useSettings } from "../context/SettingsContext";
 import { useEffect, useMemo, useState } from "react";
@@ -326,7 +326,8 @@ export default function ExpiryBanner() {
                                         letterSpacing: "0.06em",
                                     }}
                                 >
-                                    Experience {formatJourneyYears(yearsSince(bankNiftyJourney.startDate, today))}
+                                    Experience since {formatJourneyStartDate(bankNiftyJourney.startDate)}{" "}
+                                    · {formatJourneyYears(yearsSince(bankNiftyJourney.startDate, today))}
                                 </div>
                             )}
 

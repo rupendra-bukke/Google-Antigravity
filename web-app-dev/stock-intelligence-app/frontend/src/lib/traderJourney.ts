@@ -47,10 +47,24 @@ export function formatJourneyYears(years: number): string {
     return `${years.toFixed(1)}y`;
 }
 
-export function formatJourneySummary(tracks: TraderJourneyTrack[]): string {
-    return tracks
-        .map((track) => `${track.shortLabel} ${formatJourneyYears(yearsSince(track.startDate))}`)
-        .join(" · ");
+/** Display stored ISO date as DD-MM-YYYY (matches user-facing journey dates). */
+export function formatJourneyStartDate(dateStr: string): string {
+    const parsed = parseJourneyDate(dateStr);
+    if (!parsed) return dateStr;
+    const day = String(parsed.getUTCDate()).padStart(2, "0");
+    const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+    const year = parsed.getUTCFullYear();
+    return `${day}-${month}-${year}`;
+}
+
+export function formatJourneyTrack(track: TraderJourneyTrack, today = getISTToday()): string {
+    return `${track.shortLabel} ${formatJourneyStartDate(track.startDate)} ${formatJourneyYears(
+        yearsSince(track.startDate, today)
+    )}`;
+}
+
+export function formatJourneySummary(tracks: TraderJourneyTrack[], today = getISTToday()): string {
+    return tracks.map((track) => formatJourneyTrack(track, today)).join(" · ");
 }
 
 export function normalizeJourneyStartDate(value: unknown, fallback: string): string {

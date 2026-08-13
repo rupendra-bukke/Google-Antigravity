@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { authedFetch } from "@/lib/authedFetch";
 import { DASHBOARD_INDICES } from "@/lib/indices";
 import { DEFAULT_WATCHLIST_SYMBOLS } from "@/lib/userSettings";
-import { formatJourneyYears, yearsSince } from "@/lib/traderJourney";
+import { formatJourneyStartDate, formatJourneyYears, yearsSince } from "@/lib/traderJourney";
 import { useSettings } from "../context/SettingsContext";
 import { useSymbol } from "../context/SymbolContext";
 import PageHeader from "../components/PageHeader";
@@ -263,6 +263,7 @@ export default function SettingsPage() {
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                     <span className="text-sm font-semibold text-gray-200">{track.label}</span>
                                     <span className="text-xs font-mono text-bb-orange">
+                                        {formatJourneyStartDate(track.startDate)} ·{" "}
                                         {formatJourneyYears(yearsSince(track.startDate))}
                                     </span>
                                 </div>
@@ -321,7 +322,12 @@ export default function SettingsPage() {
                     <p>Trader journey:{" "}
                         <span className="text-gray-200">
                             {settings.traderJourney
-                                .map((track) => `${track.label} ${formatJourneyYears(yearsSince(track.startDate))}`)
+                                .map(
+                                    (track) =>
+                                        `${track.label} ${formatJourneyStartDate(track.startDate)} ${formatJourneyYears(
+                                            yearsSince(track.startDate)
+                                        )}`
+                                )
                                 .join(" · ")}
                         </span>
                     </p>

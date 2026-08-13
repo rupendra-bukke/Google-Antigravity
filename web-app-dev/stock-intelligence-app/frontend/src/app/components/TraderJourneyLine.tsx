@@ -1,7 +1,8 @@
 "use client";
 
 import {
-    formatJourneySummary,
+    formatJourneyStartDate,
+    formatJourneyTrack,
     formatJourneyYears,
     yearsSince,
     type TraderJourneyTrack,
@@ -31,14 +32,30 @@ export default function TraderJourneyLine({
 
     if (tracks.length === 0) return null;
 
-    const text = trackId
-        ? `${tracks[0].label} ${formatJourneyYears(yearsSince(tracks[0].startDate))}`
-        : formatJourneySummary(tracks);
+    if (trackId) {
+        const track = tracks[0];
+        const text = `${track.label} ${formatJourneyStartDate(track.startDate)} ${formatJourneyYears(
+            yearsSince(track.startDate)
+        )}`;
+
+        return (
+            <p className={`font-mono text-terminal-dim ${className}`}>
+                {prefix ? <span className="text-terminal-muted">{prefix} </span> : null}
+                <span className="text-terminal-muted">{text}</span>
+            </p>
+        );
+    }
 
     return (
-        <p className={`font-mono text-terminal-dim ${className}`}>
-            {prefix ? <span className="text-terminal-muted">{prefix} </span> : null}
-            <span className="text-terminal-muted">{text}</span>
-        </p>
+        <div className={`font-mono text-terminal-dim space-y-0.5 ${className}`}>
+            {prefix ? (
+                <p className="text-[8px] text-terminal-dim uppercase tracking-widest">{prefix}</p>
+            ) : null}
+            {tracks.map((track) => (
+                <p key={track.id} className="text-terminal-muted truncate">
+                    {formatJourneyTrack(track)}
+                </p>
+            ))}
+        </div>
     );
 }

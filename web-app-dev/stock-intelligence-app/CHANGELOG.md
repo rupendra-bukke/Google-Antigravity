@@ -11,6 +11,11 @@ Version format:
 
 ## Unreleased
 
+## [v2026.08.13-03] - 2026-08-13
+
+### Changed
+- Trader journey shows each track’s **start date** (DD-MM-YYYY) alongside years in sidebar, Settings, Bank Nifty chip, and expiry card.
+
 ## [v2026.08.13-02] - 2026-08-13
 
 ### Changed
