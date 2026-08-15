@@ -24,6 +24,20 @@
 
 **Important:** YouTube has no direct API login from cloud. Changes in Studio require your Mac session or manual paste.
 
+### GitHub — single project folder (all docs live here)
+
+Everything for this YouTube project is saved in:
+
+```
+web-app-dev/dhanya-diaries-app/
+├── YOUTUBE_GROWTH_ROADMAP.md      ← master plan (updated each phase)
+├── YOUTUBE_STEP1_CHANNEL_COPY.md  ← channel text to paste
+├── YOUTUBE_TITLE_FIXES.md         ← video title/description fixes
+└── YOUTUBE_SESSION_LOG.md         ← what we did each session (agent updates + merges to main)
+```
+
+**Rule:** After every Mac Mini session, the agent updates these files, commits, and merges to `main` so nothing is lost.
+
 ---
 
 ## Phase overview
@@ -280,6 +294,7 @@ If full ads not ready, apply for **memberships / Super Thanks** at 500 subs + 3K
 | `YOUTUBE_GROWTH_ROADMAP.md` | This roadmap |
 | `YOUTUBE_STEP1_CHANNEL_COPY.md` | Ready-to-paste channel text |
 | `YOUTUBE_TITLE_FIXES.md` | Recent video title + description fixes |
+| `YOUTUBE_SESSION_LOG.md` | Session-by-session progress log |
 
 ---
 
