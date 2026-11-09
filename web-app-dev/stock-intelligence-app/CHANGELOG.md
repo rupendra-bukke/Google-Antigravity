@@ -11,6 +11,11 @@ Version format:
 
 ## Unreleased
 
+## [v2026.11.09-02] - 2026-11-09
+
+### Changed
+- Dev preview release so the `dev` branch gets its own Vercel deployment. Same terminal UI as `v2026.11.09-01`.
+
 ## [v2026.11.09-01] - 2026-11-09
 
 ### Changed
