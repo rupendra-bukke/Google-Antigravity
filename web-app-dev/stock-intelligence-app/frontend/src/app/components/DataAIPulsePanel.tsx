@@ -142,7 +142,7 @@ export default function DataAIPulsePanel() {
             <div className="flex flex-wrap items-start justify-between gap-2 border-b border-terminal-border bg-terminal-bg/60 px-3 py-2">
                 <div>
                     <p className="section-label">Data &amp; AI Pulse</p>
-                    <h2 className="text-sm font-semibold text-white mt-0.5">
+                    <h2 className="text-sm font-semibold text-terminal-text mt-0.5">
                         BI · Analytics · Vehicle Data
                     </h2>
                     <p className="text-[10px] text-terminal-dim mt-0.5">
@@ -218,7 +218,7 @@ export default function DataAIPulsePanel() {
                     <p className="text-[10px] font-data font-bold uppercase tracking-wider text-bb-orange">
                         Action this week
                     </p>
-                    <p className="text-[12px] text-white mt-1 leading-snug">{pulse.action_this_week}</p>
+                    <p className="text-[12px] text-terminal-text mt-1 leading-snug">{pulse.action_this_week}</p>
                 </div>
 
                 {pulse.reasoning && (

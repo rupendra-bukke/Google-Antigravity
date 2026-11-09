@@ -10,12 +10,8 @@
     }
 
     body {
-        @apply text-terminal-text antialiased text-[14px] leading-relaxed;
+        @apply bg-terminal-bg text-terminal-text antialiased text-[14px] leading-relaxed;
         font-family: Inter, system-ui, sans-serif;
-        background:
-            radial-gradient(900px 420px at 0% -10%, rgba(124, 147, 255, 0.22), transparent 55%),
-            radial-gradient(700px 380px at 100% 0%, rgba(61, 220, 151, 0.08), transparent 50%),
-            #070b14;
         min-height: 100vh;
     }
 
@@ -29,12 +25,12 @@
     }
 
     ::-webkit-scrollbar-thumb {
-        background: #2a3654;
+        background: #363a45;
         border-radius: 999px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        background: #7c93ff;
+        background: #2962ff;
     }
 }
 
@@ -48,7 +44,7 @@
     }
 
     .glass-card {
-        @apply rounded-2xl border border-terminal-border bg-terminal-panel/90 shadow-[0_12px_40px_rgba(0,0,0,0.28)];
+        @apply rounded-lg border border-terminal-border bg-terminal-panel;
     }
 
     .glass-card-hover {
@@ -56,7 +52,7 @@
     }
 
     .glass-sidebar {
-        @apply rounded-3xl border border-terminal-border bg-terminal-panel/95 shadow-[0_20px_50px_rgba(0,0,0,0.35)] backdrop-blur;
+        @apply border-r border-terminal-border bg-terminal-panel;
     }
 
     .toolbar-card {
@@ -96,15 +92,15 @@
     }
 
     .nav-item-active {
-        @apply rounded-xl bg-bb-orange text-white;
+        @apply rounded-md bg-bb-orange/15 text-white;
     }
 
     .btn-primary {
-        @apply inline-flex items-center justify-center gap-1.5 rounded-xl bg-bb-orange px-3 py-2 text-xs font-semibold text-white transition hover:brightness-110 disabled:opacity-50;
+        @apply inline-flex items-center justify-center gap-1.5 rounded-md bg-bb-orange px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#1e53e5] disabled:opacity-50;
     }
 
     .btn-ghost {
-        @apply inline-flex items-center justify-center gap-1.5 rounded-xl border border-terminal-border bg-terminal-bg/60 px-3 py-2 text-xs font-semibold text-terminal-muted transition hover:border-bb-orange/40 hover:text-white disabled:opacity-50;
+        @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-terminal-border bg-transparent px-3 py-2 text-xs font-semibold text-terminal-muted transition hover:border-terminal-muted hover:text-terminal-text disabled:opacity-50;
     }
 
     .section-label {
@@ -136,7 +132,7 @@
     }
 
     .shimmer {
-        background: linear-gradient(90deg, transparent 0%, rgba(124, 147, 255, 0.12) 50%, transparent 100%);
+        background: linear-gradient(90deg, transparent 0%, rgba(41, 98, 255, 0.12) 50%, transparent 100%);
         background-size: 200% 100%;
         animation: shimmer 1.5s ease-in-out infinite;
     }

@@ -49,7 +49,7 @@ export default function Sidebar() {
         <>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="fixed left-3 top-3 z-50 rounded-xl border border-terminal-border bg-terminal-panel p-2 text-white md:hidden"
+                className="fixed left-3 top-3 z-50 rounded-md border border-terminal-border bg-terminal-panel p-2 text-terminal-text md:hidden"
                 aria-label="Toggle menu"
             >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,7 +67,7 @@ export default function Sidebar() {
 
             <aside
                 className={`
-                    glass-sidebar fixed bottom-3 left-3 top-3 z-40 flex w-60 flex-col p-3
+                    glass-sidebar fixed inset-y-0 left-0 z-40 flex w-60 flex-col p-3
                     transition-transform duration-200
                     ${isOpen ? "translate-x-0" : "-translate-x-[120%]"}
                     md:translate-x-0
@@ -75,12 +75,12 @@ export default function Sidebar() {
             >
                 <div className="px-1 pb-3">
                     <TradeCraftBrand size="sm" showTagline />
-                    <p className="mt-3 rounded-full bg-bb-orange/15 px-2.5 py-1 text-[11px] font-semibold text-bb-orange">
+                    <p className="mt-3 text-[11px] font-medium text-terminal-muted">
                         {meta}
                     </p>
                 </div>
 
-                <div className="mb-3 rounded-2xl bg-terminal-bg/70 px-3 py-2.5">
+                <div className="mb-3 rounded-md border border-terminal-border bg-terminal-bg px-3 py-2.5">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terminal-dim">Journey</p>
                     <TraderJourneyLine className="mt-2" />
                 </div>
@@ -97,7 +97,7 @@ export default function Sidebar() {
                                     router.push(item.path);
                                     setIsOpen(false);
                                 }}
-                                className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium ${
+                                className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-[13px] font-medium ${
                                     active
                                         ? "nav-item-active"
                                         : "text-terminal-muted hover:bg-white/5 hover:text-white"
@@ -111,7 +111,7 @@ export default function Sidebar() {
                 </nav>
 
                 <div className="space-y-2 pt-3">
-                    <div className="rounded-2xl bg-terminal-bg/70 px-3 py-2.5">
+                    <div className="rounded-md border border-terminal-border bg-terminal-bg px-3 py-2.5">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terminal-dim">Session</p>
                         <p className="mt-1 truncate text-xs text-terminal-text">{user?.email || "—"}</p>
                         <button

@@ -11,6 +11,10 @@ Version format:
 
 ## Unreleased
 
+### Changed
+- Dev preview `v2026.11.09-05`: dashboard price card shows the session move as an area chart, recent candles, RSI, band position, and the day range. Not on production yet.
+- Dev preview `v2026.11.09-04`: quieter trading-desk colors (slate panels, blue actions, market green and red). Not on production yet.
+
 ## [v2026.11.09-03] - 2026-11-09
 
 ### Changed

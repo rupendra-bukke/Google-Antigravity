@@ -1,5 +1,5 @@
-/** Bumped each release — visible even when Vercel env vars are unset. Promoted to production. */
-export const APP_RELEASE = "v2026.11.09-03";
+/** Bumped each release — visible even when Vercel env vars are unset. */
+export const APP_RELEASE = "v2026.11.09-05";
 
 const APP_BRANCH =
     process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF ||

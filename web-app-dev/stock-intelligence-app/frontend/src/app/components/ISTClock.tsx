@@ -41,8 +41,8 @@ export default function ISTClock({ compact = false, embedded = false }: ISTClock
         <div
             className={`font-mono ${
                 embedded
-                    ? "flex items-center rounded-full border border-terminal-border bg-terminal-panel px-3 py-1.5 text-[11px]"
-                    : `rounded-full border border-terminal-border bg-terminal-panel ${
+                    ? "flex items-center rounded-md border border-terminal-border bg-terminal-bg px-3 py-1.5 text-[11px]"
+                    : `rounded-md border border-terminal-border bg-terminal-bg ${
                           compact ? "px-2 py-1 text-[10px]" : "px-3 py-1.5 text-[11px]"
                       }`
             }`}

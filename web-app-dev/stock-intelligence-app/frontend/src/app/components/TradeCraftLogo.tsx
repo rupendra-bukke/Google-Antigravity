@@ -28,7 +28,7 @@ export default function TradeCraftLogo({ size = "md", className = "" }: TradeCra
                 height={px}
                 alt="Trade-Craft logo"
                 decoding="async"
-                className={`${SIZE_CLASSES[size]} rounded-2xl object-contain border border-white/10 bg-[#0d1528] shadow-[0_8px_24px_rgba(124,147,255,0.25)]`}
+                className={`${SIZE_CLASSES[size]} rounded-md object-contain border border-terminal-border bg-terminal-bg`}
             />
         </div>
     );

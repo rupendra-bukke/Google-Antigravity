@@ -11,22 +11,22 @@ const config: Config = {
         extend: {
             colors: {
                 bb: {
-                    orange: "#7c93ff",
-                    green: "#3ddc97",
-                    red: "#ff6b8a",
-                    amber: "#f5c16c",
+                    orange: "#2962ff",
+                    green: "#089981",
+                    red: "#f23645",
+                    amber: "#c48a2a",
                 },
                 terminal: {
-                    bg: "#070b14",
-                    panel: "#121a2c",
-                    border: "#2a3654",
-                    text: "#eef2ff",
-                    muted: "#9aa6c4",
-                    dim: "#6d7896",
+                    bg: "#131722",
+                    panel: "#1e222d",
+                    border: "#2a2e39",
+                    text: "#d1d4dc",
+                    muted: "#868993",
+                    dim: "#5d606b",
                 },
                 brand: {
-                    400: "#ff9933",
-                    500: "#ff7700",
+                    400: "#5b8def",
+                    500: "#2962ff",
                 },
             },
             fontFamily: {

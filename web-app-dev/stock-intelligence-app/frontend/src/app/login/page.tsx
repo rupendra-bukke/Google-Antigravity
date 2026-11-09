@@ -22,9 +22,9 @@ export default function LoginPage() {
 
     return (
         <div className="flex min-h-screen items-center justify-center px-4 py-10">
-            <div className="w-full max-w-md rounded-3xl border border-terminal-border bg-terminal-panel/95 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)] md:p-8">
+            <div className="w-full max-w-md rounded-lg border border-terminal-border bg-terminal-panel p-6 md:p-8">
                 <TradeCraftBrand size="md" />
-                <h1 className="mt-6 text-2xl font-semibold text-white">Sign in</h1>
+                <h1 className="mt-6 text-2xl font-semibold text-terminal-text">Sign in</h1>
                 <p className="mt-1 text-sm text-terminal-muted">
                     Your market desk for NSE indices, checkpoints, and the daily brief.
                 </p>
@@ -38,7 +38,7 @@ export default function LoginPage() {
                             onChange={(e) => setEmail(e.target.value)}
                             required
                             autoComplete="email"
-                            className="w-full rounded-xl border border-terminal-border bg-terminal-bg px-3 py-2.5 text-sm text-white outline-none focus:border-bb-orange"
+                            className="w-full rounded-md border border-terminal-border bg-terminal-bg px-3 py-2.5 text-sm text-terminal-text outline-none focus:border-bb-orange"
                         />
                     </div>
                     <div>
@@ -49,11 +49,11 @@ export default function LoginPage() {
                             onChange={(e) => setPassword(e.target.value)}
                             required
                             autoComplete="current-password"
-                            className="w-full rounded-xl border border-terminal-border bg-terminal-bg px-3 py-2.5 text-sm text-white outline-none focus:border-bb-orange"
+                            className="w-full rounded-md border border-terminal-border bg-terminal-bg px-3 py-2.5 text-sm text-terminal-text outline-none focus:border-bb-orange"
                         />
                     </div>
                     {(error || configError) && (
-                        <p className="rounded-xl border border-bb-red/40 bg-bb-red/10 px-3 py-2 text-sm text-bb-red">
+                        <p className="rounded-md border border-bb-red/40 bg-bb-red/10 px-3 py-2 text-sm text-bb-red">
                             {error || configError}
                         </p>
                     )}
