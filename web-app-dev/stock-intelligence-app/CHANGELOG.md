@@ -11,8 +11,10 @@ Version format:
 
 ## Unreleased
 
+## [v2026.11.09-03] - 2026-11-09
+
 ### Changed
-- Dev preview visual refresh (`v2026.11.09-03`): navy canvas, indigo accent, rounded cards, floating sidebar, and a simpler page header. Not released to production.
+- Visual refresh promoted to production: navy canvas, indigo accent, rounded cards, floating sidebar, and a simpler page header.
 
 ## [v2026.11.09-02] - 2026-11-09
 

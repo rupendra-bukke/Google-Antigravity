@@ -1,4 +1,4 @@
-/** Bumped each release — visible even when Vercel env vars are unset. */
+/** Bumped each release — visible even when Vercel env vars are unset. Promoted to production. */
 export const APP_RELEASE = "v2026.11.09-03";
 
 const APP_BRANCH =
