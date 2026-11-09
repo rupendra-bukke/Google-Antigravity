@@ -49,10 +49,10 @@ export default function Sidebar() {
         <>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="fixed top-2 left-2 z-50 md:hidden p-2 border border-terminal-border bg-terminal-panel text-bb-orange"
+                className="fixed left-3 top-3 z-50 rounded-xl border border-terminal-border bg-terminal-panel p-2 text-white md:hidden"
                 aria-label="Toggle menu"
             >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     {isOpen ? (
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     ) : (
@@ -62,29 +62,30 @@ export default function Sidebar() {
             </button>
 
             {isOpen && (
-                <div className="fixed inset-0 bg-black/80 z-30 md:hidden" onClick={() => setIsOpen(false)} />
+                <div className="fixed inset-0 z-30 bg-black/70 md:hidden" onClick={() => setIsOpen(false)} />
             )}
 
             <aside
                 className={`
-                    fixed top-0 left-0 h-full w-56 z-40 glass-sidebar flex flex-col
+                    glass-sidebar fixed bottom-3 left-3 top-3 z-40 flex w-60 flex-col p-3
                     transition-transform duration-200
-                    ${isOpen ? "translate-x-0" : "-translate-x-full"}
+                    ${isOpen ? "translate-x-0" : "-translate-x-[120%]"}
                     md:translate-x-0
                 `}
             >
-                <div className="border-b-2 border-b-bb-orange px-3 py-2.5">
-                    <TradeCraftBrand size="sm" showTagline={false} />
-                    <p className="text-[10px] font-mono text-terminal-muted mt-2 truncate">{meta}</p>
+                <div className="px-1 pb-3">
+                    <TradeCraftBrand size="sm" showTagline />
+                    <p className="mt-3 rounded-full bg-bb-orange/15 px-2.5 py-1 text-[11px] font-semibold text-bb-orange">
+                        {meta}
+                    </p>
                 </div>
 
-                <div className="border-b border-terminal-border px-3 py-2">
-                    <p className="text-[8px] font-mono uppercase tracking-widest text-terminal-dim">Journey</p>
-                    <TraderJourneyLine className="mt-1.5" />
+                <div className="mb-3 rounded-2xl bg-terminal-bg/70 px-3 py-2.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terminal-dim">Journey</p>
+                    <TraderJourneyLine className="mt-2" />
                 </div>
 
-                <nav className="flex-1 py-1">
-                    <p className="px-3 py-1.5 text-[9px] font-mono text-terminal-dim uppercase tracking-widest">Menu</p>
+                <nav className="flex-1 space-y-1">
                     {navItems.map((item) => {
                         const active = activeTab === item.id;
                         const Icon = item.Icon;
@@ -96,23 +97,23 @@ export default function Sidebar() {
                                     router.push(item.path);
                                     setIsOpen(false);
                                 }}
-                                className={`w-full flex items-center gap-2 px-3 py-2 text-[11px] font-mono font-semibold uppercase tracking-wide border-l-2 border-transparent ${
+                                className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium ${
                                     active
                                         ? "nav-item-active"
-                                        : "text-terminal-muted hover:text-bb-orange hover:bg-terminal-bg"
+                                        : "text-terminal-muted hover:bg-white/5 hover:text-white"
                                 }`}
                             >
-                                <Icon className="w-4 h-4 shrink-0" />
+                                <Icon className="h-4 w-4 shrink-0" />
                                 {item.label}
                             </button>
                         );
                     })}
                 </nav>
 
-                <div className="border-t border-terminal-border p-2 space-y-2">
-                    <div className="px-2 py-2 border border-terminal-border bg-terminal-bg">
-                        <p className="text-[8px] font-mono text-terminal-dim uppercase">Session</p>
-                        <p className="text-[10px] font-mono text-terminal-text truncate mt-0.5">{user?.email || "—"}</p>
+                <div className="space-y-2 pt-3">
+                    <div className="rounded-2xl bg-terminal-bg/70 px-3 py-2.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terminal-dim">Session</p>
+                        <p className="mt-1 truncate text-xs text-terminal-text">{user?.email || "—"}</p>
                         <button
                             type="button"
                             onClick={async () => {
@@ -125,12 +126,12 @@ export default function Sidebar() {
                                 }
                             }}
                             disabled={isSigningOut}
-                            className="mt-2 w-full btn-ghost py-1 text-[9px] text-bb-red border-bb-red/30 hover:bg-bb-red/10"
+                            className="btn-ghost mt-2 w-full text-bb-red"
                         >
-                            {isSigningOut ? "..." : "Logout"}
+                            {isSigningOut ? "..." : "Log out"}
                         </button>
                     </div>
-                    <BuildBadge className="w-full text-center text-[9px]" />
+                    <BuildBadge className="w-full text-center" />
                 </div>
             </aside>
         </>

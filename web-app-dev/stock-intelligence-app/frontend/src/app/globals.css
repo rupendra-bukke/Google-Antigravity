@@ -10,68 +10,69 @@
     }
 
     body {
-        @apply bg-terminal-bg text-terminal-text antialiased text-[13px] leading-snug;
+        @apply text-terminal-text antialiased text-[14px] leading-relaxed;
         font-family: Inter, system-ui, sans-serif;
+        background:
+            radial-gradient(900px 420px at 0% -10%, rgba(124, 147, 255, 0.22), transparent 55%),
+            radial-gradient(700px 380px at 100% 0%, rgba(61, 220, 151, 0.08), transparent 50%),
+            #070b14;
+        min-height: 100vh;
     }
 
     ::-webkit-scrollbar {
-        width: 5px;
-        height: 5px;
+        width: 8px;
+        height: 8px;
     }
 
     ::-webkit-scrollbar-track {
-        @apply bg-terminal-bg;
+        background: transparent;
     }
 
     ::-webkit-scrollbar-thumb {
-        @apply bg-terminal-border rounded-none;
+        background: #2a3654;
+        border-radius: 999px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        @apply bg-bb-orange/60;
+        background: #7c93ff;
     }
 }
 
 @layer components {
     .page-shell {
-        @apply max-w-[1400px] mx-auto px-3 md:px-4 pt-3 md:pt-4 pb-8 space-y-3 animate-fade-in;
+        @apply mx-auto max-w-[1280px] space-y-4 px-3 pb-10 pt-4 md:px-6 md:pt-6;
     }
 
     .font-data {
-        font-family: "IBM Plex Mono", "Courier New", monospace;
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
     }
 
     .glass-card {
-        @apply bg-terminal-panel border border-terminal-border rounded-none;
+        @apply rounded-2xl border border-terminal-border bg-terminal-panel/90 shadow-[0_12px_40px_rgba(0,0,0,0.28)];
     }
 
     .glass-card-hover {
-        @apply glass-card hover:border-bb-orange/40 transition-colors duration-150;
+        @apply glass-card transition hover:border-bb-orange/50;
     }
 
     .glass-sidebar {
-        @apply bg-terminal-panel border-r border-terminal-border;
+        @apply rounded-3xl border border-terminal-border bg-terminal-panel/95 shadow-[0_20px_50px_rgba(0,0,0,0.35)] backdrop-blur;
     }
 
     .toolbar-card {
-        @apply bg-terminal-panel border border-terminal-border px-3 py-2;
+        @apply glass-card px-4 py-3;
     }
 
     .terminal-header {
-        @apply bg-terminal-panel border border-terminal-border overflow-hidden;
+        @apply glass-card overflow-hidden;
     }
 
     .terminal-header-inner {
-        @apply flex flex-col md:flex-row md:items-stretch;
-    }
-
-    .terminal-header-brand-zone {
-        @apply flex items-center border-b border-terminal-border bg-terminal-bg/70 px-4 py-3 md:border-b-0 md:border-r md:py-4;
-        border-left: 3px solid theme("colors.bb.orange");
+        @apply flex flex-col;
     }
 
     .terminal-header-page-zone {
-        @apply flex min-w-0 flex-1 flex-col justify-center px-4 py-3 md:py-4;
+        @apply px-4 py-4 md:px-5;
     }
 
     .terminal-header-top-row {
@@ -79,81 +80,77 @@
     }
 
     .terminal-header-module {
-        @apply mb-1 inline-flex items-center gap-1.5 text-[10px] font-data font-bold uppercase tracking-[0.18em] text-bb-orange;
-    }
-
-    .terminal-header-module-dot {
-        @apply inline-block h-1.5 w-1.5 shrink-0 bg-bb-orange;
+        @apply mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-bb-orange;
     }
 
     .terminal-header-actions {
-        @apply flex shrink-0 items-stretch;
+        @apply flex shrink-0 items-center;
     }
 
     .terminal-header-title {
-        @apply text-base font-semibold tracking-tight text-white md:text-lg;
+        @apply text-2xl font-semibold tracking-tight text-white;
     }
 
     .terminal-header-desc {
-        @apply mt-1.5 max-w-3xl text-[12px] leading-relaxed text-terminal-muted;
+        @apply mt-1 max-w-3xl text-sm text-terminal-muted;
     }
 
     .nav-item-active {
-        @apply bg-bb-orange/15 text-bb-orange border-l-2 border-l-bb-orange;
+        @apply rounded-xl bg-bb-orange text-white;
     }
 
     .btn-primary {
-        @apply inline-flex items-center justify-center gap-1.5 border border-bb-orange bg-bb-orange/10 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-bb-orange transition-colors hover:bg-bb-orange/20 disabled:opacity-50 font-data;
+        @apply inline-flex items-center justify-center gap-1.5 rounded-xl bg-bb-orange px-3 py-2 text-xs font-semibold text-white transition hover:brightness-110 disabled:opacity-50;
     }
 
     .btn-ghost {
-        @apply inline-flex items-center justify-center gap-1.5 border border-terminal-border bg-terminal-bg px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-terminal-muted transition-colors hover:border-terminal-muted hover:text-terminal-text font-data;
+        @apply inline-flex items-center justify-center gap-1.5 rounded-xl border border-terminal-border bg-terminal-bg/60 px-3 py-2 text-xs font-semibold text-terminal-muted transition hover:border-bb-orange/40 hover:text-white disabled:opacity-50;
     }
 
     .section-label {
-        @apply text-[10px] font-bold text-bb-orange uppercase tracking-[0.18em] font-data;
+        @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-terminal-muted;
     }
 
     .data-table {
-        @apply w-full text-[11px] font-data border-collapse;
+        @apply w-full border-collapse text-[12px];
     }
 
     .data-table th {
-        @apply text-left text-[10px] font-bold uppercase tracking-wider text-terminal-dim bg-terminal-bg border border-terminal-border px-2 py-1;
+        @apply border-b border-terminal-border bg-transparent px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-terminal-dim;
     }
 
     .data-table td {
-        @apply border border-terminal-border px-2 py-1 text-terminal-text;
+        @apply border-b border-terminal-border/70 px-3 py-2.5 text-terminal-text;
     }
 
     .signal-buy {
-        @apply text-bb-green font-bold;
+        @apply font-semibold text-bb-green;
     }
 
     .signal-sell {
-        @apply text-bb-red font-bold;
+        @apply font-semibold text-bb-red;
     }
 
     .signal-neutral {
-        @apply text-terminal-dim font-semibold;
+        @apply font-medium text-terminal-dim;
     }
 
     .shimmer {
-        background: linear-gradient(90deg, transparent 0%, rgba(255, 119, 0, 0.06) 50%, transparent 100%);
+        background: linear-gradient(90deg, transparent 0%, rgba(124, 147, 255, 0.12) 50%, transparent 100%);
         background-size: 200% 100%;
         animation: shimmer 1.5s ease-in-out infinite;
     }
 
     .decision-buy {
-        @apply bg-bb-green/10 text-bb-green border border-bb-green/30;
+        @apply rounded-xl border border-bb-green/30 bg-bb-green/10 text-bb-green;
     }
 
     .decision-sell {
-        @apply bg-bb-red/10 text-bb-red border border-bb-red/30;
+        @apply rounded-xl border border-bb-red/30 bg-bb-red/10 text-bb-red;
     }
 
     .decision-hold {
-        @apply bg-terminal-muted/10 text-terminal-muted border border-terminal-border;
+        @apply rounded-xl border border-terminal-border bg-terminal-bg/40 text-terminal-muted;
     }
 }
 

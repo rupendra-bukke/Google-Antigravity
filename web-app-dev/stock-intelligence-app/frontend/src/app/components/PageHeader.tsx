@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import TradeCraftBrand from "./TradeCraftBrand";
 
 interface PageHeaderProps {
     /** Short module label shown above the page title, e.g. "Dashboard" */
@@ -18,26 +17,15 @@ export default function PageHeader({
     const moduleLabel = module ?? title;
 
     return (
-        <header className="terminal-header">
-            <div className="terminal-header-inner">
-                <div className="terminal-header-brand-zone">
-                    <TradeCraftBrand size="lg" />
-                </div>
-
-                <div className="terminal-header-page-zone">
-                    <div className="terminal-header-top-row">
-                        <div className="min-w-0 flex-1">
-                            <p className="terminal-header-module">
-                                <span className="terminal-header-module-dot" aria-hidden />
-                                {moduleLabel}
-                            </p>
-                            <h1 className="terminal-header-title">{title}</h1>
-                        </div>
-                        {actions && <div className="terminal-header-actions">{actions}</div>}
-                    </div>
-                    {description && <p className="terminal-header-desc">{description}</p>}
-                </div>
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+                <p className="section-label">{moduleLabel}</p>
+                <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white md:text-3xl">{title}</h1>
+                {description && (
+                    <p className="mt-1.5 max-w-2xl text-sm text-terminal-muted">{description}</p>
+                )}
             </div>
+            {actions && <div className="shrink-0">{actions}</div>}
         </header>
     );
 }

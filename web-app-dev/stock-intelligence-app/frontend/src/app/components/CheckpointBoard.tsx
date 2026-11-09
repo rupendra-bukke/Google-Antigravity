@@ -399,7 +399,7 @@ function CheckpointCard({
                 {isLatest && (
                     <div
                         style={{
-                            background: "#d4af37",
+                            background: "#7c93ff",
                             color: "#000",
                             fontSize: "0.55rem",
                             fontWeight: 900,
@@ -597,7 +597,7 @@ export default function CheckpointBoard({
     return (
         <div style={{ margin: "2.5rem 0" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1.5rem" }}>
-                <div style={{ width: "3px", height: "18px", background: "#d4af37", borderRadius: "2px" }} />
+                <div style={{ width: "3px", height: "18px", background: "#7c93ff", borderRadius: "2px" }} />
                 <h2 style={{ fontSize: "0.75rem", fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.2em", margin: 0 }}>
                     {isHistory ? "Historical Timeline" : `${timelineLabel} Market Timeline`}
                 </h2>

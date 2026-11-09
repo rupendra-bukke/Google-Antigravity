@@ -43,7 +43,7 @@ export default function IndicatorTable({ signals }: { signals?: IndicatorSignals
     const summary = signals ? computeDecision(signals) : null;
 
     return (
-        <div className="border border-terminal-border bg-terminal-panel">
+        <div className="glass-card overflow-hidden">
             <div className="flex items-center justify-between border-b border-terminal-border bg-terminal-bg px-2 py-1">
                 <span className="section-label">Technical Indicators</span>
                 {summary && (

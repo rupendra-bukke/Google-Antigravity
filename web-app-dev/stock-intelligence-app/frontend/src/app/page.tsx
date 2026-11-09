@@ -293,7 +293,7 @@ export default function Dashboard() {
             {/* ── Error ── */}
             {
                 error && (
-                    <div className="border border-bb-red/40 bg-bb-red/10 px-3 py-2 animate-fade-in">
+                    <div className="animate-fade-in rounded-2xl border border-bb-red/40 bg-bb-red/10 px-4 py-3">
                         <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-bb-red">
                             Failed to load data
                         </p>

@@ -11,18 +11,18 @@ const config: Config = {
         extend: {
             colors: {
                 bb: {
-                    orange: "#ff7700",
-                    green: "#00c853",
-                    red: "#ff1744",
-                    amber: "#ffb300",
+                    orange: "#7c93ff",
+                    green: "#3ddc97",
+                    red: "#ff6b8a",
+                    amber: "#f5c16c",
                 },
                 terminal: {
-                    bg: "#000000",
-                    panel: "#0a0a0a",
-                    border: "#2a2a2a",
-                    text: "#e8e8e8",
-                    muted: "#8a8a8a",
-                    dim: "#5c5c5c",
+                    bg: "#070b14",
+                    panel: "#121a2c",
+                    border: "#2a3654",
+                    text: "#eef2ff",
+                    muted: "#9aa6c4",
+                    dim: "#6d7896",
                 },
                 brand: {
                     400: "#ff9933",

@@ -112,7 +112,7 @@ export default function SettingsPage() {
                                     key={option.symbol}
                                     type="button"
                                     onClick={() => updateSettings({ defaultSymbol: option.symbol })}
-                                    className={`border px-3 py-2.5 text-sm font-semibold text-left ${
+                                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
                                             ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
                                             : "border-terminal-border bg-terminal-bg text-terminal-muted"
@@ -138,7 +138,7 @@ export default function SettingsPage() {
                                     key={option.value}
                                     type="button"
                                     onClick={() => updateSettings({ dashboardRefreshSec: option.value })}
-                                    className={`border px-3 py-2.5 text-sm font-semibold text-left ${
+                                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
                                             ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
                                             : "border-terminal-border bg-terminal-bg text-terminal-muted"
@@ -164,7 +164,7 @@ export default function SettingsPage() {
                                     key={option.value}
                                     type="button"
                                     onClick={() => updateSettings({ checkpointRefreshSec: option.value })}
-                                    className={`border px-3 py-2.5 text-sm font-semibold text-left ${
+                                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
                                             ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
                                             : "border-terminal-border bg-terminal-bg text-terminal-muted"
@@ -190,7 +190,7 @@ export default function SettingsPage() {
                                     key={option.value}
                                     type="button"
                                     onClick={() => updateSettings({ checkpointCatchupSec: option.value })}
-                                    className={`border px-3 py-2.5 text-sm font-semibold text-left ${
+                                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
                                             ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
                                             : "border-terminal-border bg-terminal-bg text-terminal-muted"
@@ -211,7 +211,7 @@ export default function SettingsPage() {
                     <button
                         type="button"
                         onClick={() => updateSettings({ showCandlestickChart: !settings.showCandlestickChart })}
-                        className={`border px-3 py-2.5 text-sm font-semibold text-left w-full sm:w-auto ${
+                        className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left w-full sm:w-auto ${
                             settings.showCandlestickChart
                                 ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
                                 : "border-terminal-border bg-terminal-bg text-terminal-muted"
@@ -236,7 +236,7 @@ export default function SettingsPage() {
                                     type="button"
                                     disabled={isLast}
                                     onClick={() => toggleWatchlistSymbol(option.symbol)}
-                                    className={`border px-3 py-2.5 text-sm font-semibold text-left ${
+                                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
                                             ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
                                             : "border-terminal-border bg-terminal-bg text-terminal-muted"
@@ -259,7 +259,7 @@ export default function SettingsPage() {
                     </p>
                     <div className="space-y-3">
                         {settings.traderJourney.map((track) => (
-                            <div key={track.id} className="border border-terminal-border bg-terminal-bg px-3 py-2.5">
+                            <div key={track.id} className="rounded-2xl border border-terminal-border bg-terminal-bg px-3 py-2.5">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                     <span className="text-sm font-semibold text-terminal-text">{track.label}</span>
                                     <span className="text-xs font-mono text-bb-orange">

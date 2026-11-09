@@ -321,7 +321,7 @@ export default function ExpiryBanner() {
                                         padding: "1px 6px",
                                         borderRadius: "4px",
                                         background: c.monthly ? "rgba(212,175,55,0.13)" : "rgba(148,163,184,0.1)",
-                                        color: c.monthly ? "#d4af37" : "#94a3b8",
+                                        color: c.monthly ? "#7c93ff" : "#94a3b8",
                                         textTransform: "uppercase",
                                         letterSpacing: "0.09em",
                                     }}

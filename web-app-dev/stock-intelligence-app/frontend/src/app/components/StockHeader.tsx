@@ -42,8 +42,8 @@ export default function StockHeader({
     const tag = SYMBOL_TAG[symbol] || symbol;
 
     return (
-        <div className="border border-terminal-border bg-terminal-panel border-l-[3px] border-l-bb-orange animate-fade-in">
-            <div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="glass-card animate-fade-in overflow-hidden">
+            <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
                     <p className="section-label">{tag}</p>
                     <h2 className="mt-1 truncate text-xl font-semibold tracking-tight text-white md:text-2xl">

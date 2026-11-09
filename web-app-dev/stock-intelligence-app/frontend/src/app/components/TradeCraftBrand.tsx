@@ -39,10 +39,8 @@ export default function TradeCraftBrand({
                     Trade<span className="text-bb-orange">-</span>Craft
                 </p>
                 {showTagline && (
-                    <p
-                        className={`${styles.tagline} font-data font-semibold uppercase tracking-[0.16em] text-terminal-muted mt-1`}
-                    >
-                        NSE Intelligence
+                    <p className={`${styles.tagline} mt-1 font-medium text-terminal-muted`}>
+                        Market desk
                     </p>
                 )}
             </div>

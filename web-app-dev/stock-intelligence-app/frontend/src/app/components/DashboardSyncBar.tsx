@@ -27,8 +27,8 @@ export default function DashboardSyncBar({
         lastRefresh > 0 ? formatIstTime(lastRefresh) : "—";
 
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-terminal-border pt-2 mt-2">
-            <div className="flex items-center gap-2 min-w-0 font-mono text-[10px]">
+        <div className="mt-3 flex flex-col gap-2 border-t border-terminal-border pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-2 text-[11px]">
                 <button type="button" onClick={onSync} disabled={isSyncing} className="btn-primary">
                     {isSyncing ? "SYNC..." : "SYNC"}
                 </button>
