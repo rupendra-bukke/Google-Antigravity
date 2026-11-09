@@ -67,7 +67,7 @@ export default function Sidebar() {
 
             <aside
                 className={`
-                    fixed top-0 left-0 h-full w-52 z-40 glass-sidebar flex flex-col
+                    fixed top-0 left-0 h-full w-56 z-40 glass-sidebar flex flex-col
                     transition-transform duration-200
                     ${isOpen ? "translate-x-0" : "-translate-x-full"}
                     md:translate-x-0
@@ -76,7 +76,11 @@ export default function Sidebar() {
                 <div className="border-b-2 border-b-bb-orange px-3 py-2.5">
                     <TradeCraftBrand size="sm" showTagline={false} />
                     <p className="text-[10px] font-mono text-terminal-muted mt-2 truncate">{meta}</p>
-                    <TraderJourneyLine className="text-[9px] mt-1 truncate" />
+                </div>
+
+                <div className="border-b border-terminal-border px-3 py-2">
+                    <p className="text-[8px] font-mono uppercase tracking-widest text-terminal-dim">Journey</p>
+                    <TraderJourneyLine className="mt-1.5" />
                 </div>
 
                 <nav className="flex-1 py-1">

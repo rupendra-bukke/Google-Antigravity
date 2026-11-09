@@ -83,7 +83,7 @@ export default function SettingsPage() {
     if (!hydrated) {
         return (
             <div className="max-w-3xl mx-auto px-4 md:px-6 pt-10 pb-12">
-                <div className="glass-card border border-white/10 rounded-2xl p-6 text-center text-sm text-gray-400">
+                <div className="glass-card p-6 text-center text-sm text-terminal-muted">
                     Loading settings...
                 </div>
             </div>
@@ -100,8 +100,8 @@ export default function SettingsPage() {
 
             <div className="glass-card border-terminal-border p-4 space-y-6">
                 <section className="space-y-3">
-                    <h2 className="text-sm font-bold text-white">Default index</h2>
-                    <p className="text-xs text-gray-500">
+                    <h2 className="section-label">Default index</h2>
+                    <p className="text-xs text-terminal-muted">
                         Which index opens when you visit the dashboard.
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -112,7 +112,7 @@ export default function SettingsPage() {
                                     key={option.symbol}
                                     type="button"
                                     onClick={() => updateSettings({ defaultSymbol: option.symbol })}
-                                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
+                                    className={`border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
                                             ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
                                             : "border-terminal-border bg-terminal-bg text-terminal-muted"
@@ -126,8 +126,8 @@ export default function SettingsPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-sm font-bold text-white">Dashboard refresh interval</h2>
-                    <p className="text-xs text-gray-500">
+                    <h2 className="section-label">Dashboard refresh interval</h2>
+                    <p className="text-xs text-terminal-muted">
                         How often the main dashboard polls for new market data. Higher intervals reduce backend load.
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -138,7 +138,7 @@ export default function SettingsPage() {
                                     key={option.value}
                                     type="button"
                                     onClick={() => updateSettings({ dashboardRefreshSec: option.value })}
-                                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
+                                    className={`border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
                                             ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
                                             : "border-terminal-border bg-terminal-bg text-terminal-muted"
@@ -152,8 +152,8 @@ export default function SettingsPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-sm font-bold text-white">Checkpoint timeline refresh</h2>
-                    <p className="text-xs text-gray-500">
+                    <h2 className="section-label">Checkpoint timeline refresh</h2>
+                    <p className="text-xs text-terminal-muted">
                         How often the checkpoint board polls for new timeline cards during live market hours.
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -164,7 +164,7 @@ export default function SettingsPage() {
                                     key={option.value}
                                     type="button"
                                     onClick={() => updateSettings({ checkpointRefreshSec: option.value })}
-                                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
+                                    className={`border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
                                             ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
                                             : "border-terminal-border bg-terminal-bg text-terminal-muted"
@@ -178,8 +178,8 @@ export default function SettingsPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-sm font-bold text-white">Checkpoint catch-up refresh</h2>
-                    <p className="text-xs text-gray-500">
+                    <h2 className="section-label">Checkpoint catch-up refresh</h2>
+                    <p className="text-xs text-terminal-muted">
                         Faster polling while the board is filling missed checkpoints after market open.
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -190,7 +190,7 @@ export default function SettingsPage() {
                                     key={option.value}
                                     type="button"
                                     onClick={() => updateSettings({ checkpointCatchupSec: option.value })}
-                                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
+                                    className={`border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
                                             ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
                                             : "border-terminal-border bg-terminal-bg text-terminal-muted"
@@ -204,14 +204,14 @@ export default function SettingsPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-sm font-bold text-white">Dashboard chart</h2>
-                    <p className="text-xs text-gray-500">
+                    <h2 className="section-label">Dashboard chart</h2>
+                    <p className="text-xs text-terminal-muted">
                         Candlesticks load only when enabled, keeping the default dashboard light on free tier.
                     </p>
                     <button
                         type="button"
                         onClick={() => updateSettings({ showCandlestickChart: !settings.showCandlestickChart })}
-                        className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left w-full sm:w-auto ${
+                        className={`border px-3 py-2.5 text-sm font-semibold text-left w-full sm:w-auto ${
                             settings.showCandlestickChart
                                 ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
                                 : "border-terminal-border bg-terminal-bg text-terminal-muted"
@@ -222,8 +222,8 @@ export default function SettingsPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-sm font-bold text-white">Watchlist symbols</h2>
-                    <p className="text-xs text-gray-500">
+                    <h2 className="section-label">Watchlist symbols</h2>
+                    <p className="text-xs text-terminal-muted">
                         Choose which assets appear on the Watchlist page. At least one symbol must stay enabled.
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -236,14 +236,14 @@ export default function SettingsPage() {
                                     type="button"
                                     disabled={isLast}
                                     onClick={() => toggleWatchlistSymbol(option.symbol)}
-                                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold text-left ${
+                                    className={`border px-3 py-2.5 text-sm font-semibold text-left ${
                                         active
                                             ? "border-bb-orange bg-bb-orange/15 text-bb-orange"
                                             : "border-terminal-border bg-terminal-bg text-terminal-muted"
                                     } ${isLast ? "opacity-60 cursor-not-allowed" : ""}`}
                                 >
                                     {option.label}
-                                    <span className="block text-[10px] font-normal text-gray-500 mt-0.5">
+                                    <span className="block text-[10px] font-normal text-terminal-muted mt-0.5">
                                         {option.kind === "stock" ? "Stock" : "Index"} · {option.symbol}
                                     </span>
                                 </button>
@@ -253,21 +253,21 @@ export default function SettingsPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-sm font-bold text-white">Trader journey</h2>
-                    <p className="text-xs text-gray-500">
+                    <h2 className="section-label">Trader journey</h2>
+                    <p className="text-xs text-terminal-muted">
                         Start dates for your trading experience. Years are calculated to today in IST and shown in the sidebar.
                     </p>
                     <div className="space-y-3">
                         {settings.traderJourney.map((track) => (
-                            <div key={track.id} className="rounded-xl border border-terminal-border bg-terminal-bg px-3 py-2.5">
+                            <div key={track.id} className="border border-terminal-border bg-terminal-bg px-3 py-2.5">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <span className="text-sm font-semibold text-gray-200">{track.label}</span>
+                                    <span className="text-sm font-semibold text-terminal-text">{track.label}</span>
                                     <span className="text-xs font-mono text-bb-orange">
                                         {formatJourneyStartDate(track.startDate)} ·{" "}
                                         {formatJourneyYears(yearsSince(track.startDate))}
                                     </span>
                                 </div>
-                                <label className="mt-2 block text-[10px] font-mono text-gray-500 uppercase tracking-wide">
+                                <label className="mt-2 block text-[10px] font-mono text-terminal-muted uppercase tracking-wide">
                                     Start date
                                 </label>
                                 <input
@@ -281,7 +281,7 @@ export default function SettingsPage() {
                                         );
                                         updateSettings({ traderJourney: next });
                                     }}
-                                    className="mt-1 w-full rounded-lg border border-terminal-border bg-black/30 px-2 py-1.5 text-sm text-gray-200 font-mono"
+                                    className="mt-1 w-full border border-terminal-border bg-terminal-bg px-2 py-1.5 text-sm text-terminal-text font-mono outline-none focus:border-bb-orange"
                                 />
                             </div>
                         ))}
@@ -299,7 +299,7 @@ export default function SettingsPage() {
                     <button
                         type="button"
                         onClick={resetSettings}
-                        className="rounded-xl border border-white/10 bg-gray-900/40 px-4 py-2.5 text-sm font-bold text-gray-300"
+                        className="btn-ghost px-4 py-2 text-sm normal-case tracking-normal"
                     >
                         Reset to defaults
                     </button>
@@ -311,16 +311,16 @@ export default function SettingsPage() {
             </div>
 
             <div className="glass-card border-terminal-border p-4">
-                <h2 className="text-sm font-bold text-white mb-2">Current values</h2>
-                <div className="text-xs text-gray-400 space-y-1">
-                    <p>Default index: <span className="text-gray-200">{settings.defaultSymbol}</span></p>
-                    <p>Dashboard refresh: <span className="text-gray-200">{settings.dashboardRefreshSec}s</span></p>
-                    <p>Checkpoint refresh: <span className="text-gray-200">{settings.checkpointRefreshSec}s</span></p>
-                    <p>Catch-up refresh: <span className="text-gray-200">{settings.checkpointCatchupSec}s</span></p>
-                    <p>Chart on dashboard: <span className="text-gray-200">{settings.showCandlestickChart ? "Yes" : "No"}</span></p>
-                    <p>Watchlist symbols: <span className="text-gray-200">{settings.watchlistSymbols.join(", ")}</span></p>
+                <h2 className="section-label mb-2">Current values</h2>
+                <div className="text-xs text-terminal-muted space-y-1">
+                    <p>Default index: <span className="text-terminal-text">{settings.defaultSymbol}</span></p>
+                    <p>Dashboard refresh: <span className="text-terminal-text">{settings.dashboardRefreshSec}s</span></p>
+                    <p>Checkpoint refresh: <span className="text-terminal-text">{settings.checkpointRefreshSec}s</span></p>
+                    <p>Catch-up refresh: <span className="text-terminal-text">{settings.checkpointCatchupSec}s</span></p>
+                    <p>Chart on dashboard: <span className="text-terminal-text">{settings.showCandlestickChart ? "Yes" : "No"}</span></p>
+                    <p>Watchlist symbols: <span className="text-terminal-text">{settings.watchlistSymbols.join(", ")}</span></p>
                     <p>Trader journey:{" "}
-                        <span className="text-gray-200">
+                        <span className="text-terminal-text">
                             {settings.traderJourney
                                 .map(
                                     (track) =>

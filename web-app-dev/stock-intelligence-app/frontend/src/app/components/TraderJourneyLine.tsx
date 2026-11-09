@@ -2,7 +2,6 @@
 
 import {
     formatJourneyStartDate,
-    formatJourneyTrack,
     formatJourneyYears,
     yearsSince,
     type TraderJourneyTrack,
@@ -34,27 +33,31 @@ export default function TraderJourneyLine({
 
     if (trackId) {
         const track = tracks[0];
-        const text = `${track.label} ${formatJourneyStartDate(track.startDate)} ${formatJourneyYears(
-            yearsSince(track.startDate)
-        )}`;
-
         return (
-            <p className={`font-mono text-terminal-dim ${className}`}>
-                {prefix ? <span className="text-terminal-muted">{prefix} </span> : null}
-                <span className="text-terminal-muted">{text}</span>
+            <p className={`font-mono text-[10px] text-terminal-muted ${className}`}>
+                {prefix ? <span className="uppercase tracking-wide text-terminal-dim">{prefix} </span> : null}
+                <span className="font-bold text-bb-orange">{track.shortLabel}</span>
+                <span className="mx-1.5 text-terminal-dim">{formatJourneyStartDate(track.startDate)}</span>
+                <span className="text-terminal-text">
+                    {formatJourneyYears(yearsSince(track.startDate))}
+                </span>
             </p>
         );
     }
 
     return (
-        <div className={`font-mono text-terminal-dim space-y-0.5 ${className}`}>
+        <div className={`space-y-1 ${className}`}>
             {prefix ? (
-                <p className="text-[8px] text-terminal-dim uppercase tracking-widest">{prefix}</p>
+                <p className="font-mono text-[8px] uppercase tracking-widest text-terminal-dim">{prefix}</p>
             ) : null}
             {tracks.map((track) => (
-                <p key={track.id} className="text-terminal-muted truncate">
-                    {formatJourneyTrack(track)}
-                </p>
+                <div key={track.id} className="flex items-baseline gap-2 font-mono text-[10px]">
+                    <span className="w-3 shrink-0 font-bold text-bb-orange">{track.shortLabel}</span>
+                    <span className="text-terminal-muted">{formatJourneyStartDate(track.startDate)}</span>
+                    <span className="ml-auto tabular-nums text-terminal-text">
+                        {formatJourneyYears(yearsSince(track.startDate))}
+                    </span>
+                </div>
             ))}
         </div>
     );

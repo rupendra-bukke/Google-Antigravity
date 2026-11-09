@@ -11,6 +11,14 @@ Version format:
 
 ## Unreleased
 
+## [v2026.11.09-01] - 2026-11-09
+
+### Changed
+- Dashboard price header, closed-market banner, and load error use the terminal layout (square panels, mono type, orange accent).
+- Sidebar journey is its own block with letter, start date, and years aligned.
+- Settings choices use the same square controls as the rest of the terminal.
+- Expiry tracker cards drop the rounded glow and match the terminal panels.
+
 ## [v2026.08.13-03] - 2026-08-13
 
 ### Changed

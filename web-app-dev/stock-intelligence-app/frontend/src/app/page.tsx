@@ -276,7 +276,7 @@ export default function Dashboard() {
                         {selectedSymbol === "^NSEBANK" && (
                             <TraderJourneyLine
                                 trackId="bankNifty"
-                                className="text-[9px] border border-terminal-border bg-terminal-bg px-2 py-1"
+                                className="border border-terminal-border bg-terminal-bg px-2 py-1"
                             />
                         )}
                     </div>
@@ -293,22 +293,11 @@ export default function Dashboard() {
             {/* ── Error ── */}
             {
                 error && (
-                    <div className="glass-card p-4 border border-rose-500/20 bg-rose-500/5 animate-fade-in">
-                        <div className="flex items-start gap-3">
-                            <span className="text-rose-400 text-base mt-0.5">⚠</span>
-                            <div>
-                                <p className="text-sm font-semibold text-rose-400">
-                                    Failed to load data
-                                </p>
-                                <p className="text-xs text-gray-400 mt-1">{error}</p>
-                                <p className="text-xs text-gray-600 mt-2">
-                                    Backend:{" "}
-                                    <code className="text-brand-400/80 text-[10px]">
-                                        uvicorn main:app --reload --port 8000
-                                    </code>
-                                </p>
-                            </div>
-                        </div>
+                    <div className="border border-bb-red/40 bg-bb-red/10 px-3 py-2 animate-fade-in">
+                        <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-bb-red">
+                            Failed to load data
+                        </p>
+                        <p className="mt-1 font-mono text-[12px] text-terminal-text">{error}</p>
                     </div>
                 )
             }

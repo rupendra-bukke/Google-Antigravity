@@ -180,27 +180,19 @@ export default function ExpiryBanner() {
     const todayExpiries = sorted.filter((c) => c.days === 0);
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem" }}>
+        <div className="space-y-2">
             <div
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: "0.6rem",
-                    padding: "0.6rem 0.9rem",
-                    borderRadius: "12px",
-                    background: todayExpiries.length > 0 ? "rgba(239,68,68,0.08)" : "rgba(99,102,241,0.06)",
-                    border: todayExpiries.length > 0 ? "1px solid rgba(239,68,68,0.28)" : "1px solid rgba(99,102,241,0.2)",
-                }}
+                className={`flex flex-wrap items-center justify-between gap-2 border px-3 py-2 ${
+                    todayExpiries.length > 0
+                        ? "border-bb-red/40 bg-bb-red/10"
+                        : "border-terminal-border bg-terminal-panel"
+                }`}
             >
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
-                    <span style={{ fontSize: "0.56rem", fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.16em" }}>
-                        Options Expiry Tracker
-                    </span>
-                    <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#e2e8f0" }}>
-                        Next: {nearest.abbr} | {statusText(nearest.days)} | {formatDate(nearest.expiry)}
-                    </span>
+                <div>
+                    <p className="section-label">Options expiry</p>
+                    <p className="mt-1 font-mono text-[12px] text-terminal-text">
+                        Next: {nearest.abbr} · {statusText(nearest.days)} · {formatDate(nearest.expiry)}
+                    </p>
                 </div>
 
                 {todayExpiries.length > 0 ? (
@@ -227,19 +219,13 @@ export default function ExpiryBanner() {
                         ))}
                     </div>
                 ) : (
-                    <span style={{ fontSize: "0.62rem", color: "#94a3b8", fontWeight: 600 }}>
+                    <span className="font-mono text-[10px] uppercase tracking-wide text-terminal-dim">
                         No index expiry today
                     </span>
                 )}
             </div>
 
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(185px, 1fr))",
-                    gap: "0.65rem",
-                }}
-            >
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {sorted.map((c) => {
                     const isToday = c.days === 0;
                     const isTomorrow = c.days === 1;
@@ -251,16 +237,10 @@ export default function ExpiryBanner() {
                     return (
                         <div
                             key={c.abbr}
+                            className="relative overflow-hidden border bg-terminal-panel px-3 py-2.5"
                             style={{
-                                position: "relative",
-                                overflow: "hidden",
-                                borderRadius: "14px",
-                                padding: "0.75rem 0.85rem",
-                                border: `1px solid ${cardBorder}`,
-                                background: cardBg,
-                                boxShadow: isToday ? "0 0 24px rgba(239,68,68,0.22)" : `0 0 10px ${c.glow}`,
-                                transform: isToday ? "translateY(-1px) scale(1.01)" : "none",
-                                transition: "all 0.25s ease",
+                                borderColor: cardBorder,
+                                background: isToday || isTomorrow ? cardBg : undefined,
                             }}
                         >
                             <div
@@ -314,7 +294,7 @@ export default function ExpiryBanner() {
                                 {statusText(c.days)}
                             </div>
 
-                            <div style={{ marginTop: "0.22rem", fontSize: "0.84rem", fontWeight: 700, color: "#e2e8f0" }}>{formatDate(c.expiry)}</div>
+                            <div className="mt-1 font-mono text-[13px] font-semibold text-terminal-text">{formatDate(c.expiry)}</div>
 
                             {c.abbr === "BANKNIFTY" && bankNiftyJourney && (
                                 <div
@@ -331,7 +311,7 @@ export default function ExpiryBanner() {
                                 </div>
                             )}
 
-                            <div style={{ marginTop: "0.32rem", fontSize: "0.58rem", color: "#94a3b8", lineHeight: 1.45 }}>{urgencyHint(c.days)}</div>
+                            <div className="mt-1 font-mono text-[10px] leading-snug text-terminal-muted">{urgencyHint(c.days)}</div>
 
                             <div style={{ marginTop: "0.45rem", display: "flex", alignItems: "center", gap: "0.45rem" }}>
                                 <span
