@@ -320,6 +320,8 @@ Details: [PROJECT_REFERENCE_AND_ROADMAP.md](./PROJECT_REFERENCE_AND_ROADMAP.md)
 
 The keepalive workflow reuses the same four `CHECKPOINT_CRON_*` GitHub secrets. It calls `GET /health/keepalive` on each Render backend, which pings Supabase Auth and touches Upstash Redis using env vars already configured on Render.
 
+What you need to do yourself (weekly sign-in, Supabase restore, monthly Actions check): [KEEP_SERVICES_RUNNING.md](./KEEP_SERVICES_RUNNING.md)
+
 ---
 
 *Trade-Craft · Built by Rupendra Bukke · Stock Intelligence Project*
