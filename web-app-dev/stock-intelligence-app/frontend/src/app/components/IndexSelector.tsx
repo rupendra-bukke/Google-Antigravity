@@ -14,7 +14,7 @@ export default function IndexSelector({
     disabled,
 }: IndexSelectorProps) {
     return (
-        <div className="inline-flex flex-wrap gap-1 rounded-full border border-terminal-border bg-terminal-bg/80 p-1">
+        <div className="inline-flex flex-wrap gap-1 rounded-md border border-terminal-border bg-terminal-bg p-1">
             {DASHBOARD_INDICES.map(({ label, symbol }) => {
                 const isActive = selected === symbol;
                 return (
@@ -23,10 +23,10 @@ export default function IndexSelector({
                         type="button"
                         onClick={() => onSelect(symbol)}
                         disabled={disabled}
-                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                        className={`rounded-md px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
                             isActive
                                 ? "bg-bb-orange text-white"
-                                : "text-terminal-muted hover:bg-white/5 hover:text-white"
+                                : "text-terminal-muted hover:bg-terminal-panel hover:text-terminal-text"
                         }`}
                     >
                         {label}

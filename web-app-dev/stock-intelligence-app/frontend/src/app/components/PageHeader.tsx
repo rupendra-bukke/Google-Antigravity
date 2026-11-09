@@ -20,7 +20,7 @@ export default function PageHeader({
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
                 <p className="section-label">{moduleLabel}</p>
-                <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white md:text-3xl">{title}</h1>
+                <h1 className="mt-1 text-2xl font-semibold tracking-tight text-terminal-text md:text-[1.65rem]">{title}</h1>
                 {description && (
                     <p className="mt-1.5 max-w-2xl text-sm text-terminal-muted">{description}</p>
                 )}

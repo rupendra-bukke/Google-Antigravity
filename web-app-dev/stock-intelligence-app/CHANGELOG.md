@@ -11,6 +11,9 @@ Version format:
 
 ## Unreleased
 
+### Changed
+- Dev preview `v2026.11.09-04`: quieter trading-desk colors (slate panels, blue actions, market green and red). Not on production yet.
+
 ## [v2026.11.09-03] - 2026-11-09
 
 ### Changed

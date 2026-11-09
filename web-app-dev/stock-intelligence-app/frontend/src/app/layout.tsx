@@ -22,7 +22,7 @@ export const metadata: Metadata = {
         "mobile-web-app-capable": "yes",
         "apple-mobile-web-app-capable": "yes",
         "apple-mobile-web-app-status-bar-style": "black-translucent",
-        "theme-color": "#070b14",
+        "theme-color": "#131722",
         "msapplication-TileColor": "#0f172a",
     },
     icons: {
