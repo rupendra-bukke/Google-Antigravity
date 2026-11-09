@@ -140,6 +140,8 @@ export default function Dashboard() {
     const [data, setData] = useState<AnalyzeData | null>(null);
     const [chartCandles, setChartCandles] = useState<OhlcBar[]>([]);
     const [chartLoading, setChartLoading] = useState(false);
+    const [moveCandles, setMoveCandles] = useState<OhlcBar[]>([]);
+    const [moveLoading, setMoveLoading] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -168,8 +170,8 @@ export default function Dashboard() {
 
             const basicJson: AnalyzeData = await basicRes.json();
             setData(basicJson);
-
             setLastRefresh(Date.now());
+            void fetchMoveSeries(symbol);
         } catch (err: unknown) {
             const message =
                 err instanceof Error ? err.message : "Failed to fetch data";
@@ -180,6 +182,25 @@ export default function Dashboard() {
             } else {
                 setIsLoading(false);
             }
+        }
+    }, []);
+
+    const fetchMoveSeries = useCallback(async (symbol: string) => {
+        setMoveLoading(true);
+        try {
+            const res = await authedFetch(
+                `${API_BASE}/v1/analyze?symbol=${encodeURIComponent(symbol)}&include_candles=true`
+            );
+            if (!res.ok) {
+                setMoveCandles([]);
+                return;
+            }
+            const json: AnalyzeData = await res.json();
+            setMoveCandles(json.candles || []);
+        } catch {
+            setMoveCandles([]);
+        } finally {
+            setMoveLoading(false);
         }
     }, []);
 
@@ -232,6 +253,7 @@ export default function Dashboard() {
     const handleSymbolChange = (symbol: string) => {
         setData(null);
         setChartCandles([]);
+        setMoveCandles([]);
         setSelectedSymbol(symbol);
     };
 
@@ -318,6 +340,9 @@ export default function Dashboard() {
                 price={data?.price ?? 0}
                 timestamp={data?.timestamp ?? ""}
                 isLoading={loading}
+                candles={moveCandles}
+                chartLoading={moveLoading}
+                indicators={data?.indicators ?? null}
             />
 
             {/* ── AI Price Action Decision ── */}
